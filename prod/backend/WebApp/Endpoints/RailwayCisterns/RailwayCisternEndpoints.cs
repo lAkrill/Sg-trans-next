@@ -306,7 +306,19 @@ public static class RailwayCisternEndpoints
                         TareWeight2 = rc.TareWeight2,
                         TareWeight3 = rc.TareWeight3,
                         CreatedAt = rc.CreatedAt,
-                        UpdatedAt = rc.UpdatedAt
+                        UpdatedAt = rc.UpdatedAt,
+                        Vessels = rc.Vessels != null
+                            ? rc.Vessels.Select(v => new VesselListDTO
+                            {
+                                Id = v.Id,
+                                SerialNumber = v.SerialNumber,
+                                BuildDate = v.BuildDate,
+                                Manufacturer = v.Manufacturer,
+                                WagonModelId = v.WagonModelId,
+                                Pressure = v.Pressure,
+                                Capacity = v.Capacity
+                            }).ToList()
+                            : null
                     })
                     .ToListAsync();
 
@@ -416,7 +428,19 @@ public static class RailwayCisternEndpoints
                         TareWeight2 = rc.TareWeight2,
                         TareWeight3 = rc.TareWeight3,
                         CreatedAt = rc.CreatedAt,
-                        UpdatedAt = rc.UpdatedAt
+                        UpdatedAt = rc.UpdatedAt,
+                        Vessels = rc.Vessels != null
+                            ? rc.Vessels.Select(v => new VesselListDTO
+                            {
+                                Id = v.Id,
+                                SerialNumber = v.SerialNumber,
+                                BuildDate = v.BuildDate,
+                                Manufacturer = v.Manufacturer,
+                                WagonModelId = v.WagonModelId,
+                                Pressure = v.Pressure,
+                                Capacity = v.Capacity
+                            }).ToList()
+                            : null
                     })
                     .ToListAsync();
 
@@ -556,7 +580,19 @@ public static class RailwayCisternEndpoints
                         TareWeight2 = rc.TareWeight2,
                         TareWeight3 = rc.TareWeight3,
                         CreatedAt = rc.CreatedAt,
-                        UpdatedAt = rc.UpdatedAt
+                        UpdatedAt = rc.UpdatedAt,
+                        Vessels = rc.Vessels != null
+                            ? rc.Vessels.Select(v => new VesselListDTO
+                            {
+                                Id = v.Id,
+                                SerialNumber = v.SerialNumber,
+                                BuildDate = v.BuildDate,
+                                Manufacturer = v.Manufacturer,
+                                WagonModelId = v.WagonModelId,
+                                Pressure = v.Pressure,
+                                Capacity = v.Capacity
+                            }).ToList()
+                            : null
                     })
                     .FirstOrDefaultAsync();
 
