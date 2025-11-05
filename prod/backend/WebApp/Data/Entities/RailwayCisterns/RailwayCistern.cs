@@ -48,6 +48,7 @@ public class RailwayCistern
     public Registrar? Registrar { get; set; }
     public WagonModel? Model { get; set; }
     public WagonType Type { get; set; } = null!;
+    public ICollection<Vessel>? Vessels { get; set; }
     public ICollection<MilageCistern> MilageCisterns { get; set; } = new List<MilageCistern>();
     public ICollection<PartInstallation> PartInstallations { get; set; } = new List<PartInstallation>();
 }

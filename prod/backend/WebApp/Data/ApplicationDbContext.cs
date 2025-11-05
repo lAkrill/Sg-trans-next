@@ -209,6 +209,26 @@ public class ApplicationDbContext(
                 .OnDelete(DeleteBehavior.Cascade); // ON DELETE CASCADE
         });
 
+        //Vessel
+        modelBuilder.Entity<Vessel>(entity =>
+        {
+            entity.ToTable("Vessels");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("Id").IsRequired();
+            entity.Property(e => e.SerialNumber).HasColumnName("SerialNumber").IsRequired().HasColumnType("text");
+            entity.Property(e => e.BuildDate).HasColumnName("BuildDate").IsRequired().HasColumnType("date");
+            entity.Property(e => e.Manufacturer).HasColumnName("Manufacturer").IsRequired().HasColumnType("text");
+            entity.Property(e => e.WagonModelId).HasColumnName("WagonModelId").IsRequired().HasColumnType("text");
+            entity.Property(e => e.Pressure).HasColumnName("Pressure").IsRequired().HasColumnType("numeric");
+            entity.Property(e => e.Capacity).HasColumnName("Capacity ").IsRequired().HasColumnType("numeric");
+
+            entity.HasOne(e => e.RailwayCistern)
+                .WithMany(r => r.Vessels)
+                .HasForeignKey(e => e.RailwayCisternId)
+                .HasConstraintName("Vessels_RailwayCisternId_fkey")
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
         // WagonTypes
         modelBuilder.Entity<WagonType>(entity =>
         {

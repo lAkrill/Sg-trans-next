@@ -46,6 +46,7 @@ public class RailwayCisternDetailDTO
     public decimal TareWeight3 { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+    public List<VesselListDTO>? Vessels { get; set; }
 }
 
 public class RailwayCisternListDTO
