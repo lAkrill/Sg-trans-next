@@ -2,16 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Skeleton,
-  Badge,
-} from "@/components/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Skeleton, Badge } from "@/components/ui";
 import { ArrowLeft, History, FileText, Wrench, Building2, Calendar, Truck } from "lucide-react";
 import { usePartById, usePartInstallationHistory } from "@/hooks";
 import { format } from "date-fns";
@@ -27,7 +18,7 @@ export default function PartHistoryPage() {
   const formatDate = (dateString?: string | { year: number; month: number; day: number }) => {
     if (!dateString) return "—";
     try {
-      if (typeof dateString === 'string') {
+      if (typeof dateString === "string") {
         return format(new Date(dateString), "dd MMMM yyyy", { locale: ru });
       } else {
         // DateOnly format from backend
@@ -40,7 +31,7 @@ export default function PartHistoryPage() {
 
   const formatYear = (yearData?: string | { year: number; month: number; day: number }) => {
     if (!yearData) return "—";
-    if (typeof yearData === 'string') {
+    if (typeof yearData === "string") {
       // Если строка в формате даты (например "2019-01-01"), извлекаем год
       const yearMatch = yearData.match(/^(\d{4})/);
       return yearMatch ? yearMatch[1] : yearData;
@@ -51,21 +42,31 @@ export default function PartHistoryPage() {
 
   const getOperationName = (operation: number) => {
     switch (operation) {
-      case 1: return "Установка";
-      case 2: return "Снятие";
-      case 3: return "Ремонт";
-      case 4: return "Замена";
-      default: return `Операция ${operation}`;
+      case 1:
+        return "Установка";
+      case 2:
+        return "Снятие";
+      case 3:
+        return "Ремонт";
+      case 4:
+        return "Замена";
+      default:
+        return `Операция ${operation}`;
     }
   };
 
   const getOperationColor = (operation: number) => {
     switch (operation) {
-      case 1: return "bg-green-100 text-green-800 border-green-300";
-      case 2: return "bg-red-100 text-red-800 border-red-300";
-      case 3: return "bg-blue-100 text-blue-800 border-blue-300";
-      case 4: return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      default: return "bg-gray-100 text-gray-800 border-gray-300";
+      case 1:
+        return "bg-green-100 text-green-800 border-green-300";
+      case 2:
+        return "bg-red-100 text-red-800 border-red-300";
+      case 3:
+        return "bg-blue-100 text-blue-800 border-blue-300";
+      case 4:
+        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
 
@@ -150,10 +151,6 @@ export default function PartHistoryPage() {
                 {part.status.name}
               </p>
             </div>
-            <div>
-              <span className="text-gray-600 dark:text-gray-400">Депо:</span>
-              <p className="font-medium">{part.depot?.name || "—"}</p>
-            </div>
             {part.serialNumber && (
               <div>
                 <span className="text-gray-600 dark:text-gray-400">Заводской номер:</span>
@@ -169,7 +166,13 @@ export default function PartHistoryPage() {
             {part.currentLocation && (
               <div>
                 <span className="text-gray-600 dark:text-gray-400">Текущее местоположение:</span>
-                <p className="font-medium">{part.currentLocation}</p>
+                <p className="font-medium">Вагон {part.currentLocation.number}</p>
+              </div>
+            )}
+            {!part.currentLocation && part.depot && (
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">Депо:</span>
+                <p className="font-medium">{part.depot.shortName || part.depot.name}</p>
               </div>
             )}
           </div>
@@ -182,30 +185,24 @@ export default function PartHistoryPage() {
           <CardTitle>
             История операций с деталью
             {sortedEquipments.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-gray-500">
-                ({sortedEquipments.length})
-              </span>
+              <span className="ml-2 text-sm font-normal text-gray-500">({sortedEquipments.length})</span>
             )}
           </CardTitle>
-          <CardDescription>
-            Полная история установок, ремонтов и других операций с деталью
-          </CardDescription>
+          <CardDescription>Полная история установок, ремонтов и других операций с деталью</CardDescription>
         </CardHeader>
         <CardContent>
           {sortedEquipments.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              История комплектации отсутствует
-            </div>
+            <div className="text-center py-8 text-gray-500">История комплектации отсутствует</div>
           ) : (
             <div className="space-y-4">
               {sortedEquipments.map((equipment, index) => (
                 <div
                   key={equipment.id}
-                  className="relative p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="relative p-4 border rounded-lg transition-colors"
                 >
                   {/* Timeline indicator */}
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-300 dark:bg-gray-700 rounded-l-lg" />
-                  
+
                   <div className="pl-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
@@ -225,6 +222,24 @@ export default function PartHistoryPage() {
                           </p>
                         </div>
                       </div>
+
+                      {/* Документ в правой части заголовка */}
+                      {equipment.document && (
+                        <div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-white">
+                                Документ {equipment.document.number}
+                              </p>
+                              <div className="flex gap-2 text-xs text-gray-500">
+                                {equipment.document.date && <span>{formatDate(equipment.document.date)}</span>}
+                                {equipment.document.author && <span>• {equipment.document.author}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
@@ -279,36 +294,23 @@ export default function PartHistoryPage() {
                         </div>
                       )}
 
-                      {/* ID Документа (вместо объекта) */}
-                      {equipment.documetnsId && (
-                        <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded">
-                          <FileText className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="text-gray-600 dark:text-gray-400 text-xs">ID Документа:</span>
-                            <p className="font-medium">{equipment.documetnsId}</p>
-                            {equipment.documetnDate && (
-                              <p className="text-xs text-gray-500">{formatDate(equipment.documetnDate)}</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
                       {/* Толщина колес (если есть) */}
-                      {((equipment.thicknessLeft && equipment.thicknessLeft > 0) || 
-                        (equipment.thicknessRight && equipment.thicknessRight > 0)) && (
+                      {equipment.thicknessLeft != 0 && equipment.thicknessRight != 0 && (
                         <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded">
                           <Calendar className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div>
-                            <span className="text-gray-600 dark:text-gray-400 text-xs">Толщина колес:</span>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs">Толщина колес (мм):</span>
                             <p className="font-medium">
-                              Л: {equipment.thicknessLeft} / П: {equipment.thicknessRight}
+                              Левое: {equipment.thicknessLeft} мм
+                              <br />
+                              Правое: {equipment.thicknessRight} мм
                             </p>
                           </div>
                         </div>
                       )}
 
                       {/* Тип тележки */}
-                      {equipment.truckType && (
+                      {equipment.truckType != 0 && (
                         <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded">
                           <Truck className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div>
@@ -322,9 +324,7 @@ export default function PartHistoryPage() {
                     {/* Примечания */}
                     {equipment.notes && (
                       <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">
-                          Примечания
-                        </p>
+                        <p className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">Примечания</p>
                         <p className="text-sm text-blue-700 dark:text-blue-300">{equipment.notes}</p>
                       </div>
                     )}

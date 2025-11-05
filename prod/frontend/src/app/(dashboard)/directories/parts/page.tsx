@@ -99,7 +99,8 @@ export default function PartsPage() {
       part.serialNumber?.toLowerCase().includes(search) ||
       part.partType.name.toLowerCase().includes(search) ||
       part.stampNumber.value.toLowerCase().includes(search) ||
-      part.currentLocation?.toLowerCase().includes(search)
+      part.currentLocation?.number.toLowerCase().includes(search) ||
+      part.depot?.name.toLowerCase().includes(search)
     );
   }) as PartDTO[];
 
@@ -146,22 +147,6 @@ export default function PartsPage() {
     }
     // DateOnly format from backend
     return yearData.year.toString();
-  };
-
-  const formatDate = (dateData?: string | { year: number; month: number; day: number }) => {
-    if (!dateData) return "";
-    if (typeof dateData === 'string') {
-      // Если строка в формате ISO (например "2019-01-01"), конвертируем в DD.MM.YYYY
-      const dateMatch = dateData.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (dateMatch) {
-        const [, year, month, day] = dateMatch;
-        return `${day}.${month}.${year}`;
-      }
-      return dateData;
-    }
-    // DateOnly format from backend
-    const { year, month, day } = dateData;
-    return `${day.toString().padStart(2, '0')}.${month.toString().padStart(2, '0')}.${year}`;
   };
 
   if (error) {
@@ -290,7 +275,6 @@ export default function PartsPage() {
                     <TableHead>Год производства</TableHead>
                     <TableHead>Местоположение</TableHead>
                     <TableHead>Статус</TableHead>
-                    <TableHead>Депо</TableHead>
                     <TableHead>Примечания</TableHead>
                     <TableHead>Действия</TableHead>
                   </TableRow>
@@ -304,13 +288,17 @@ export default function PartsPage() {
                       <TableCell>{part.stampNumber.value}</TableCell>
                       <TableCell>{part.serialNumber || "—"}</TableCell>
                       <TableCell>{formatYear(part.manufactureYear)}</TableCell>
-                      <TableCell>{part.currentLocation || "—"}</TableCell>
+                      <TableCell>
+                        {part.currentLocation 
+                          ? `Вагон ${part.currentLocation.number}` 
+                          : part.depot?.shortName || part.depot?.name || "—"
+                        }
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" style={{ borderColor: part.status.color }}>
                           {part.status.name}
                         </Badge>
                       </TableCell>
-                      <TableCell>{part.depot?.shortName || "—"}</TableCell>
                       <TableCell>{part.notes || "—"}</TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-2">

@@ -327,7 +327,7 @@ export interface PartDTO extends BaseEntity {
   stampNumber: StampNumberDTO;
   serialNumber?: string;
   manufactureYear?: string | { year: number; month: number; day: number }; // DateOnly может прийти как объект
-  currentLocation?: string;
+  currentLocation?: { id: string; number: string };
   status: PartStatusDTO;
   notes?: string;
   createdAt: string;
@@ -569,6 +569,7 @@ export interface PartEquipmentDTO {
     description: string;
   };
   part?: PartInfoDTO;
+  document?: DocumentDTO;
 }
 
 export interface LastEquipmentDTO {

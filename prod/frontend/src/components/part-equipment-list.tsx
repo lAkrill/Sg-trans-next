@@ -493,7 +493,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4 text-gray-400" />
-                                {formatDate(equipment.documetnDate)}
+                                {formatDate(equipment.document?.date)}
                               </div>
                             </TableCell>
                             <TableCell>
