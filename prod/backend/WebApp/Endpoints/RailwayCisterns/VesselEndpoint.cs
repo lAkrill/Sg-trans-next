@@ -9,6 +9,13 @@ using WebApp.Extensions;
 
 namespace WebApp.Endpoints.RailwayCisterns;
 
+public record ResponseForVesselPagination(
+    List<VesselListWithCisternNumberDTO> Vessels,
+    int TotalCount,
+    int TotalPages,
+    int CurrentPage,
+    int PageSize);
+
 public static class VesselEndpoint
 {
     public static void MapVesselEndpoints(this IEndpointRouteBuilder app)
@@ -17,11 +24,21 @@ public static class VesselEndpoint
             .RequireAuthorization()
             .WithTags("Vessels");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/", async ([FromServices] ApplicationDbContext context,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 10) =>
             {
-                var vessels = await context.Vessels
+                var query = context.Vessels
                     .Include(v => v.RailwayCistern)
-                    .Select(v => new VesselDTO()
+                    .AsQueryable();
+
+                var totalCount = await query.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+                var vessels = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(v => new VesselListWithCisternNumberDTO()
                     {
                         Id = v.Id,
                         SerialNumber = v.SerialNumber,
@@ -30,29 +47,25 @@ public static class VesselEndpoint
                         WagonModelId = v.WagonModelId,
                         Pressure = v.Pressure,
                         Capacity = v.Capacity,
-                        RailwayCisternListDto = v.RailwayCistern != null
-                            ? new RailwayCisternListDTO()
+                        RailwayCisternIdAndNumberDto = v.RailwayCistern != null
+                            ? new RailwayCisternIdAndNumberDTO()
                             {
                                 Id = v.RailwayCistern.Id,
-                                Number = v.RailwayCistern.Number,
-                                ManufacturerName = v.RailwayCistern.Manufacturer.Name,
-                                BuildDate = v.RailwayCistern.BuildDate,
-                                TypeName = v.RailwayCistern.Type.Name,
-                                ModelName = v.RailwayCistern.Model.Name,
-                                OwnerName = v.RailwayCistern.Owner.Name,
-                                RegistrationNumber = v.RailwayCistern.RegistrationNumber,
-                                RegistrationDate = v.RailwayCistern.RegistrationDate,
-                                AffiliationValue = v.RailwayCistern.Affiliation.Value
+                                Number = v.RailwayCistern.Number
                             }
                             : null
                     })
                     .ToListAsync();
-
+                var response = new ResponseForVesselPagination(vessels, 
+                    totalCount, 
+                    totalPages, 
+                    page, 
+                    pageSize);
                 return Results.Ok(vessels);
             })
             .WithName("GetVessels")
             .ProducesValidationProblem()
-            .Produces<List<VesselDTO>>(StatusCodes.Status200OK)
+            .Produces<ResponseForVesselPagination>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
 
         group.MapGet("/{id}", async ([FromServices] ApplicationDbContext context, Guid id) =>

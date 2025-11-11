@@ -22,6 +22,7 @@ import {
   FileText,
   Car,
   Cog,
+  Droplet,
 } from "lucide-react";
 import { useCurrentUser, useVersion } from "@/hooks";
 import { Role } from "@/types/auth";
@@ -89,6 +90,11 @@ const directoryItems: SidebarItem[] = [
     title: "Модели вагонов",
     href: "/directories/wagon-models",
     icon: Car,
+  },
+  {
+    title: "Сосуды",
+    href: "/directories/vessels",
+    icon: Droplet,
   },
 ];
 

@@ -1,5 +1,7 @@
 // Railway Cistern types based on backend DTOs
 
+import { VesselListDTO } from "./vessels";
+
 export interface RailwayCisternListDTO {
   id: string;
   number: string;
@@ -70,6 +72,7 @@ export interface RailwayCisternDetailDTO {
   tareWeight3: number;
   createdAt: string;
   updatedAt: string;
+  vessels: VesselListDTO[]
 }
 
 export interface RailwayCisternListDTO {

@@ -66,6 +66,7 @@ import type {
   UpdateStationDTO,
   PaginatedStationsResponse,
 } from '@/types/directories';
+import { CreateVesselDTO, PaginatedVesselsResponse, UpdateVesselDto, VesselDTO } from '@/types/vessels';
 
 // Generic CRUD operations for directories
 const createDirectoryApi = <T, CreateT, UpdateT>(endpoint: string) => ({
@@ -220,6 +221,39 @@ export const convertToSelectOptions = {
 
   partStatuses: (partStatuses: PartStatusDTO[]) =>
     partStatuses.map(ps => ({ value: ps.id, label: ps.name })),
+
+  vessels: (vessels: { id: string; serialNumber?: string; manufacturer?: string }[]) =>
+    vessels.map(v => ({ value: v.id, label: `${v.serialNumber ?? ''} (${v.manufacturer ?? ''})` })),
+};
+
+//Vessels API
+export const vesselsApi = {
+  getAll: async (pageNumber = 1, pageSize = 10): Promise<PaginatedVesselsResponse> => {
+    const params = new URLSearchParams({
+      pageNumber: pageNumber.toString(),
+      pageSize: pageSize.toString(),
+    });
+    const response = await api.get(`/api/vessels?${params.toString()}`);
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<VesselDTO> => {
+    const response = await api.get(`/api/vessels/${id}`);
+    return response.data;
+  },
+
+  create: async (data: CreateVesselDTO): Promise<string> => {
+    const response = await api.post('/api/vessels', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: UpdateVesselDto): Promise<void> => {
+    await api.put(`/api/vessels/${id}`, data);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/api/vessels/${id}`);
+  },
 };
 
 // Parts API

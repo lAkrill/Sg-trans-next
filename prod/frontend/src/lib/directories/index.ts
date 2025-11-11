@@ -16,6 +16,7 @@ export { repairTypesConfig } from './repair-types.config';
 export { registrarsConfig } from './registrars.config';
 export { stampNumbersConfig } from './stamp-numbers.config';
 export { partsBaseConfig } from './parts.config';
+export { vesselsConfig } from './vessels.config';
 
 // Объект со всеми базовыми конфигурациями
 import { affiliationsBaseConfig } from './affiliations.config';
@@ -31,6 +32,7 @@ import { repairTypesBaseConfig } from './repair-types.config';
 import { registrarsBaseConfig } from './registrars.config';
 import { stampNumbersBaseConfig } from './stamp-numbers.config';
 import { partsBaseConfig } from './parts.config';
+import { vesselsBaseConfig } from './vessels.config';
 import { DirectoryConfig } from './types';
 
 export const directoriesConfig: Record<string, DirectoryConfig> = {
@@ -47,6 +49,7 @@ export const directoriesConfig: Record<string, DirectoryConfig> = {
   registrars: registrarsBaseConfig,
   stampNumbers: stampNumbersBaseConfig,
   parts: partsBaseConfig,
+  vessels: vesselsBaseConfig,
 };
 
 // Утилиты для работы с базовыми конфигурациями

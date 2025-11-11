@@ -4,6 +4,7 @@ import { TechnicalSpecsCard } from './technical-specs-card';
 import { ManufacturerCard } from './manufacturer-card';
 import { OwnerCard } from './owner-card';
 import { SafetyInfoCard } from './safety-info-card';
+import { VesselCard } from './vessel-card';
 
 import { RailwayCisternDetailDTO } from '@/types/cisterns';
 
@@ -30,6 +31,10 @@ export function GeneralInfoTab({ cistern }: GeneralInfoTabProps) {
         fillingVolume={cistern.fillingVolume}
       />
 
+      {cistern.vessels && cistern.vessels.length > 0 && (
+        <VesselCard vessels={cistern.vessels} />
+      )}
+
       <ManufacturerCard
         manufacturerName={cistern.manufacturer?.name}
         typeName={cistern.type?.name}
@@ -50,6 +55,8 @@ export function GeneralInfoTab({ cistern }: GeneralInfoTabProps) {
         pressure={cistern.pressure}
         testPressure={cistern.testPressure}
       />
+
+      
 
       {cistern.notes && (
         <Card className="md:col-span-2">

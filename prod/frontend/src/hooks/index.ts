@@ -15,6 +15,7 @@ export * from './parts.hook';
 export * from './partEquipment.hook';
 export * from './partsFilter.hook';
 export * from './part-installations.hook';
+export * from './vessels.hook';
 
 export * from './auth.hook';
 export * from './cisterns.hook';
