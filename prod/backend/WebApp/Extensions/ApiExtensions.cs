@@ -48,6 +48,7 @@ public static class ApiExtensions
         app.MapStationEndpoints();
         app.MapDocumentEndpoints();
         app.MapVesselEndpoints();
+        app.MapDislocationEndpoints();
     }
 
     public static void AddApiAuthentication(
