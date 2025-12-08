@@ -15,6 +15,8 @@ import type {
 } from "@/types/vessels";
 import type { DirectoryConfig } from "@/components/directory-manager";
 import { DirectoryConfig as BaseDirectoryConfig } from "./types";
+import { CisternSelect } from "@/components/cistern-select";
+import { WagonModelSelect } from "@/components/wagon-model-select";
 
 // Базовая конфигурация полей
 export const vesselsBaseConfig: BaseDirectoryConfig = {
@@ -47,9 +49,9 @@ export const vesselsBaseConfig: BaseDirectoryConfig = {
     {
       key: "wagonModelId",
       label: "Модель вагона",
-      type: "text",
+      type: "custom",
       required: true,
-      placeholder: "Введите ID модели вагона",
+      customComponent: WagonModelSelect,
     },
     {
       key: "pressure",
@@ -68,8 +70,9 @@ export const vesselsBaseConfig: BaseDirectoryConfig = {
     {
       key: "railwayCisternId",
       label: "Железнодорожная цистерна",
-      type: "select",
+      type: "custom",
       required: true,
+      customComponent: CisternSelect,
     },
   ],
 };
@@ -86,7 +89,7 @@ export const vesselsConfig: DirectoryConfig<
   fields: vesselsBaseConfig.fields.map((field) => ({
     key: field.key,
     label: field.label,
-    type:
+    type: field.type === "custom" ? "custom" : 
       field.type === "boolean" ||
       field.type === "select" ||
       field.type === "textarea"
@@ -94,6 +97,7 @@ export const vesselsConfig: DirectoryConfig<
         : field.type,
     required: field.required,
     placeholder: field.placeholder,
+    customComponent: field.customComponent,
   })),
   hooks: {
     useGetAll: useVessels,

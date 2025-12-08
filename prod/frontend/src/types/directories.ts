@@ -287,20 +287,14 @@ export interface UpdateRegistrarDTO {
 // WagonModel (Модель вагона)
 export interface WagonModelDTO extends BaseEntity {
   name: string;
-  typeId: string;
-  manufacturerId: string;
 }
 
 export interface CreateWagonModelDTO {
   name: string;
-  typeId: string;
-  manufacturerId: string;
 }
 
 export interface UpdateWagonModelDTO {
   name: string;
-  typeId: string;
-  manufacturerId: string;
 }
 
 // StampNumber (Номер клейма)

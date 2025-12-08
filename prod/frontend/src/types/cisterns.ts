@@ -2,6 +2,11 @@
 
 import { VesselListDTO } from "./vessels";
 
+export interface RailwayCisternIdAndNumberDTO {
+  id: string;
+  number: string;
+}
+
 export interface RailwayCisternListDTO {
   id: string;
   number: string;

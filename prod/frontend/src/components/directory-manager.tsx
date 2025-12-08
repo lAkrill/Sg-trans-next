@@ -48,9 +48,14 @@ export interface BaseDirectoryItem {
 export interface DirectoryFieldConfig {
   key: string;
   label: string;
-  type: "text" | "number" | "email";
+  type: "text" | "number" | "email" | "custom";
   required?: boolean;
   placeholder?: string;
+  customComponent?: React.ComponentType<{
+    value: unknown;
+    onChange: (value: unknown) => void;
+    disabled?: boolean;
+  }>;
 }
 
 // Configuration interface for directory management
@@ -401,17 +406,24 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                     {field.label}
                     {field.required && <span className="text-red-500 ml-1">*</span>}
                   </Label>
-                  <Input
-                    id={field.key}
-                    type={field.type}
-                    value={String((formData as Record<string, unknown>)[field.key] || "")}
-                    onChange={(e) => {
-                      const value =
-                        field.type === "number" ? (e.target.value ? parseInt(e.target.value) : 0) : e.target.value;
-                      updateFormField(field.key, value);
-                    }}
-                    placeholder={field.placeholder}
-                  />
+                  {field.type === "custom" && field.customComponent ? (
+                    <field.customComponent
+                      value={(formData as Record<string, unknown>)[field.key] || ""}
+                      onChange={(value) => updateFormField(field.key, value)}
+                    />
+                  ) : (
+                    <Input
+                      id={field.key}
+                      type={field.type}
+                      value={String((formData as Record<string, unknown>)[field.key] || "")}
+                      onChange={(e) => {
+                        const value =
+                          field.type === "number" ? (e.target.value ? parseInt(e.target.value) : 0) : e.target.value;
+                        updateFormField(field.key, value);
+                      }}
+                      placeholder={field.placeholder}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -526,17 +538,24 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                   {field.label}
                   {field.required && <span className="text-red-500 ml-1">*</span>}
                 </Label>
-                <Input
-                  id={`edit-${field.key}`}
-                  type={field.type}
-                  value={String((formData as Record<string, unknown>)[field.key] || "")}
-                  onChange={(e) => {
-                    const value =
-                      field.type === "number" ? (e.target.value ? parseInt(e.target.value) : 0) : e.target.value;
-                    updateFormField(field.key, value);
-                  }}
-                  placeholder={field.placeholder}
-                />
+                {field.type === "custom" && field.customComponent ? (
+                  <field.customComponent
+                    value={(formData as Record<string, unknown>)[field.key] || ""}
+                    onChange={(value) => updateFormField(field.key, value)}
+                  />
+                ) : (
+                  <Input
+                    id={`edit-${field.key}`}
+                    type={field.type}
+                    value={String((formData as Record<string, unknown>)[field.key] || "")}
+                    onChange={(e) => {
+                      const value =
+                        field.type === "number" ? (e.target.value ? parseInt(e.target.value) : 0) : e.target.value;
+                      updateFormField(field.key, value);
+                    }}
+                    placeholder={field.placeholder}
+                  />
+                )}
               </div>
             ))}
           </div>

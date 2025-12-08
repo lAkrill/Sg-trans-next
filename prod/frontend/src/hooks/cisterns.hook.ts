@@ -11,6 +11,7 @@ import type {
   CreateSavedFilterDTO,
   UpdateSavedFilterDTO,
   FilteredCisternsResponse,
+  RailwayCisternIdAndNumberDTO,
 } from '@/types/cisterns';
 
 // Query keys
@@ -106,6 +107,16 @@ export const useCisternNumbers = () => {
     queryKey: cisternsKeys.allNumbers(),
     queryFn: () => cisternsApi.getAllNumbers(),
     staleTime: 10 * 60 * 1000, // 10 minutes - numbers don't change often
+    gcTime: 15 * 60 * 1000, // 15 minutes
+  });
+};
+
+// Get all cistern IDs and numbers for select dropdowns
+export const useCisternIdAndNumbers = () => {
+  return useQuery<RailwayCisternIdAndNumberDTO[]>({
+    queryKey: [...cisternsKeys.all, 'id-numbers'],
+    queryFn: () => cisternsApi.getAllIdAndNumbers(),
+    staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 15 * 60 * 1000, // 15 minutes
   });
 };

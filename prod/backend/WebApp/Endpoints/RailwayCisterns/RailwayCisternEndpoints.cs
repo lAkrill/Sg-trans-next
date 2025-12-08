@@ -45,6 +45,19 @@ public static class RailwayCisternEndpoints
             .Produces<List<string>>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
 
+// Get all cistern numbers and ids
+        group.MapGet("/id-numbers", async ([FromServices] ApplicationDbContext context) =>
+            {
+                var list = await context.Set<RailwayCistern>()
+                    .Select(rc => new RailwayCisternIdAndNumberDTO { Id = rc.Id, Number = rc.Number })
+                    .OrderBy(n => n.Number)
+                    .ToListAsync();
+                return Results.Ok(list);
+            })
+            .WithName("GetAllCisternIdsAndNumbers")
+            .Produces<List<RailwayCisternIdAndNumberDTO>>(StatusCodes.Status200OK)
+            .RequirePermissions(Permission.Read);
+
         // Search cistern numbers by prefix
         group.MapGet("/numbers/search", async (
                 [FromServices] ApplicationDbContext context,

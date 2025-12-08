@@ -1,3 +1,5 @@
+import React from 'react';
+
 // Базовые типы для конфигурации справочников
 export interface DirectoryConfig {
   name: string;
@@ -10,10 +12,15 @@ export interface DirectoryConfig {
 export interface DirectoryField {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'textarea';
+  type: 'text' | 'number' | 'boolean' | 'select' | 'textarea' | 'custom';
   required?: boolean;
   placeholder?: string;
   options?: Array<{ value: string; label: string }>;
+  customComponent?: React.ComponentType<{
+    value: unknown;
+    onChange: (value: unknown) => void;
+    disabled?: boolean;
+  }>;
   validation?: {
     min?: number;
     max?: number;

@@ -141,8 +141,7 @@ public static class VesselEndpoint
                 {
                     return Results.NotFound();
                 }
-
-                vessel.Id = Guid.NewGuid();
+                
                 vessel.SerialNumber = dto.SerialNumber;
                 vessel.BuildDate = dto.BuildDate;
                 vessel.Manufacturer = dto.Manufacturer;

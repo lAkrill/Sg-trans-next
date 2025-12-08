@@ -25,18 +25,6 @@ export const wagonModelsBaseConfig: BaseDirectoryConfig = {
       required: true,
       placeholder: 'Введите название модели',
     },
-    {
-      key: 'typeId',
-      label: 'Тип вагона',
-      type: 'select',
-      required: true,
-    },
-    {
-      key: 'manufacturerId',
-      label: 'Производитель',
-      type: 'select',
-      required: true,
-    },
   ],
 };
 
@@ -61,13 +49,9 @@ export const wagonModelsConfig: DirectoryConfig<WagonModelDTO, CreateWagonModelD
   searchFields: ["name"] as (keyof WagonModelDTO)[],
   tableColumns: [
     { key: "name", label: "Название модели" },
-    { key: "typeId", label: "Тип вагона" },
-    { key: "manufacturerId", label: "Производитель" },
   ],
-  createInitialData: () => ({ name: "", typeId: "", manufacturerId: "" }),
+  createInitialData: () => ({ name: ""}),
   mapToFormData: (item: WagonModelDTO) => ({
     name: item.name,
-    typeId: item.typeId,
-    manufacturerId: item.manufacturerId,
   }),
 };

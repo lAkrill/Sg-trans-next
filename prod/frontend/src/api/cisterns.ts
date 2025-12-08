@@ -12,6 +12,7 @@ import type {
   CreateSavedFilterDTO,
   UpdateSavedFilterDTO,
   FilteredCisternsApiResponse,
+  RailwayCisternIdAndNumberDTO,
 } from '@/types/cisterns';
 
 const CISTERNS_ENDPOINT = '/api/railway-cisterns';
@@ -72,6 +73,14 @@ export const cisternsApi = {
   // Get all cistern numbers
   getAllNumbers: async (): Promise<string[]> => {
     const response = await api.get<string[]>(`${CISTERNS_ENDPOINT}/numbers`);
+    return response.data;
+  },
+
+  // Get all cistern IDs and numbers
+  getAllIdAndNumbers: async (): Promise<RailwayCisternIdAndNumberDTO[]> => {
+    const response = await api.get<RailwayCisternIdAndNumberDTO[]>(
+      `${CISTERNS_ENDPOINT}/id-numbers`
+    );
     return response.data;
   },
 
