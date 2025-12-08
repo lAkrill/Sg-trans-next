@@ -762,6 +762,87 @@ export default function EditCisternPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Operational Information */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Информация об эксплуатации и ремонте</CardTitle>
+              <CardDescription>Данные о техническом состоянии и сроках проверок</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="techConditions">Техническое состояние</Label>
+                  <Input
+                    id="techConditions"
+                    value={formData.techConditions || ""}
+                    onChange={(e) => handleInputChange("techConditions", e.target.value)}
+                    placeholder="Описание технического состояния"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pripiska">Приписка</Label>
+                  <Input
+                    id="pripiska"
+                    value={formData.pripiska || ""}
+                    onChange={(e) => handleInputChange("pripiska", e.target.value)}
+                    placeholder="Место приписки"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rent">Аренда</Label>
+                  <Input
+                    id="rent"
+                    value={formData.rent || ""}
+                    onChange={(e) => handleInputChange("rent", e.target.value)}
+                    placeholder="Данные об аренде"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="periodMajorRepair">Дата планового капитального ремонта</Label>
+                  <Input
+                    id="periodMajorRepair"
+                    type="date"
+                    value={formData.periodMajorRepair || ""}
+                    onChange={(e) => handleInputChange("periodMajorRepair", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="periodPeriodicTest">Дата плановой периодической проверки</Label>
+                  <Input
+                    id="periodPeriodicTest"
+                    type="date"
+                    value={formData.periodPeriodicTest || ""}
+                    onChange={(e) => handleInputChange("periodPeriodicTest", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="periodIntermediateTest">Дата промежуточной проверки</Label>
+                  <Input
+                    id="periodIntermediateTest"
+                    type="date"
+                    value={formData.periodIntermediateTest || ""}
+                    onChange={(e) => handleInputChange("periodIntermediateTest", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="periodDepotRepair">Дата планового деповского ремонта</Label>
+                  <Input
+                    id="periodDepotRepair"
+                    type="date"
+                    value={formData.periodDepotRepair || ""}
+                    onChange={(e) => handleInputChange("periodDepotRepair", e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Form Actions */}
