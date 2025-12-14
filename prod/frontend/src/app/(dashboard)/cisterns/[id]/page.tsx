@@ -136,7 +136,7 @@ export default function CisternPassportPage() {
 
         {/* Location Tab */}
         <TabsContent value="location">
-          <LocationTab />
+          <LocationTab CicternNumber={cistern.number} />
         </TabsContent>
 
         {/* History Tab */}

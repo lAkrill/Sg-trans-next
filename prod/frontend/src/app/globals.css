@@ -112,6 +112,15 @@
   --sidebar-ring: oklch(0.552 0.016 285.938);
 }
 
+.leaflet-container {
+  height: 480px;
+  width: 640px;
+}
+
+.leaflet-pane {
+    top: 9px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
