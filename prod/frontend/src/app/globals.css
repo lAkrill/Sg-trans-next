@@ -114,10 +114,9 @@
 
 .leaflet-container {
   height: 480px;
-  width: 640px;
 }
 
-.leaflet-pane {
+.leaflet-marker-pane img {
     top: 9px;
 }
 

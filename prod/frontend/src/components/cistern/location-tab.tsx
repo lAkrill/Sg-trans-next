@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { MapPin, MapIcon } from "lucide-react";
 import { CisternDislocation } from "@/api/dislocations";
-import type { CisternLastLocation } from "@/api/dislocations";
+import type { CisternLastLocation, CisternAllLocation } from "@/api/dislocations";
 import "@/lib/leaflet/dist/leaflet.css";
 import L, {Map, TileLayer, Marker, Circle, Polygon, Popup, Tooltip, Icon} from "@/lib/leaflet/dist/leaflet-src.js";
 
@@ -15,6 +15,7 @@ type LocationTabProps = {
 export function LocationTab({CicternNumber}:LocationTabProps) {
 
   const [location, setLocation] = useState<CisternLastLocation | null>(null);
+  const [locationAll, setLocationAll] = useState<CisternAllLocation[] | null>(null);
 
   const myIcon = new Icon({
 			iconUrl: '../tank.png',
@@ -23,16 +24,17 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 	});
 
   const handleCisternSelect = useCallback(async () => {
-    console.log('Number:', CicternNumber);
-    const res = await CisternDislocation.getLastLocation( CicternNumber);
-    
-    setLocation(res); // сохраняем  в state
+    const res1 = await CisternDislocation.getLastLocation( CicternNumber);
+    const res2 = await CisternDislocation.getAllLocation( CicternNumber);
+    setLocation(res1); // сохраняем  в state
+    setLocationAll(res2);
   }, []);
 
 
-  useEffect(() => {
-    handleCisternSelect(); // вызываем при монтировании
-  }, [handleCisternSelect]);
+   useEffect(() => {
+     handleCisternSelect(); // вызываем при монтировании
+  
+    }, [handleCisternSelect]);
 
   
   useEffect(() => {
@@ -48,7 +50,7 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
     const map = new Map('map').setView([location.lat,	location.lon], 13);
 
 		 const osm  = new TileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 19,
+			maxZoom: 15,
 			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 			opacity: 0.7
 		 });
@@ -64,7 +66,7 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 		// 1. Железнодорожный транспорт (OpenRailwayMap)
 		var railwayLayer = new TileLayer('https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
 			attribution: '&copy; <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a>',
-			maxZoom: 19,
+			maxZoom: 15,
 			opacity: 1
 		}).addTo(map);
 
@@ -78,6 +80,46 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 
     
   },  [location]);
+
+
+  // утилита для группировки подряд идущих станций
+  function groupStations(locations: CisternAllLocation[]) {
+    const result: { name: string; count: number; date: string }[] = [];
+    let prevName = "";
+    let count = 0;
+    let lastDate = "";
+    let firstDate = "";
+    let day1;
+    let day2;
+    let day3;
+    for (const loc of locations) {
+      if (loc.nameStationOpr === prevName) {
+        firstDate = loc.dateOpr;
+      } else {
+        if (prevName) {
+          if (firstDate) {
+            day1 = new Date(firstDate).getTime();
+            day2 = new Date(lastDate).getTime();
+            day3 = Math.trunc((((day2-day1)/1000) / 3600) / 24);
+            // console.log(loc.nameStationOpr, day2, day1, day3)
+            count = day3;
+            firstDate = "";
+          }
+          result.push({ name: prevName, count, date: lastDate });
+        }
+        prevName = loc.nameStationOpr;
+        count = 1;
+        lastDate = loc.dateOpr;
+      }
+    }
+
+    // добавляем последнюю группу
+    if (prevName) {
+      result.push({ name: prevName, count, date: lastDate });
+    }
+
+    return result;
+  }
 
   return (
     <div className="space-y-6">
@@ -107,16 +149,25 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 
         </CardHeader>
         <CardContent className="px-0">
-          <div className="h-[600px] rounded-lg overflow-hidden border ml-[24px] mr-[24px]">
+          <div className="flex h-[480px] rounded-lg overflow-hidden border ml-[24px] mr-[24px] mb-[24px]">
 
-            <div id="map" className="w-full h-full" />
-
-            {/* <iframe
-              src="https://www.openrailwaymap.org/?style=standard&lat=55.519499&lon=28.5920011&zoom=15"
-              className="w-full h-full border-0"
-              title="Railway Map - Интерактивная карта"
-              allowFullScreen
-            /> */}
+            <div id="map" className="w-2/3 h-full" />
+            {/* Список станций */}
+            <div className="w-1/3 h-full overflow-y-auto border-l p-4 bg-gray-50 ml-[24px]">
+              <h3 className="font-semibold mb-2">История перемещения</h3>
+              <ul className="space-y-2">
+                  {locationAll && groupStations(locationAll).map((item, idx) => (
+                    <li key={idx} className="text-sm">
+                      <p className={item.count > 3 ? "text-red-600" : "text-black"}>
+                        <b>{item.name}</b> — простой вагона <b>{item.count}</b> дней
+                      </p>
+                      <p className={item.count > 3 ? "text-red-600" : "text-gray-600"}>
+                        Последняя дата операции: <b>{new Date(item.date).toLocaleDateString()}</b>
+                      </p>
+                    </li>
+                  ))}
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>
