@@ -525,8 +525,8 @@ export interface PartEquipmentDTO {
   thicknessRight?: number;
   truckType?: number;
   notes?: string;
-  documetnsId?: number;
-  documetnDate?: string;
+  documentsId?: number;
+  documentDate?: string;
   railwayCistern?: {
     id: string;
     number: string;

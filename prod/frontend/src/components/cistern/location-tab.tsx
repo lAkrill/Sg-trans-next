@@ -84,10 +84,13 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 
   // утилита для группировки подряд идущих станций
   function groupStations(locations: CisternAllLocation[]) {
-    const result: { name: string; count: number; date: string }[] = [];
+    const result: { name: string; code: string; count: number; date: string }[] = [];
     let prevName = "";
+    let prevCode = "";
     let count = 0;
     let lastDate = "";
+  
+   
     let firstDate = "";
     let day1;
     let day2;
@@ -105,9 +108,10 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
             count = day3;
             firstDate = "";
           }
-          result.push({ name: prevName, count, date: lastDate });
+          result.push({ name: prevName, code: prevCode, count, date: lastDate });
         }
         prevName = loc.nameStationOpr;
+        prevCode = loc.codeStationOpr;
         count = 1;
         lastDate = loc.dateOpr;
       }
@@ -115,9 +119,15 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 
     // добавляем последнюю группу
     if (prevName) {
-      result.push({ name: prevName, count, date: lastDate });
+      result.push({ name: prevName, code: prevCode, count, date: lastDate });
     }
-
+    
+    day1 = new Date(result[0].date).getTime();
+    day2 = new Date().getTime();
+    day3 = Math.trunc((((day2-day1)/1000) / 3600) / 24);
+            
+    
+    result[0].count = day3; 
     return result;
   }
 
@@ -134,7 +144,11 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
         <CardContent>
           Последнее местоположение
           <p>
-            Станция: <b>{location?.nameStationOpr} </b>, Дата: <b>{new Date(location?.dateOpr ?? "").toLocaleDateString()}</b>
+            Станция: <b>{location?.nameStationOpr} ({location?.codeStationOpr})</b>, Дата операции: <b>{new Date(location?.dateOpr ?? "").toLocaleDateString()}</b>
+            <br></br>
+            Операция: {location?.operationNote} ({location?.operationShort})
+            <br></br>
+            Груз: {location?.nameShip} ({location?.codeShip})
           </p>
           </CardContent>
       </Card>
@@ -159,7 +173,7 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
                   {locationAll && groupStations(locationAll).map((item, idx) => (
                     <li key={idx} className="text-sm">
                       <p className={item.count > 3 ? "text-red-600" : "text-black"}>
-                        <b>{item.name}</b> — простой вагона <b>{item.count}</b> дней
+                        <b>{item.name} ({item.code})</b> — простой вагона <b>{item.count}</b> дней
                       </p>
                       <p className={item.count > 3 ? "text-red-600" : "text-gray-600"}>
                         Последняя дата операции: <b>{new Date(item.date).toLocaleDateString()}</b>

@@ -6,21 +6,41 @@ const DISLOCATION_ALL_ENDPOINT = '/api/dislocations/locations/by-number';
 export interface CisternLastLocation {
   id: string;
   dateOpr: string;
-  nameStationOpr: string;
   lat: number;
   lon: number;
+  dateRas: string;
+  numCistern: string;
+  codeStationOpr: string;
+  nameStationOpr: string;
+  roadDislocation: string;
+  operationShort: string;
+  operationNote: string;
+  codeStationOut: string;
+  nameStationOut: string;
+  codeStationEnd: string;
+  nameStationEnd: string;
+  codeShip: string;
+  nameShip: string;
 }
 
 export interface CisternAllLocation {
-    id: string;
-    dateRas: string;
-    dateOpr: string;
-    numCistern: string;
-    codeStationOpr: string;
-    nameStationOpr: string;
-    operationShort: string;
-    codeStationOut: string;
-    nameStationOut: string;
+  id: string;
+  dateOpr: string;
+  lat: number;
+  lon: number;
+  dateRas: string;
+  numCistern: string;
+  codeStationOpr: string;
+  nameStationOpr: string;
+  roadDislocation: string;
+  operationShort: string;
+  operationNote: string;
+  codeStationOut: string;
+  nameStationOut: string;
+  codeStationEnd: string;
+  nameStationEnd: string;
+  codeShip: string;
+  nameShip: string;
 }
 
 
