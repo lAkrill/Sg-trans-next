@@ -57,7 +57,7 @@ public static class MilageCisternEndpoints
                 .FirstOrDefaultAsync();
             return milage is null ? Results.NotFound() : Results.Ok(milage);
         })
-        .WithName("GetMilageCisternById")
+        .WithName("GetLastMilageCisternById")
         .Produces<MilageCisternDTO>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status404NotFound)
         .RequirePermissions(Permission.Read);
@@ -78,10 +78,85 @@ public static class MilageCisternEndpoints
                     InputModeCode = m.InputModeCode,
                     InputDate = m.InputDate
                 })
+                .OrderByDescending(m => m.InputDate)
                 .ToListAsync();
             return Results.Ok(milages);
         })
         .WithName("GetMilageCisternsByCisternId")
+        .Produces<List<MilageCisternDTO>>(StatusCodes.Status200OK)
+        .RequirePermissions(Permission.Read);
+        
+        group.MapGet("/last/by-cistern-id/{cisternId}", async ([FromServices] ApplicationDbContext context, [FromRoute] Guid cisternId) =>
+        {
+            var milage = await context.Set<MilageCistern>()
+                .Where(m => m.CisternId == cisternId)
+                .Select(m => new MilageCisternDTO
+                {
+                    Id = m.Id,
+                    CisternId = m.CisternId,
+                    CisternNumber = m.CisternNumber,
+                    Milage = m.Milage,
+                    MilageNorm = m.MilageNorm,
+                    RepairTypeId = m.RepairTypeId,
+                    RepairDate = m.RepairDate,
+                    InputModeCode = m.InputModeCode,
+                    InputDate = m.InputDate
+                })
+                .OrderByDescending(m => m.InputDate)
+                .FirstOrDefaultAsync();
+            return Results.Ok(milage);
+        })
+        .WithName("GetLastMilageCisternsByCisternId")
+        .Produces<MilageCisternDTO>(StatusCodes.Status200OK)
+        .RequirePermissions(Permission.Read);
+        
+        group.MapGet("/by-cistern-number/{cisternNumber}", async ([FromServices] ApplicationDbContext context, [FromRoute] string cisternNumber) =>
+        {
+            var milages = await context.Set<MilageCistern>()
+                .Include(m => m.Cistern)
+                .Where(m => m.Cistern.Number == cisternNumber)
+                .Select(m => new MilageCisternDTO
+                {
+                    Id = m.Id,
+                    CisternId = m.CisternId,
+                    CisternNumber = m.CisternNumber,
+                    Milage = m.Milage,
+                    MilageNorm = m.MilageNorm,
+                    RepairTypeId = m.RepairTypeId,
+                    RepairDate = m.RepairDate,
+                    InputModeCode = m.InputModeCode,
+                    InputDate = m.InputDate
+                })
+                .OrderByDescending(m => m.InputDate)
+                .ToListAsync();
+            return Results.Ok(milages);
+        })
+        .WithName("GetMilageCisternsByCisternNumber")
+        .Produces<List<MilageCisternDTO>>(StatusCodes.Status200OK)
+        .RequirePermissions(Permission.Read); 
+        
+        group.MapGet("/last/by-cistern-number/{cisternNumber}", async ([FromServices] ApplicationDbContext context, [FromRoute] string cisternNumber) =>
+        {
+            var milages = await context.Set<MilageCistern>()
+                .Include(m => m.Cistern)
+                .Where(m => m.Cistern.Number == cisternNumber)
+                .Select(m => new MilageCisternDTO
+                {
+                    Id = m.Id,
+                    CisternId = m.CisternId,
+                    CisternNumber = m.CisternNumber,
+                    Milage = m.Milage,
+                    MilageNorm = m.MilageNorm,
+                    RepairTypeId = m.RepairTypeId,
+                    RepairDate = m.RepairDate,
+                    InputModeCode = m.InputModeCode,
+                    InputDate = m.InputDate
+                })
+                .OrderByDescending(m => m.InputDate)
+                .FirstOrDefaultAsync();
+            return Results.Ok(milages);
+        })
+        .WithName("GetLastMilageCisternsByCisternNumber")
         .Produces<List<MilageCisternDTO>>(StatusCodes.Status200OK)
         .RequirePermissions(Permission.Read);
 
