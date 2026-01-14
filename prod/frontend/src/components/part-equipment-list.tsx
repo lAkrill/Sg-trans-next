@@ -92,7 +92,7 @@ const WheelPairsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
               <TableHead>Код ЖД <br/>администр.</TableHead>
                 
              
-              <TableHead>Деталь</TableHead>
+              <TableHead>Деталь<br/>(код пред.; завод. номер; год) </TableHead>
             
               <TableHead>Код п-я работы <br/> с деталью</TableHead>
               <TableHead>
@@ -105,7 +105,7 @@ const WheelPairsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
               </TableHead>
               
               <TableHead>Толщина обода (Л/П)</TableHead>
-              <TableHead>Документ</TableHead>
+              <TableHead>Документ <br/>(договор, дата) </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -120,7 +120,7 @@ const WheelPairsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
                 <TableRow key={equipment.equipmentTypeId}>
                   <TableCell>{equipment.equipmentTypeName} 
                               <br></br> <span className="text-xs text-gray-500">Код детали: {equipment.lastEquipment.equipmentType?.code} </span>
-                              <br></br> <span className="text-xs text-gray-500">Код неиспр.: {equipment.lastEquipment.defectsId || "—"} </span>
+                              {/* <br></br> <span className="text-xs text-gray-500">Код неиспр.: {equipment.lastEquipment.defectsId || "—"} </span> */}
                   </TableCell>
                  <TableCell>
                         {equipment.lastEquipment.adminOwnerId || "—"}
@@ -128,9 +128,7 @@ const WheelPairsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
 
                   
                   <TableCell>
-                    <span>Код пред. изг.: {equipment.lastEquipment.part?.stampInfo?.value || "—"} </span>
-                    <br/> <span>Завод. номер: {equipment.lastEquipment.part?.serialNumber || "—"} </span>
-                    <br/> <span>Год изготовления: {equipment.lastEquipment.part?.manufactureYear ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear() : "—"} </span>
+                    <span>{equipment.lastEquipment.part?.stampInfo?.value || "—"}; {equipment.lastEquipment.part?.serialNumber || "—"}; {equipment.lastEquipment.part?.manufactureYear ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear() : "—"} </span>
                   </TableCell>
 
                   <TableCell>{equipment.lastEquipment.jobDepot?.code || "—"}</TableCell>
@@ -144,8 +142,7 @@ const WheelPairsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
                       : "—"}
                   </TableCell>
                   <TableCell>
-                     Номер: {equipment.lastEquipment.document?.number || "—"}
-                     <br/> Дата: {equipment.lastEquipment.documentDate ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU") : "—"}
+                     {equipment.lastEquipment.document?.number || "—"}; {equipment.lastEquipment.documentDate ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU") : "—"}
                      <br/> Вид ремонта: {equipment.lastEquipment.repairType?.code || "—"}
                   </TableCell>
                 </TableRow>
@@ -184,7 +181,7 @@ const TruckPartsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
                 Код ЖД <br />
                 администр.
               </TableHead>
-              <TableHead>Деталь</TableHead>
+              <TableHead>Деталь<br/>(код пред.; завод. номер; год) </TableHead>
               
               <TableHead>Код п-я работы <br/> с деталью</TableHead>
               <TableHead>
@@ -192,7 +189,7 @@ const TruckPartsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
               </TableHead>
               <TableHead>Код вида работы</TableHead>
               <TableHead>Код вида тележки</TableHead>
-               <TableHead>Документ</TableHead>
+               <TableHead>Документ <br/>(договор, дата) </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -208,14 +205,12 @@ const TruckPartsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
                   <TableCell>{equipment.equipmentTypeName}
                                     
                               <br></br> <span className="text-xs text-gray-500">Код детали: {equipment.lastEquipment.equipmentType?.code} </span>
-                              <br></br> <span className="text-xs text-gray-500">Код неиспр.: {equipment.lastEquipment.defectsId || "—"} </span>
+                              {/* <br></br> <span className="text-xs text-gray-500">Код неиспр.: {equipment.lastEquipment.defectsId || "—"} </span> */}
                
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.adminOwnerId || "—"}</TableCell>
                   <TableCell>
-                    <span>Код пред. изг.: {equipment.lastEquipment.part?.stampInfo?.value || "—"} </span>
-                    <br/> <span>Завод. номер: {equipment.lastEquipment.part?.serialNumber || "—"} </span>
-                    <br/> <span>Год изготовления: {equipment.lastEquipment.part?.manufactureYear ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear() : "—"} </span>
+                    <span>{equipment.lastEquipment.part?.stampInfo?.value || "—"}; {equipment.lastEquipment.part?.serialNumber || "—"}; {equipment.lastEquipment.part?.manufactureYear ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear() : "—"}  </span>
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.jobDepot?.code || "—"}</TableCell>
                   <TableCell>
@@ -233,8 +228,7 @@ const TruckPartsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
                 
                   <TableCell>{equipment.lastEquipment.truckType || "—"}</TableCell>
                   <TableCell>
-                     Номер: {equipment.lastEquipment.document?.number || "—"}
-                     <br/> Дата: {equipment.lastEquipment.documentDate ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU") : "—"}
+                     {equipment.lastEquipment.document?.number || "—"}; {equipment.lastEquipment.documentDate ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU") : "—"}
                      <br/> Вид ремонта: {equipment.lastEquipment.repairType?.code || "—"}
                   </TableCell>
                 </TableRow>
