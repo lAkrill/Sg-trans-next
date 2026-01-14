@@ -415,10 +415,11 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                     <Input
                       id={field.key}
                       type={field.type}
+                      step={field.type === "number" ? "0.01" : undefined}
                       value={String((formData as Record<string, unknown>)[field.key] || "")}
                       onChange={(e) => {
                         const value =
-                          field.type === "number" ? (e.target.value ? parseInt(e.target.value) : 0) : e.target.value;
+                          field.type === "number" ? (e.target.value ? parseFloat(e.target.value) : 0) : e.target.value;
                         updateFormField(field.key, value);
                       }}
                       placeholder={field.placeholder}
@@ -547,10 +548,11 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                   <Input
                     id={`edit-${field.key}`}
                     type={field.type}
+                    step={field.type === "number" ? "0.01" : undefined}
                     value={String((formData as Record<string, unknown>)[field.key] || "")}
                     onChange={(e) => {
                       const value =
-                        field.type === "number" ? (e.target.value ? parseInt(e.target.value) : 0) : e.target.value;
+                        field.type === "number" ? (e.target.value ? parseFloat(e.target.value) : 0) : e.target.value;
                       updateFormField(field.key, value);
                     }}
                     placeholder={field.placeholder}

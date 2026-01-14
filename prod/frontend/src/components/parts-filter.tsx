@@ -230,6 +230,7 @@ export function PartsFilter({
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           type="number"
+                          step="0.01"
                           placeholder="От"
                           value={localFilters.thicknessLeft?.from || ''}
                           onChange={(e) => updateFilter('thicknessLeft', { 
@@ -239,6 +240,7 @@ export function PartsFilter({
                         />
                         <Input
                           type="number"
+                          step="0.01"
                           placeholder="До"
                           value={localFilters.thicknessLeft?.to || ''}
                           onChange={(e) => updateFilter('thicknessLeft', { 
@@ -254,6 +256,7 @@ export function PartsFilter({
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           type="number"
+                          step="0.01"
                           placeholder="От"
                           value={localFilters.thicknessRight?.from || ''}
                           onChange={(e) => updateFilter('thicknessRight', { 
@@ -263,6 +266,7 @@ export function PartsFilter({
                         />
                         <Input
                           type="number"
+                          step="0.01"
                           placeholder="До"
                           value={localFilters.thicknessRight?.to || ''}
                           onChange={(e) => updateFilter('thicknessRight', { 

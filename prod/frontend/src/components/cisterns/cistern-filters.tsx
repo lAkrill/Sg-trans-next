@@ -199,6 +199,7 @@ const NumberRangeInput: React.FC<NumberRangeInputProps> = ({ label, value, onCha
         <Input
           type="number"
           placeholder="От"
+          step="0.01"
           value={value.from ?? ""}
           onChange={(e) => onChange({ ...value, from: e.target.value ? Number(e.target.value) : undefined })}
           className="h-8 text-sm"
@@ -206,6 +207,7 @@ const NumberRangeInput: React.FC<NumberRangeInputProps> = ({ label, value, onCha
         <Input
           type="number"
           placeholder="До"
+          step="0.01"
           value={value.to ?? ""}
           onChange={(e) => onChange({ ...value, to: e.target.value ? Number(e.target.value) : undefined })}
           className="h-8 text-sm"
