@@ -5,6 +5,7 @@ import QuickActions from "@/components/dashboard/quick-actions";
 import UserInfoCard from "@/components/cards/user-info.card";
 
 export default function DashboardPage() {
+
   return (
     <div className="space-y-7">
       {/* Welcome section */}

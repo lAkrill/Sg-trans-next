@@ -2,6 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { MapPin, MapIcon } from "lucide-react";
 import { CisternDislocation } from "@/api/dislocations";
+import { CisternMilages } from "@/api/milages";
+import type { CisternMilage } from "@/api/milages";
 import type { CisternLastLocation, CisternAllLocation } from "@/api/dislocations";
 import "@/lib/leaflet/dist/leaflet.css";
 import L, {Map, TileLayer, Marker, Circle, Polygon, Popup, Tooltip, Icon} from "@/lib/leaflet/dist/leaflet-src.js";
@@ -16,7 +18,8 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 
   const [location, setLocation] = useState<CisternLastLocation | null>(null);
   const [locationAll, setLocationAll] = useState<CisternAllLocation[] | null>(null);
-
+  const [milage, setMilage] = useState<CisternMilage | null>(null);
+  const [remainMilage, setRemainMilage] = useState<number>(0);
   const myIcon = new Icon({
 			iconUrl: '../tank.png',
 			iconSize: [38, 27],
@@ -26,8 +29,12 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
   const handleCisternSelect = useCallback(async () => {
     const res1 = await CisternDislocation.getLastLocation( CicternNumber);
     const res2 = await CisternDislocation.getAllLocation( CicternNumber);
+    const res3 = await CisternMilages.getLastMilage( CicternNumber);
+
     setLocation(res1); // сохраняем  в state
     setLocationAll(res2);
+    setMilage(res3);
+    setRemainMilage(res3.milageNorm - res3.milage);
   }, []);
 
 
@@ -104,7 +111,6 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
             day1 = new Date(firstDate).getTime();
             day2 = new Date(lastDate).getTime();
             day3 = Math.trunc((((day2-day1)/1000) / 3600) / 24);
-            // console.log(loc.nameStationOpr, day2, day1, day3)
             count = day3;
             firstDate = "";
           }
@@ -115,6 +121,7 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
         count = 1;
         lastDate = loc.dateOpr;
       }
+      //console.log(loc.nameStationOpr, day2, day1, day3, firstDate)
     }
 
     // добавляем последнюю группу
@@ -139,10 +146,16 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
             <MapPin className="h-5 w-5" />
             Пробеги и местоположения
           </CardTitle>
-          <CardDescription>История пробегов цистерны с датами получения данных</CardDescription>
+
         </CardHeader>
         <CardContent>
-          Последнее местоположение
+          <i>Пробег</i>
+          <br/>Дата получения данных: <b>{new Date(milage?.inputDate ?? "").toLocaleDateString()}</b>
+          <br/>Накопленный пробег: {milage?.milage} км; Норма пробега: {milage?.milageNorm} км; Остаточный пробег: <b>{remainMilage} км</b>
+          <br/>Дата планируемого ремонта: <b>{new Date(milage?.repairDate ?? "").toLocaleDateString()}</b>
+         </CardContent>
+        <CardContent>
+          <i>Последнее местоположение</i>
           <p>
             Станция: <b>{location?.nameStationOpr} ({location?.codeStationOpr})</b>, Дата операции: <b>{new Date(location?.dateOpr ?? "").toLocaleDateString()}</b>
             <br></br>

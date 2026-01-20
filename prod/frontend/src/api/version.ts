@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-interface VersionResponse {
+export interface VersionResponse {
   frontend: string;
   backend: string;
 }
