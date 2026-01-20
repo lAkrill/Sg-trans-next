@@ -231,7 +231,7 @@ export default function SettingsPage() {
       {/* Save Button */}
       <div className="flex w-full justify-between items-center">
         <div className="text-xs text-gray-500 dark:text-gray-400">
-          <span>Версия:</span> {version?.frontend} (frontend), {version?.backend} (backend)
+          <span>Версия:</span> {version?.frontend} (клиент), {version?.backend} (сервер)
         </div>
         <Button className="flex items-center gap-2">
           <Save className="h-4 w-4" />
