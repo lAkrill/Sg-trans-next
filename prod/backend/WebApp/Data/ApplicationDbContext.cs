@@ -33,7 +33,6 @@ public class ApplicationDbContext(
     public DbSet<Location> Locations { get; set; }
     public DbSet<PartInstallation> PartInstallations { get; set; }
     public DbSet<RepairType> RepairTypes { get; set; }
-    public DbSet<Repair> Repairs { get; set; }
     public DbSet<PartStatus> PartStatuses { get; set; }
     public DbSet<PartType> PartTypes { get; set; }
     public DbSet<FilterType> FilterTypes { get; set; }
@@ -400,22 +399,6 @@ public class ApplicationDbContext(
             .HasMany(d => d.Parts)
             .WithOne(p => p.Depot)
             .HasForeignKey(p => p.DepotId);
-
-        // Repair связи
-        modelBuilder.Entity<RepairType>()
-            .HasMany(rt => rt.Repairs)
-            .WithOne(r => r.RepairType)
-            .HasForeignKey(r => r.RepairTypeId);
-
-        modelBuilder.Entity<Part>()
-            .HasMany(p => p.Repairs)
-            .WithOne(r => r.Part)
-            .HasForeignKey(r => r.PartId);
-
-        modelBuilder.Entity<Depot>()
-            .HasMany(d => d.Repairs)
-            .WithOne(r => r.Depot)
-            .HasForeignKey(r => r.DepotId);
 
         // PartStatus
         modelBuilder.Entity<PartStatus>(entity =>

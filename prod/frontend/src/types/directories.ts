@@ -370,7 +370,6 @@ export interface CreateWheelPairDTO {
   stampNumberId: string;
   serialNumber?: string;
   manufactureYear?: string;
-  currentLocation?: string;
   statusId: string;
   notes?: string;
   thicknessLeft?: number;
@@ -384,7 +383,6 @@ export interface CreateSideFrameDTO {
   stampNumberId: string;
   serialNumber?: string;
   manufactureYear?: string;
-  currentLocation?: string;
   statusId: string;
   notes?: string;
   serviceLifeYears?: number;
@@ -397,7 +395,6 @@ export interface CreateBolsterDTO {
   stampNumberId: string;
   serialNumber?: string;
   manufactureYear?: string;
-  currentLocation?: string;
   statusId: string;
   notes?: string;
   serviceLifeYears?: number;
@@ -410,7 +407,6 @@ export interface CreateCouplerDTO {
   stampNumberId: string;
   serialNumber?: string;
   manufactureYear?: string;
-  currentLocation?: string;
   statusId: string;
   notes?: string;
 }
@@ -421,7 +417,6 @@ export interface CreateShockAbsorberDTO {
   stampNumberId: string;
   serialNumber?: string;
   manufactureYear?: string;
-  currentLocation?: string;
   statusId: string;
   notes?: string;
   model?: string;
@@ -434,7 +429,7 @@ export interface UpdateWheelPairDTO {
   depotId?: string;
   stampNumberId: string;
   serialNumber?: string;
-  manufactureYear?: string;
+  manufactureYear?: string | number;
   currentLocation?: string;
   statusId: string;
   notes?: string;
@@ -447,7 +442,7 @@ export interface UpdateSideFrameDTO {
   depotId?: string;
   stampNumberId: string;
   serialNumber?: string;
-  manufactureYear?: string;
+  manufactureYear?: string | number;
   currentLocation?: string;
   statusId: string;
   notes?: string;
@@ -459,7 +454,7 @@ export interface UpdateBolsterDTO {
   depotId?: string;
   stampNumberId: string;
   serialNumber?: string;
-  manufactureYear?: string;
+  manufactureYear?: string | number;
   currentLocation?: string;
   statusId: string;
   notes?: string;
@@ -471,7 +466,7 @@ export interface UpdateCouplerDTO {
   depotId?: string;
   stampNumberId: string;
   serialNumber?: string;
-  manufactureYear?: string;
+  manufactureYear?: string | number;
   currentLocation?: string;
   statusId: string;
   notes?: string;
@@ -481,7 +476,7 @@ export interface UpdateShockAbsorberDTO {
   depotId?: string;
   stampNumberId: string;
   serialNumber?: string;
-  manufactureYear?: string;
+  manufactureYear?: string | number;
   currentLocation?: string;
   statusId: string;
   notes?: string;

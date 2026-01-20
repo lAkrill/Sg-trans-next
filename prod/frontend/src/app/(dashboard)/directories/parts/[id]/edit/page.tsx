@@ -39,6 +39,7 @@ import {
   useUpdateShockAbsorber,
 } from "@/hooks";
 import { DepotSearchSelect } from "@/components/depots/DepotSearchSelect";
+import { RailwayCisternSearchSelect } from "@/components/cisterns/RailwayCisternSearchSelect";
 import {
   wheelPairUpdateSchema,
   sideFrameUpdateSchema,
@@ -61,6 +62,8 @@ export default function EditPartPage() {
   const partId = params.id as string;
 
   const { data: part, isLoading, error } = usePartById(partId);
+  
+  console.log("EditPartPage - partId:", partId, "isLoading:", isLoading, "error:", error, "part:", part);
 
   // Mutations
   const updateWheelPairMutation = useUpdateWheelPair();
@@ -96,9 +99,9 @@ export default function EditPartPage() {
       stampNumberId: "",
       statusId: "",
       depotId: "",
-      serialNumber: "",
-      manufactureYear: "",
       currentLocation: "",
+      serialNumber: "",
+      manufactureYear: undefined,
       notes: "",
       // Wheel Pair
       thicknessLeft: undefined,
@@ -117,13 +120,38 @@ export default function EditPartPage() {
   // Load data into form when part loads
   useEffect(() => {
     if (part) {
-      form.reset({
+      console.log("Loading part data into form:", part);
+      
+      // Parse manufacture year - can be a date object from backend or string
+      let manufYear: number | undefined;
+      if (part.manufactureYear) {
+        if (typeof part.manufactureYear === 'object' && 'year' in part.manufactureYear) {
+          // DateOnly received as object
+          manufYear = part.manufactureYear.year;
+        } else if (typeof part.manufactureYear === 'string') {
+          // DateOnly received as string YYYY-MM-DD
+          manufYear = parseInt(part.manufactureYear.split('-')[0]);
+        }
+      }
+
+      // Helper function to convert DateOnly to string YYYY-MM-DD
+      const convertDateOnlyToString = (value: any): string => {
+        if (!value) return "";
+        if (typeof value === 'string' && value) return value;
+        if (typeof value === 'object' && 'year' in value) {
+          const { year, month, day } = value;
+          return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+        return "";
+      };
+
+      const resetData = {
         stampNumberId: part.stampNumber.id,
         statusId: part.status.id,
         depotId: part.depot?.id || "",
         serialNumber: part.serialNumber || "",
-        manufactureYear: part.manufactureYear || "",
-        currentLocation: part.currentLocation || "",
+        manufactureYear: manufYear,
+        currentLocation: part.currentLocation?.id || "",
         notes: part.notes || "",
         // Wheel Pair
         thicknessLeft: part.wheelPair?.thicknessLeft,
@@ -131,12 +159,15 @@ export default function EditPartPage() {
         wheelType: part.wheelPair?.wheelType || "",
         // Side Frame
         serviceLifeYears: part.sideFrame?.serviceLifeYears || part.bolster?.serviceLifeYears || part.shockAbsorber?.serviceLifeYears,
-        extendedUntil: part.sideFrame?.extendedUntil || part.bolster?.extendedUntil || "",
+        extendedUntil: convertDateOnlyToString(part.sideFrame?.extendedUntil || part.bolster?.extendedUntil),
         // Shock Absorber
         model: part.shockAbsorber?.model || "",
         manufacturerCode: part.shockAbsorber?.manufacturerCode || "",
-        nextRepairDate: part.shockAbsorber?.nextRepairDate || "",
-      });
+        nextRepairDate: convertDateOnlyToString(part.shockAbsorber?.nextRepairDate),
+      };
+      
+      console.log("Reset data:", resetData);
+      form.reset(resetData);
     }
   }, [part, form]);
 
@@ -144,9 +175,18 @@ export default function EditPartPage() {
   const onSubmit = async (data: any) => {
     try {
       // Clean empty strings
-      const cleanData = Object.fromEntries(
+      let cleanData = Object.fromEntries(
         Object.entries(data).map(([key, value]) => [key, value === "" ? undefined : value])
       ) as unknown;
+
+      // Convert manufacture year to full date if it's a number (year)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      cleanData = (cleanData as any).manufactureYear && typeof (cleanData as any).manufactureYear === 'number'
+        ? {
+            ...(cleanData as any),
+            manufactureYear: `${(cleanData as any).manufactureYear}-01-01`,
+          }
+        : cleanData;
 
       switch (partTypeCode) {
         case 1:
@@ -321,7 +361,13 @@ export default function EditPartPage() {
                     <FormItem>
                       <FormLabel>Год производства</FormLabel>
                       <FormControl>
-                        <Input placeholder="Введите год производства" {...field} />
+                        <Input 
+                          type="number" 
+                          placeholder="Введите год производства" 
+                          {...field}
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -353,9 +399,13 @@ export default function EditPartPage() {
                   name="currentLocation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Текущее местоположение</FormLabel>
+                      <FormLabel>Текущее местоположение (вагон)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Введите местоположение" {...field} />
+                        <RailwayCisternSearchSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Выберите вагон"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

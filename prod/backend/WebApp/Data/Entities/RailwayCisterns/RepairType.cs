@@ -7,7 +7,9 @@ public class RepairType
     public string Code { get; set; } = null!;
     public string Description { get; set; } = null!;
     public DateTimeOffset CreatedAt { get; set; }
+    public string? ShortName { get; set; }
+    public string? PortalName { get; set; }
+    public int? OldCode;
 
     public ICollection<MilageCistern> MilageCisterns { get; set; } = new List<MilageCistern>();
-    public ICollection<Repair> Repairs { get; set; } = new List<Repair>();
 }

@@ -100,8 +100,7 @@ export default function CreatePartPage() {
       statusId: "",
       depotId: "",
       serialNumber: "",
-      manufactureYear: "",
-      currentLocation: "",
+      manufactureYear: undefined,
       notes: "",
       // Wheel Pair
       thicknessLeft: undefined,
@@ -128,9 +127,18 @@ export default function CreatePartPage() {
   const onSubmit = async (data: any) => {
     try {
       // Clean empty strings
-      const cleanData = Object.fromEntries(
+      let cleanData = Object.fromEntries(
         Object.entries(data).map(([key, value]) => [key, value === "" ? undefined : value])
       ) as unknown;
+
+      // Convert manufacture year to full date (January 1st of that year)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      cleanData = (cleanData as any).manufactureYear
+        ? {
+            ...(cleanData as any),
+            manufactureYear: `${(cleanData as any).manufactureYear}-01-01`,
+          }
+        : cleanData;
 
       switch (partTypeCode) {
         case 1:
@@ -300,7 +308,13 @@ export default function CreatePartPage() {
                     <FormItem>
                       <FormLabel>Год производства</FormLabel>
                       <FormControl>
-                        <Input placeholder="Введите год производства" {...field} />
+                        <Input 
+                          type="number" 
+                          placeholder="Введите год производства" 
+                          {...field}
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -320,21 +334,6 @@ export default function CreatePartPage() {
                           onValueChange={field.onChange}
                           placeholder="Выберите депо"
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Current Location */}
-                <FormField
-                  control={form.control}
-                  name="currentLocation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Текущее местоположение</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Введите местоположение" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -32,7 +32,6 @@ public abstract class CreatePartDTOBase
     public Guid StampNumberId { get; set; }
     public string? SerialNumber { get; set; }
     public DateOnly? ManufactureYear { get; set; }
-    public Guid? CurrentLocation { get; set; }
     public Guid StatusId { get; set; }
     public string? Notes { get; set; }
     public int? Code { get; set; }

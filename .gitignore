@@ -65,3 +65,8 @@ test/back/.idea/.idea.back/.idea/
 /prod/backend/.vs
 /prod/backend/WebApp/.config
 /prod/backend/WebApp/Properties/PublishProfiles
+
+
+
+**/.idea/
+*.user

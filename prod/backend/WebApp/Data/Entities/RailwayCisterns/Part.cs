@@ -35,7 +35,6 @@ public class Part
     public ShockAbsorber? ShockAbsorber { get; set; }
     
     public ICollection<PartInstallation> PartInstallations { get; set; } = new List<PartInstallation>();
-    public ICollection<Repair> Repairs { get; set; } = new List<Repair>();
     
     public int? Code { get; set; }
     [Column("DocumetnsId")]

@@ -29,6 +29,8 @@ export const usePartById = (id: string) => {
     queryKey: partsKeys.byId(id),
     queryFn: () => partsApi.getById(id),
     enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 };
 

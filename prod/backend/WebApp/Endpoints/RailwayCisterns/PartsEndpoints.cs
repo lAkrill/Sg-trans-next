@@ -160,11 +160,13 @@ public static class PartsEndpoints
                 .Include(p => p.Status)
                 .Include(p => p.StampNumber)
                 .Include(p => p.Depot)
+                .Include(p => p.RailwayCistern)
                 .Include(p => p.WheelPair)
                 .Include(p => p.SideFrame)
                 .Include(p => p.Bolster)
                 .Include(p => p.Coupler)
                 .Include(p => p.ShockAbsorber)
+                .Include(p => p.Document)
                 .Where(p => p.Id == id)
                 .Select(p => new PartDTO
                 {
@@ -283,7 +285,6 @@ public static class PartsEndpoints
                 StampNumberId = dto.StampNumberId,
                 SerialNumber = dto.SerialNumber,
                 ManufactureYear = dto.ManufactureYear,
-                CurrentLocation = dto.CurrentLocation,
                 StatusId = dto.StatusId,
                 Notes = dto.Notes,
                 CreatedAt = DateTime.UtcNow,
@@ -344,7 +345,6 @@ public static class PartsEndpoints
                 StampNumberId = dto.StampNumberId,
                 SerialNumber = dto.SerialNumber,
                 ManufactureYear = dto.ManufactureYear,
-                CurrentLocation = dto.CurrentLocation,
                 StatusId = dto.StatusId,
                 Notes = dto.Notes,
                 CreatedAt = DateTime.UtcNow,
@@ -404,7 +404,6 @@ public static class PartsEndpoints
                 StampNumberId = dto.StampNumberId,
                 SerialNumber = dto.SerialNumber,
                 ManufactureYear = dto.ManufactureYear,
-                CurrentLocation = dto.CurrentLocation,
                 StatusId = dto.StatusId,
                 Notes = dto.Notes,
                 CreatedAt = DateTime.UtcNow,
@@ -464,7 +463,6 @@ public static class PartsEndpoints
                 StampNumberId = dto.StampNumberId,
                 SerialNumber = dto.SerialNumber,
                 ManufactureYear = dto.ManufactureYear,
-                CurrentLocation = dto.CurrentLocation,
                 StatusId = dto.StatusId,
                 Notes = dto.Notes,
                 CreatedAt = DateTime.UtcNow,
@@ -522,7 +520,6 @@ public static class PartsEndpoints
                 StampNumberId = dto.StampNumberId,
                 SerialNumber = dto.SerialNumber,
                 ManufactureYear = dto.ManufactureYear,
-                CurrentLocation = dto.CurrentLocation,
                 StatusId = dto.StatusId,
                 Notes = dto.Notes,
                 CreatedAt = DateTime.UtcNow,
@@ -577,6 +574,10 @@ public static class PartsEndpoints
             Guid id,
             [FromBody] UpdateWheelPairDTO dto) =>
         {
+            // Validate: can't have both depot and current location
+            if (dto.DepotId.HasValue && dto.CurrentLocation.HasValue)
+                return Results.BadRequest("Cannot set both depot and current location");
+
             var part = await context.Parts
                 .Include(p => p.WheelPair)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -622,6 +623,10 @@ public static class PartsEndpoints
             Guid id,
             [FromBody] UpdateSideFrameDTO dto) =>
         {
+            // Validate: can't have both depot and current location
+            if (dto.DepotId.HasValue && dto.CurrentLocation.HasValue)
+                return Results.BadRequest("Cannot set both depot and current location");
+
             var part = await context.Parts
                 .Include(p => p.SideFrame)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -662,6 +667,10 @@ public static class PartsEndpoints
             Guid id,
             [FromBody] UpdateBolsterDTO dto) =>
         {
+            // Validate: can't have both depot and current location
+            if (dto.DepotId.HasValue && dto.CurrentLocation.HasValue)
+                return Results.BadRequest("Cannot set both depot and current location");
+
             var part = await context.Parts
                 .Include(p => p.Bolster)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -702,6 +711,10 @@ public static class PartsEndpoints
             Guid id,
             [FromBody] UpdateCouplerDTO dto) =>
         {
+            // Validate: can't have both depot and current location
+            if (dto.DepotId.HasValue && dto.CurrentLocation.HasValue)
+                return Results.BadRequest("Cannot set both depot and current location");
+
             var part = await context.Parts
                 .Include(p => p.Coupler)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -739,6 +752,10 @@ public static class PartsEndpoints
             Guid id,
             [FromBody] UpdateShockAbsorberDTO dto) =>
         {
+            // Validate: can't have both depot and current location
+            if (dto.DepotId.HasValue && dto.CurrentLocation.HasValue)
+                return Results.BadRequest("Cannot set both depot and current location");
+
             var part = await context.Parts
                 .Include(p => p.ShockAbsorber)
                 .FirstOrDefaultAsync(p => p.Id == id);

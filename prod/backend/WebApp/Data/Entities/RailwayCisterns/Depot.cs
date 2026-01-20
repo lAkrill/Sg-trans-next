@@ -11,5 +11,4 @@ public class Depot
     public Guid CreatorId { get; set; }
     
     public ICollection<Part> Parts { get; set; } = new List<Part>();
-    public ICollection<Repair> Repairs { get; set; } = new List<Repair>();
 }
