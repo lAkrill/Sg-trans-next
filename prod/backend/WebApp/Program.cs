@@ -64,6 +64,7 @@ services.Configure<AuthorizationOptions>(configuration.GetSection(nameof(Authori
 
 services.AddHttpContextAccessor();
 services.AddScoped<ICurrentUserService, CurrentUserService>();
+services.AddHttpClient();
 
 services
     .AddPersistence(configuration)
