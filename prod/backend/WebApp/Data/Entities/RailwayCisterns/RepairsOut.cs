@@ -16,8 +16,8 @@ public class RepairsOut
     public string? RoadCode { get; set; }
     public string? RoadName { get; set; }
     public string[]? ModernName {get; set;}
-    
-    public RailwayCistern? Cistern { get; set; }
-    public RepairType? TypeRepair { get; set; }
-    public Depot? Depot { get; set; }
+
+    public RailwayCistern Cistern { get; set; } = null!;
+    public RepairType RepairType { get; set; } = null!;
+    public Depot Depot { get; set; } = null!;
 }

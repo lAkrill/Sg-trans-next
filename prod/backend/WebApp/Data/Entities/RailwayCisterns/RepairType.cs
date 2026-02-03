@@ -9,7 +9,7 @@ public class RepairType
     public DateTimeOffset CreatedAt { get; set; }
     public string? ShortName { get; set; }
     public string? PortalName { get; set; }
-    public int? OldCode;
+    public int? OldCode { get; set; }
 
     public ICollection<MilageCistern> MilageCisterns { get; set; } = new List<MilageCistern>();
 }

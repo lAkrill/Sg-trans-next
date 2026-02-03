@@ -19,8 +19,9 @@ public class RepairsIn
     public string[]? DefectCode {get; set;}
     public string[]? DefectName {get; set;}
     public string? AdminRoadCode { get; set; }
-    
-    public RailwayCistern? Cistern { get; set; }
-    public RepairType? TypeRepair { get; set; }
-    public Depot? Depot { get; set; }
+
+    public RailwayCistern Cistern { get; set; } = null!;
+    public RepairType RepairType { get; set; } = null!;
+    public Depot Depot { get; set; } = null!;
+    public Station Station { get; set; } = null!;
 }

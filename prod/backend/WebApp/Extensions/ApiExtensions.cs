@@ -49,6 +49,14 @@ public static class ApiExtensions
         app.MapDocumentEndpoints();
         app.MapVesselEndpoints();
         app.MapDislocationEndpoints();
+        
+        app.MapAdminOwnerEndpoints();
+        app.MapDefectEndpoints();
+        app.MapRepairsInEndpoints();
+        app.MapRepairsOutEndpoints();
+        app.MapRoadEndpoints();
+        app.MapUpdateEndpoints();
+        
     }
 
     public static void AddApiAuthentication(

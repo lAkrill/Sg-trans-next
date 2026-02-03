@@ -19,13 +19,7 @@ public static class RepairTypeEndpoints
         group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
         {
             var repairTypes = await context.Set<RepairType>()
-                .Select(rt => new RepairTypeDTO
-                {
-                    Id = rt.Id,
-                    Name = rt.Name,
-                    Code = rt.Code,
-                    Description = rt.Description
-                })
+                .Select(rt => rt.ToRepairTypeDto())
                 .ToListAsync();
             return Results.Ok(repairTypes);
         })
@@ -37,13 +31,7 @@ public static class RepairTypeEndpoints
         {
             var repairType = await context.Set<RepairType>()
                 .Where(rt => rt.Id == id)
-                .Select(rt => new RepairTypeDTO
-                {
-                    Id = rt.Id,
-                    Name = rt.Name,
-                    Code = rt.Code,
-                    Description = rt.Description
-                })
+                .Select(rt => rt.ToRepairTypeDto())
                 .FirstOrDefaultAsync();
             return repairType is null ? Results.NotFound() : Results.Ok(repairType);
         })
@@ -54,13 +42,7 @@ public static class RepairTypeEndpoints
 
         group.MapPost("/", async ([FromServices] ApplicationDbContext context, [FromBody] CreateRepairTypeDTO dto) =>
         {
-            var repairType = new RepairType
-            {
-                Name = dto.Name,
-                Code = dto.Code,
-                Description = dto.Description,
-                CreatedAt = DateTimeOffset.UtcNow
-            };
+            var repairType = dto.ToRepairType();
 
             context.Add(repairType);
             await context.SaveChangesAsync();
@@ -84,9 +66,7 @@ public static class RepairTypeEndpoints
             if (repairType == null)
                 return Results.NotFound();
 
-            repairType.Name = dto.Name;
-            repairType.Code = dto.Code;
-            repairType.Description = dto.Description;
+            repairType.UpdateRepairType(dto);
 
             await context.SaveChangesAsync();
             return Results.NoContent();
