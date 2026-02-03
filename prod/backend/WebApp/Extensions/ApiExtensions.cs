@@ -56,7 +56,7 @@ public static class ApiExtensions
         app.MapRepairsOutEndpoints();
         app.MapRoadEndpoints();
         app.MapUpdateEndpoints();
-        
+        app.MapRepairsFileEndpoints();
     }
 
     public static void AddApiAuthentication(

@@ -19,7 +19,6 @@ public static class RepairsFileEndpoints
         group.MapPost("/process-repairs-file", ProcessRepairsFile)
             .WithName("ProcessRepairsFile")
             .WithOpenApi()
-            .Accepts<IFormFile>("multipart/form-data")
             .Produces(200)
             .Produces(400)
             .Produces(500);
@@ -27,7 +26,7 @@ public static class RepairsFileEndpoints
 
     private static async Task<IResult> ProcessRepairsFile(
         IFormFile file,
-        HttpClient httpClient)
+        [FromServices] HttpClient httpClient)
     {
         if (file == null || file.Length == 0)
         {
