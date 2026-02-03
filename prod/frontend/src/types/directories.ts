@@ -256,6 +256,9 @@ export interface UpdatePartStatusDTO {
 export interface RepairTypeDTO extends BaseEntity {
   name: string;
   description?: string;
+  code: string;
+  shortName: string;
+  portalName: string;
 }
 
 export interface CreateRepairTypeDTO {
