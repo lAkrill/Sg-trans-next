@@ -19,6 +19,7 @@ public static class RepairsFileEndpoints
         group.MapPost("/process-repairs-file", ProcessRepairsFile)
             .WithName("ProcessRepairsFile")
             .WithOpenApi()
+            .DisableAntiforgery()
             .Produces(200)
             .Produces(400)
             .Produces(500);

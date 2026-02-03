@@ -119,5 +119,69 @@ public static class RepairsInEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
             .RequirePermissions(Permission.Update);
+
+        group.MapGet("/byCisternNumber/{cisternNumber}", async ([FromServices] ApplicationDbContext context,
+                [FromRoute] string cisternNumber,
+                [FromQuery] int skip = 0,
+                [FromQuery] int take = 50) =>
+            {
+                var repairsIn = await context.RepairsIns
+                    .AsNoTracking()
+                    .Where(r => r.CisternNumber == cisternNumber)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(c => c.Type)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(c => c.Manufacturer)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(c => c.Model)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(c => c.Owner)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(r => r.Affiliation)
+                    .Include(r => r.RepairType)
+                    .Include(r => r.Depot)
+                    .Include(r => r.Station)
+                    .AsSplitQuery()
+                    .OrderByDescending(r => r.DateIn)
+                    .Skip(skip)
+                    .Take(Math.Min(take, 100))
+                    .Select(r => r.ToRepairsInDTO())
+                    .ToListAsync();
+                return Results.Ok(repairsIn);
+            })
+            .WithName("GetRepairsInByCisternNumber")
+            .Produces<List<RepairsInDTO>>(StatusCodes.Status200OK)
+            .RequirePermissions(Permission.Read);
+
+        group.MapGet("/latest/byCisternNumber/{cisternNumber}", async ([FromServices] ApplicationDbContext context,
+                [FromRoute] string cisternNumber) =>
+            {
+                var repairsIn = await context.RepairsIns
+                    .AsNoTracking()
+                    .Where(r => r.CisternNumber == cisternNumber)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(c => c.Type)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(c => c.Manufacturer)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(c => c.Model)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(c => c.Owner)
+                    .Include(r => r.Cistern)
+                        .ThenInclude(r => r.Affiliation)
+                    .Include(r => r.RepairType)
+                    .Include(r => r.Depot)
+                    .Include(r => r.Station)
+                    .AsSplitQuery()
+                    .OrderByDescending(r => r.DateIn)
+                    .Select(r => r.ToRepairsInDTO())
+                    .FirstOrDefaultAsync();
+
+                return repairsIn is null ? Results.NotFound() : Results.Ok(repairsIn);
+            })
+            .WithName("GetLatestRepairsInByCisternNumber")
+            .Produces<RepairsInDTO>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .RequirePermissions(Permission.Read);
     }
 }
