@@ -26,51 +26,54 @@ public static class RepairsFileEndpoints
     }
 
     private static async Task<IResult> ProcessRepairsFile(
-        IFormFile file,
-        [FromServices] HttpClient httpClient)
+    IFormFile file,
+    IHttpClientFactory httpClientFactory) // Используем фабрику для надежности
     {
         if (file == null || file.Length == 0)
         {
-            return Results.BadRequest("Файл не был загружен или имеет нулевой размер");
+            return Results.BadRequest("Файл не был загружен");
         }
 
         try
         {
-            // Читаем файл в память, чтобы избежать проблем с dispose потока
-            var bytes = new byte[file.Length];
-            using (var stream = file.OpenReadStream())
+            var client = httpClientFactory.CreateClient();
+
+            // Настраиваем таймаут, если файл большой
+            client.Timeout = TimeSpan.FromMinutes(5);
+
+            using var content = new MultipartFormDataContent();
+
+            // Открываем поток чтения напрямую из IFormFile
+            using var stream = file.OpenReadStream();
+            var streamContent = new StreamContent(stream);
+
+            // Копируем заголовки типа контента
+            streamContent.Headers.ContentType =
+                new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType ?? "application/octet-stream");
+
+            // "file" — это имя аргумента, которое ожидает FastAPI (@app.post("/.../"){ file: UploadFile })
+            content.Add(streamContent, "file", file.FileName);
+
+            // Используем 127.0.0.1 вместо localhost
+            var response = await client.PostAsync("http://127.0.0.1:8000/process-repairs-file/", content);
+
+            var responseData = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
             {
-                await stream.ReadAsync(bytes, 0, (int)file.Length);
+                return Results.Content(responseData, "application/json");
             }
 
-            using (var content = new MultipartFormDataContent())
-            {
-                var streamContent = new ByteArrayContent(bytes);
-                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType ?? "application/octet-stream");
-                content.Add(streamContent, "file", file.FileName);
-
-                var response = await httpClient.PostAsync("http://localhost:8000/process-repairs-file/", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    return Results.Ok(new { message = "Файл успешно обработан", data = responseContent });
-                }
-                else
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    return Results.StatusCode((int)response.StatusCode);
-                }
-            }
+            return Results.StatusCode((int)response.StatusCode);
         }
         catch (HttpRequestException ex)
         {
-            // Более информативная ошибка для отладки
-            return Results.StatusCode(503);
+            // Выводим ошибку, чтобы понять, почему нет связи (Connection Refused / Timeout)
+            return Results.Problem(detail: ex.Message, statusCode: 503, title: "FastAPI unreachable");
         }
         catch (Exception ex)
         {
-            return Results.StatusCode(500);
+            return Results.Problem(detail: ex.Message, statusCode: 500);
         }
     }
 }

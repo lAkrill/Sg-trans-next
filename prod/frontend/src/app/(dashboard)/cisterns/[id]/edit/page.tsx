@@ -686,11 +686,12 @@ export default function EditCisternPage() {
                 <div className="space-y-2">
                   <Label htmlFor="dangerClass">Класс опасности *</Label>
                   <Select
-                    value={formData.dangerClass?.toString() || "3"}
+                    key={`dangerClass-${formData.dangerClass}`}
+                    value={formData.dangerClass ? formData.dangerClass.toString() : ""}
                     onValueChange={(value) => handleInputChange("dangerClass", parseInt(value))}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Выберите класс опасности" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="1">1 - Взрывчатые вещества</SelectItem>
