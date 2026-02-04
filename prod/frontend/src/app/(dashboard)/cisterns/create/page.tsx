@@ -56,7 +56,7 @@ export default function CreateCisternPage() {
     initialTareWeight: 0,
     typeId: '',
     modelId: '',
-    commissioningDate: new Date().toISOString().split('T')[0],
+    commissioningDate: '',
     serialNumber: '',
     registrationNumber: '',
     registrationDate: new Date().toISOString().split('T')[0],
@@ -86,6 +86,40 @@ export default function CreateCisternPage() {
     }));
   };
 
+  // Функция для очистки пустых необязательных полей
+  const cleanEmptyFields = (data: CreateRailwayCisternDTO) => {
+    const optionalFields = [
+      'fillingVolume',
+      'initialTareWeight',
+      'commissioningDate',
+      'registrarId',
+      'ownerId',
+      'techConditions',
+      'pripiska',
+      'reRegistrationDate',
+      'rent',
+      'modelId',
+      'periodMajorRepair',
+      'periodPeriodicTest',
+      'periodIntermediateTest',
+      'periodDepotRepair',
+      'notes'
+    ] as const;
+
+    const cleaned = { ...data };
+    
+    optionalFields.forEach(field => {
+      const value = cleaned[field];
+      
+      // Преобразуем пустые строки и нулевые значения в null для необязательных полей
+      if (value === '' || (field !== 'serviceLifeYears' && field !== 'dangerClass' && value === 0)) {
+        (cleaned as any)[field] = null;
+      }
+    });
+
+    return cleaned;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -96,16 +130,24 @@ export default function CreateCisternPage() {
         return;
       }
 
-      // Convert dates to strings if they exist
-      const submitData: CreateRailwayCisternDTO = {
-        ...formData,
-        buildDate: formData.buildDate || new Date().toISOString().split('T')[0],
-        registrationDate: formData.registrationDate || new Date().toISOString().split('T')[0],
-        // Set required IDs - these should come from selects in a real implementation
-        manufacturerId: formData.manufacturerId || '',
-        typeId: formData.typeId || '',
-        affiliationId: formData.affiliationId || '',
-      } as CreateRailwayCisternDTO;
+      // Validate directory fields
+      if (!formData.manufacturerId) {
+        alert('Выберите производителя');
+        return;
+      }
+
+      if (!formData.typeId) {
+        alert('Выберите тип вагона');
+        return;
+      }
+
+      if (!formData.affiliationId) {
+        alert('Выберите принадлежность');
+        return;
+      }
+
+      // Clean empty optional fields
+      const submitData = cleanEmptyFields(formData);
 
       await createMutation.mutateAsync(submitData);
       router.push('/cisterns');
@@ -170,12 +212,13 @@ export default function CreateCisternPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="buildDate">Дата постройки</Label>
+                <Label htmlFor="buildDate">Дата постройки *</Label>
                 <Input
                   id="buildDate"
                   type="date"
                   value={formData.buildDate || ''}
                   onChange={(e) => handleInputChange('buildDate', e.target.value)}
+                  required
                 />
               </div>
 
@@ -200,34 +243,37 @@ export default function CreateCisternPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tareWeight">Тара (т)</Label>
+                  <Label htmlFor="tareWeight">Тара (т) *</Label>
                   <Input
                     id="tareWeight"
                     type="number"
                     step="0.1"
                     value={formData.tareWeight || ''}
                     onChange={(e) => handleInputChange('tareWeight', parseFloat(e.target.value) || 0)}
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="loadCapacity">Грузоподъемность (т)</Label>
+                  <Label htmlFor="loadCapacity">Грузоподъемность (т) *</Label>
                   <Input
                     id="loadCapacity"
                     type="number"
                     step="0.1"
                     value={formData.loadCapacity || ''}
                     onChange={(e) => handleInputChange('loadCapacity', parseFloat(e.target.value) || 0)}
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="length">Длина (мм)</Label>
+                  <Label htmlFor="length">Длина (мм) *</Label>
                   <Input
                     id="length"
                     type="number"
                     value={formData.length || ''}
                     onChange={(e) => handleInputChange('length', parseInt(e.target.value) || 0)}
+                    required
                   />
                 </div>
 
@@ -250,13 +296,14 @@ export default function CreateCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="volume">Объем (м³)</Label>
+                  <Label htmlFor="volume">Объем (м³) *</Label>
                   <Input
                     id="volume"
                     type="number"
                     step="0.1"
                     value={formData.volume || ''}
                     onChange={(e) => handleInputChange('volume', parseFloat(e.target.value) || 0)}
+                    required
                   />
                 </div>
 
@@ -293,12 +340,13 @@ export default function CreateCisternPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="registrationDate">Дата регистрации</Label>
+                <Label htmlFor="registrationDate">Дата регистрации *</Label>
                 <Input
                   id="registrationDate"
                   type="date"
                   value={formData.registrationDate || ''}
                   onChange={(e) => handleInputChange('registrationDate', e.target.value)}
+                  required
                 />
               </div>
 
@@ -457,7 +505,7 @@ export default function CreateCisternPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dangerClass">Класс опасности</Label>
+                  <Label htmlFor="dangerClass">Класс опасности *</Label>
                   <Select 
                     value={formData.dangerClass?.toString() || '3'} 
                     onValueChange={(value) => handleInputChange('dangerClass', parseInt(value))}
@@ -480,34 +528,37 @@ export default function CreateCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="substance">Вещество</Label>
+                  <Label htmlFor="substance">Вещество *</Label>
                   <Input
                     id="substance"
                     value={formData.substance || ''}
                     onChange={(e) => handleInputChange('substance', e.target.value)}
                     placeholder="Название перевозимого вещества"
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="pressure">Рабочее давление (МПа)</Label>
+                  <Label htmlFor="pressure">Рабочое давление (МПа) *</Label>
                   <Input
                     id="pressure"
                     type="number"
                     step="0.1"
                     value={formData.pressure || ''}
                     onChange={(e) => handleInputChange('pressure', parseFloat(e.target.value) || 0)}
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="testPressure">Испытательное давление (МПа)</Label>
+                  <Label htmlFor="testPressure">Испытательное давление (МПа) *</Label>
                   <Input
                     id="testPressure"
                     type="number"
                     step="0.1"
                     value={formData.testPressure || ''}
                     onChange={(e) => handleInputChange('testPressure', parseFloat(e.target.value) || 0)}
+                    required
                   />
                 </div>
               </div>
@@ -533,24 +584,26 @@ export default function CreateCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="tareWeight2">Тара 2 (т)</Label>
+                  <Label htmlFor="tareWeight2">Тара 2 (т) *</Label>
                   <Input
                     id="tareWeight2"
                     type="number"
                     step="0.1"
                     value={formData.tareWeight2 || ''}
                     onChange={(e) => handleInputChange('tareWeight2', parseFloat(e.target.value) || 0)}
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="tareWeight3">Тара 3 (т)</Label>
+                  <Label htmlFor="tareWeight3">Тара 3 (т) *</Label>
                   <Input
                     id="tareWeight3"
                     type="number"
                     step="0.1"
                     value={formData.tareWeight3 || ''}
                     onChange={(e) => handleInputChange('tareWeight3', parseFloat(e.target.value) || 0)}
+                    required
                   />
                 </div>
 
