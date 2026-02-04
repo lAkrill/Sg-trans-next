@@ -36,31 +36,36 @@ public static class RepairsFileEndpoints
 
         try
         {
+            // Читаем файл в память, чтобы избежать проблем с dispose потока
+            var bytes = new byte[file.Length];
+            using (var stream = file.OpenReadStream())
+            {
+                await stream.ReadAsync(bytes, 0, (int)file.Length);
+            }
+
             using (var content = new MultipartFormDataContent())
             {
-                using (var stream = file.OpenReadStream())
+                var streamContent = new ByteArrayContent(bytes);
+                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType ?? "application/octet-stream");
+                content.Add(streamContent, "file", file.FileName);
+
+                var response = await httpClient.PostAsync("http://localhost:8000/process-repairs-file/", content);
+
+                if (response.IsSuccessStatusCode)
                 {
-                    var streamContent = new StreamContent(stream);
-                    streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType ?? "application/octet-stream");
-                    content.Add(streamContent, "file", file.FileName);
-
-                    var response = await httpClient.PostAsync("http://localhost:8000/process-repairs-file/", content);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var responseContent = await response.Content.ReadAsStringAsync();
-                        return Results.Ok(new { message = "Файл успешно обработан", data = responseContent });
-                    }
-                    else
-                    {
-                        var errorContent = await response.Content.ReadAsStringAsync();
-                        return Results.StatusCode((int)response.StatusCode);
-                    }
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    return Results.Ok(new { message = "Файл успешно обработан", data = responseContent });
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return Results.StatusCode((int)response.StatusCode);
                 }
             }
         }
         catch (HttpRequestException ex)
         {
+            // Более информативная ошибка для отладки
             return Results.StatusCode(503);
         }
         catch (Exception ex)
