@@ -64,7 +64,13 @@ services.Configure<AuthorizationOptions>(configuration.GetSection(nameof(Authori
 
 services.AddHttpContextAccessor();
 services.AddScoped<ICurrentUserService, CurrentUserService>();
-services.AddHttpClient();
+
+builder.Services.AddHttpClient("FastAPI", c => {
+    c.BaseAddress = new Uri("http://127.0.0.1:8005/");
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    UseProxy = false
+});
 
 services
     .AddPersistence(configuration)

@@ -36,7 +36,8 @@ public static class RepairsFileEndpoints
 
         try
         {
-            var client = httpClientFactory.CreateClient();
+            var client = httpClientFactory.CreateClient("FastAPI");
+            
 
             // Настраиваем таймаут, если файл большой
             client.Timeout = TimeSpan.FromMinutes(5);
@@ -55,7 +56,7 @@ public static class RepairsFileEndpoints
             content.Add(streamContent, "file", file.FileName);
 
             // Используем 127.0.0.1 вместо localhost
-            var response = await client.PostAsync("http://127.0.0.1:8000/process-repairs-file/", content);
+            var response = await client.PostAsync("process-repairs-file/", content);
 
             var responseData = await response.Content.ReadAsStringAsync();
 
