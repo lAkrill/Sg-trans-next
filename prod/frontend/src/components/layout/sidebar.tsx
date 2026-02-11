@@ -23,6 +23,7 @@ import {
   Car,
   Cog,
   Droplet,
+  Import,
 } from "lucide-react";
 import { useCurrentUser, useVersion } from "@/hooks";
 import { Role } from "@/types/auth";
@@ -115,6 +116,11 @@ const sidebarItems: SidebarItem[] = [
     icon: Cog,
   },
   {
+    title: "Ремонты",
+    href: "/repairs",
+    icon: Wrench,
+  },
+  {
     title: "Справочники",
     icon: Database,
     children: directoryItems,
@@ -129,6 +135,11 @@ const sidebarItems: SidebarItem[] = [
     title: "Настройки",
     href: "/settings",
     icon: Settings,
+  },
+  {
+    title: "Импорт данных",
+    href: "/import",
+    icon: Import,
   },
 ];
 
@@ -229,7 +240,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b px-4">
           <Link href="/dashboard" className="text-lg font-semibold text-gray-900 dark:text-white">
-            СГ-Транс
+            СГ-ТРАНС
           </Link>
           <button onClick={onToggle} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 lg:hidden">
             <X className="h-5 w-5" />

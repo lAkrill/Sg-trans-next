@@ -13,6 +13,7 @@ import {
   AvatarFallback 
 } from "@/components/ui";
 import { useRouter } from "next/navigation";
+import { useVersion } from "@/hooks";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -22,6 +23,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const { data: user } = useCurrentUser();
   const logoutMutation = useLogout();
   const router = useRouter();
+  const { data: version } = useVersion();
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -40,9 +42,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         <Menu className="h-5 w-5" />
       </Button>
 
-      <div />
-
-      {/* User menu */}
+      <div className="ml-auto flex items-center gap-4">
+        <div className="text-right text-xs text-gray-500 dark:text-gray-400">
+          <span>Версии приложений</span> <br /> {version?.frontend} (клиент), {version?.backend} (сервер)
+        </div>
+        {/* User menu */}
       {user && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -67,6 +71,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      </div>
     </header>
   );
 }

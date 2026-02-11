@@ -23,7 +23,13 @@ export function RepairsTab({CicternNumber}:LocationTabProps) {
     const items: { type: 'in' | 'out'; date: string; data: RepairsIn | RepairsOut }[] = [];
     repairsIn?.forEach((r) => items.push({ type: 'in', date: r.dateIn, data: r }));
     repairsOut?.forEach((r) => items.push({ type: 'out', date: r.dateOut, data: r }));
-    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return items.sort((a, b) => {
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      if (a.type === b.type) return 0;
+      // При одинаковых датах «выход из ремонта» должен быть выше «приёма в ремонт»
+      return a.type === 'out' ? -1 : 1;
+    });
   }, [repairsIn, repairsOut]);
   const hasRepairs = repairsChain.length > 0;
 
