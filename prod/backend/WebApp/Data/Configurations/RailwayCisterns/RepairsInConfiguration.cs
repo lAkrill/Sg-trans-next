@@ -34,7 +34,7 @@ public partial class RepairsInConfiguration : IEntityTypeConfiguration<RepairsIn
             .HasColumnType("text");
         entity.Property(x => x.StationId).HasColumnName("StationId").IsRequired();
         entity.Property(x=>x.DateIn).HasColumnName("DateIn").IsRequired()
-            .HasColumnType("date");
+            .HasColumnType("timestamp without time zone");
         entity.Property(x=>x.DefectCode).HasColumnName("DefectCode").IsRequired()
             .HasColumnType("text[]");
         entity.Property(x=>x.DefectName).HasColumnName("DefectName").IsRequired()

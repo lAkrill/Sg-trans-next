@@ -25,9 +25,9 @@ public partial class RepairsOutConfiguration : IEntityTypeConfiguration<RepairsO
             .HasColumnType("text");
         entity.Property(e=>e.DepotId).HasColumnName("DepotId").IsRequired();
         entity.Property(e=>e.DateIn).HasColumnName("DateIn").IsRequired()
-            .HasColumnType("date");
+            .HasColumnType("timestamp without time zone");
         entity.Property(e=>e.DateOut).HasColumnName("DateOut").IsRequired()
-            .HasColumnType("date");
+            .HasColumnType("timestamp without time zone");
        entity.Property(e=>e.ModernCode).HasColumnName("ModernCode").IsRequired()
            .HasColumnType("text[]");
         entity.Property(e=>e.RoadCode).HasColumnName("RoadCode").IsRequired()

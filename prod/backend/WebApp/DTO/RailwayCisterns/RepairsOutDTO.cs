@@ -12,8 +12,8 @@ public class RepairsOutDTO
     public string DepotName { get; set; } = null!;
     public string DepotCode { get; set; } = null!;
     public Guid DepotId { get; set; }
-    public DateOnly DateIn { get; set; }
-    public DateOnly DateOut { get; set; }
+    public DateTime DateIn { get; set; }
+    public DateTime DateOut { get; set; }
     public string[]? ModernCode {get; set;}
     public string? RoadCode { get; set; }
     public string? RoadName { get; set; }
@@ -33,8 +33,8 @@ public class CreateRepairsOutDTO
     public string DepotName { get; set; } = null!;
     public string DepotCode { get; set; } = null!;
     public Guid DepotId { get; set; }
-    public DateOnly DateIn { get; set; }
-    public DateOnly DateOut { get; set; }
+    public DateTime DateIn { get; set; }
+    public DateTime DateOut { get; set; }
     public string[]? ModernCode {get; set;}
     public string? RoadCode { get; set; }
     public string? RoadName { get; set; }
@@ -50,8 +50,8 @@ public class UpdateRepairsOutDTO
     public string DepotName { get; set; } = null!;
     public string DepotCode { get; set; } = null!;
     public Guid DepotId { get; set; }
-    public DateOnly DateIn { get; set; }
-    public DateOnly DateOut { get; set; }
+    public DateTime DateIn { get; set; }
+    public DateTime DateOut { get; set; }
     public string[]? ModernCode {get; set;}
     public string? RoadCode { get; set; }
     public string? RoadName { get; set; }

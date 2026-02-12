@@ -17,7 +17,7 @@ public class RepairsInDTO
     public string StationCode { get; set; } = null!;
     public string StationName { get; set; } = null!;
     public Guid StationId { get; set; }
-    public DateOnly DateIn { get; set; }
+    public DateTime DateIn { get; set; }
     public string[]? DefectCode {get; set;}
     public string[]? DefectName {get; set;}
     public string? AdminRoadCode { get; set; }
@@ -42,7 +42,7 @@ public class CreateRepairsInDTO
     public string StationCode { get; set; } = null!;
     public string StationName { get; set; } = null!;
     public Guid StationId { get; set; }
-    public DateOnly DateIn { get; set; }
+    public DateTime DateIn { get; set; }
     public string[]? DefectCode {get; set;}
     public string[]? DefectName {get; set;}
     public string? AdminRoadCode { get; set; }
@@ -62,7 +62,7 @@ public class UpdateRepairsInDTO
     public string StationCode { get; set; } = null!;
     public string StationName { get; set; } = null!;
     public Guid StationId { get; set; }
-    public DateOnly DateIn { get; set; }
+    public DateTime DateIn { get; set; }
     public string[]? DefectCode {get; set;}
     public string[]? DefectName {get; set;}
     public string? AdminRoadCode { get; set; }
