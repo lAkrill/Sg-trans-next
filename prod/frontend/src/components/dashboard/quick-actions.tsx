@@ -1,6 +1,6 @@
 "use client";
 
-import { Train, MapPin, BarChart3, Users } from "lucide-react";
+import { Train, MapPin, Users, Wrench } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { useCurrentUser } from "@/api";
 import { roleUtils } from "@/lib/permissions";
@@ -25,10 +25,10 @@ const QuickActions = () => {
       color: "bg-yellow-500",
     },
     {
-      title: "Отчеты",
-      description: "Аналитика и отчетность",
-      icon: BarChart3,
-      href: "/reports",
+      title: "Ремонты",
+      description: "Сведения о ремонтах",
+      icon: Wrench,
+      href: "/repairs",
       color: "bg-purple-500",
     },
   ];
