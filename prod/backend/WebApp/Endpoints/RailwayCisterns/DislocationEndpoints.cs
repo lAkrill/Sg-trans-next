@@ -40,6 +40,8 @@ public static class DislocationEndpoints
                         OperationNote = d.OperationNote,
                         CodeStationOut = d.CodeStationOut,
                         NameStationOut = d.NameStationOut,
+                        CodeStationEnd = d.CodeStationEnd,
+                        NameStationEnd = d.NameStationEnd,
                         CodeShip = d.CodeShip,
                         NameShip = d.NameShip,
                         WeightShip = d.WeightShip,
@@ -84,6 +86,8 @@ public static class DislocationEndpoints
                         OperationNote = d.OperationNote,
                         CodeStationOut = d.CodeStationOut,
                         NameStationOut = d.NameStationOut,
+                        CodeStationEnd = d.CodeStationEnd,
+                        NameStationEnd = d.NameStationEnd,
                         CodeShip = d.CodeShip,
                         NameShip = d.NameShip,
                         WeightShip = d.WeightShip,
@@ -127,6 +131,8 @@ public static class DislocationEndpoints
                         OperationNote = d.OperationNote,
                         CodeStationOut = d.CodeStationOut,
                         NameStationOut = d.NameStationOut,
+                        CodeStationEnd = d.CodeStationEnd,
+                        NameStationEnd = d.NameStationEnd,
                         CodeShip = d.CodeShip,
                         NameShip = d.NameShip,
                         WeightShip = d.WeightShip,
@@ -171,6 +177,8 @@ public static class DislocationEndpoints
                         OperationNote = d.OperationNote,
                         CodeStationOut = d.CodeStationOut,
                         NameStationOut = d.NameStationOut,
+                        CodeStationEnd = d.CodeStationEnd,
+                        NameStationEnd = d.NameStationEnd,
                         CodeShip = d.CodeShip,
                         NameShip = d.NameShip,
                         WeightShip = d.WeightShip,
@@ -231,6 +239,8 @@ public static class DislocationEndpoints
                         OperationNote = d.OperationNote,
                         CodeStationOut = d.CodeStationOut,
                         NameStationOut = d.NameStationOut,
+                        CodeStationEnd = d.CodeStationEnd,
+                        NameStationEnd = d.NameStationEnd,
                         CodeShip = d.CodeShip,
                         NameShip = d.NameShip,
                         WeightShip = d.WeightShip,
@@ -291,6 +301,8 @@ public static class DislocationEndpoints
                         OperationNote = d.OperationNote,
                         CodeStationOut = d.CodeStationOut,
                         NameStationOut = d.NameStationOut,
+                        CodeStationEnd = d.CodeStationEnd,
+                        NameStationEnd = d.NameStationEnd,
                         CodeShip = d.CodeShip,
                         NameShip = d.NameShip,
                         WeightShip = d.WeightShip,
@@ -309,6 +321,76 @@ public static class DislocationEndpoints
             })
             .WithName("GetDislocationsByDateRangeForCisternByNumber")
             .Produces<List<DislocationListDTO>>(StatusCodes.Status200OK)
+            .RequirePermissions(Permission.Read);
+        
+        // Get last cistern dislocations
+        group.MapGet("/cisterns-last-location", async (
+                [FromServices] ApplicationDbContext context
+                ) =>
+            {
+                
+                var dislocation = await context.Dislocations
+                    .AsNoTracking()
+                    .OrderBy(d=>d.CisternId)
+                    .ThenByDescending(d => d.DateOpr)
+                    .Include(d => d.StationOpr)
+                    .ToListAsync();
+                    
+                var result = dislocation.GroupBy(d => d.CisternId)
+                    .Select(group => 
+                    {
+                        var history = group.ToList(); // Список уже отсортирован благодаря OrderBy выше
+                        var latestRecord = history.First();
+                        var currentStation = latestRecord.StationOpr;
+
+                        // Ищем момент смены станции
+                        var firstDifferentStation = history.FirstOrDefault(x => x.StationOpr != currentStation);
+            
+                        DateTime arrivalDate;
+                        if (firstDifferentStation == null)
+                        {
+                            arrivalDate = history.Last().DateOpr;
+                        }
+                        else
+                        {
+                            int index = history.IndexOf(firstDifferentStation);
+                            arrivalDate = history[index - 1].DateOpr;
+                        }
+                       return group.Select(d=> new CisternsLastDislocationDTO(){
+                           Id = d.Id,
+                           DateOpr = d.DateOpr,
+                           Downtime = (DateTime.Now - arrivalDate).Days,
+                           NumCistern = d.NumCistern,
+                           CodeStationOpr = d.CodeStationOpr,
+                           NameStationOpr = d.NameStationOpr,
+                           RoadDislocation = d.RoadDislocation,
+                           OperationShort = d.OperationShort,
+                           OperationNote = d.OperationNote,
+                           CodeStationOut = d.CodeStationOut,
+                           NameStationOut = d.NameStationOut,
+                           CodeStationEnd = d.CodeStationEnd,
+                           NameStationEnd = d.NameStationEnd,
+                           CodeShip = d.CodeShip,
+                           NameShip = d.NameShip,
+                           WeightShip = d.WeightShip,
+                           NumTrain = d.NumTrain,
+                           IndxTrain = d.IndxTrain,
+                           CodeConsignor = d.CodeConsignor,
+                           CodeConsignee = d.CodeConsignee,
+                           CodeWagonOwner = d.CodeWagonOwner,
+                           NumShipmen = d.NumShipmen,
+                           Lat = d.StationOpr != null ? d.StationOpr.Lat : 0,
+                           Lon = d.StationOpr != null ? d.StationOpr.Lon : 0
+                           }).ToList();
+                    })
+                    .ToList()
+                    .FirstOrDefault();
+
+                return result is null ? Results.NotFound() : Results.Ok(dislocation);
+            })
+            .WithName("GetLastCisternsDislocation")
+            .Produces<CisternsLastDislocationDTO>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
             .RequirePermissions(Permission.Read);
     }
 }
