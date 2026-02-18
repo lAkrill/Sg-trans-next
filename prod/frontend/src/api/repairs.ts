@@ -4,10 +4,12 @@ import { DepotDTO, StationDTO, RepairTypeDTO} from "../types/directories";
 import { RailwayCisternListDTO} from "../types/cisterns";
 
 
-const REPIN_LAST_ENDPOINT = '/api/RepairsIn/latest/byCisternNumber';
-const REPIN_ALL_ENDPOINT = '/api/RepairsIn/byCisternNumber';
-const REPOUT_LAST_ENDPOINT = '/api/RepairsOut/latest/byCisternNumber';
-const REPOUT_ALL_ENDPOINT = '/api/RepairsOut/byCisternNumber';
+const REPIN_LAST_NUM_ENDPOINT = '/api/RepairsIn/latest/byCisternNumber';
+const REPIN_ALL_NUM_ENDPOINT = '/api/RepairsIn/byCisternNumber';
+const REPOUT_LAST_NUM_ENDPOINT = '/api/RepairsOut/latest/byCisternNumber';
+const REPOUT_ALL_NUM_ENDPOINT = '/api/RepairsOut/byCisternNumber';
+const REPIN_ALL_ENDPOINT = '/api/RepairsIn';
+const REPOUT_ALL_ENDPOINT = '/api/RepairsOut';
 
 export interface RepairsIn {
   
@@ -58,23 +60,34 @@ export interface RepairsOut {
 }
 
 export const CisternRepairs= {
-  getLastRepairsIn: async (Num: string): Promise<RepairsIn> => {
-    const response = await api.get<RepairsIn>(`${REPIN_LAST_ENDPOINT}/${Num}`);
+  getLastRepairsNumIn: async (Num: string): Promise<RepairsIn> => {
+    const response = await api.get<RepairsIn>(`${REPIN_LAST_NUM_ENDPOINT}/${Num}`);
     return response.data;
   },
 
-  getAllRepairsIn: async (Num: string): Promise<RepairsIn[]> => {
-    const response = await api.get<RepairsIn[]>(`${REPIN_ALL_ENDPOINT}/${Num}?skip=0&take=50`);
+  getAllRepairsNumIn: async (Num: string): Promise<RepairsIn[]> => {
+    const response = await api.get<RepairsIn[]>(`${REPIN_ALL_NUM_ENDPOINT}/${Num}?skip=0&take=50`);
     return response.data;
   },
 
-  getLastRepairsOut: async (Num: string): Promise<RepairsOut> => {
-    const response = await api.get<RepairsOut>(`${REPOUT_LAST_ENDPOINT}/${Num}`);
+  getLastRepairsNumOut: async (Num: string): Promise<RepairsOut> => {
+    const response = await api.get<RepairsOut>(`${REPOUT_LAST_NUM_ENDPOINT}/${Num}`);
     return response.data;
   },
 
-  getAllRepairsOut: async (Num: string): Promise<RepairsOut[]> => {
-    const response = await api.get<RepairsOut[]>(`${REPOUT_ALL_ENDPOINT}/${Num}?skip=0&take=50`);
+  getAllRepairsNumOut: async (Num: string): Promise<RepairsOut[]> => {
+    const response = await api.get<RepairsOut[]>(`${REPOUT_ALL_NUM_ENDPOINT}/${Num}?skip=0&take=50`);
     return response.data;
   },
+
+  getAllRepairsIn: async (): Promise<RepairsIn[]> => {
+    const response = await api.get<RepairsIn[]>(`${REPIN_ALL_ENDPOINT}?skip=0&take=1000`);
+    return response.data;
+  },
+
+  getAllRepairsOut: async (): Promise<RepairsOut[]> => {
+    const response = await api.get<RepairsOut[]>(`${REPOUT_ALL_ENDPOINT}?skip=0&take=1000`);
+    return response.data;
+  },
+
 };
