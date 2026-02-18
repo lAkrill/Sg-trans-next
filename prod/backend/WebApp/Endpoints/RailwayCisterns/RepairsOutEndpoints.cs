@@ -123,6 +123,10 @@ public static class RepairsOutEndpoints
                 [FromQuery] int skip = 0,
                 [FromQuery] int take = 50) =>
             {
+                if (take < 0)
+                {
+                    return Results.BadRequest();
+                }
                 var repairsOut = await context.RepairsOuts
                     .AsNoTracking()
                     .Where(r => r.CisternNumber == cisternNumber)
@@ -141,12 +145,41 @@ public static class RepairsOutEndpoints
                     .AsSplitQuery()
                     .OrderByDescending(r => r.DateIn)
                     .Skip(skip)
-                    .Take(Math.Min(take, 100))
+                    .Take(take)
                     .Select(r => r.ToRepairsOutDTO())
                     .ToListAsync();
                 return Results.Ok(repairsOut);
             })
             .WithName("GetRepairsOutByCisternNumber")
+            .Produces<List<RepairsOutDTO>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .RequirePermissions(Permission.Read);
+        
+        group.MapGet("/byCisternNumberAll/{cisternNumber}", async ([FromServices] ApplicationDbContext context,
+                [FromRoute] string cisternNumber) =>
+            {
+                var repairsOut = await context.RepairsOuts
+                    .AsNoTracking()
+                    .Where(r => r.CisternNumber == cisternNumber)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Type)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Manufacturer)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Model)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Owner)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(r => r.Affiliation)
+                    .Include(r => r.RepairType)
+                    .Include(r => r.Depot)
+                    .AsSplitQuery()
+                    .OrderByDescending(r => r.DateIn)
+                    .Select(r => r.ToRepairsOutDTO())
+                    .ToListAsync();
+                return Results.Ok(repairsOut);
+            })
+            .WithName("GetAllRepairsOutByCisternNumber")
             .Produces<List<RepairsOutDTO>>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
 
