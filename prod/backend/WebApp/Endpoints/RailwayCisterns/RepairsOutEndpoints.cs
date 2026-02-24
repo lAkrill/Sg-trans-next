@@ -18,6 +18,10 @@ public static class RepairsOutEndpoints
         
         group.MapGet("/", async ([FromServices] ApplicationDbContext context, [FromQuery] int skip = 0, [FromQuery] int take = 50) =>
         {
+            if (take < 0)
+            {
+                return Results.BadRequest();
+            }
             var repairsOut = await context.RepairsOuts
                 .AsNoTracking()
                 .Include(r=> r.Cistern)
@@ -34,14 +38,41 @@ public static class RepairsOutEndpoints
                 .Include(r=> r.Depot)
                 .AsSplitQuery()
                 .Skip(skip)
-                .Take(Math.Min(take, 100))
+                .Take(take)
                 .Select(r => r.ToRepairsOutDTO())
                 .ToListAsync();
             return Results.Ok(repairsOut);
         })
         .WithName("GetRepairsOut")
         .Produces<List<RepairsOutDTO>>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
         .RequirePermissions(Permission.Read);
+        
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
+            {
+               var repairsOut = await context.RepairsOuts
+                    .AsNoTracking()
+                    .Include(r=> r.Cistern)
+                    .ThenInclude(c=>c.Type)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Manufacturer)
+                    .Include(r=> r.Cistern)
+                    .ThenInclude(c=>c.Model)
+                    .Include(r=> r.Cistern)
+                    .ThenInclude(c=>c.Owner)
+                    .Include(r=> r.Cistern)
+                    .ThenInclude(r=>r.Affiliation)
+                    .Include(r=>r.RepairType)
+                    .Include(r=> r.Depot)
+                    .AsSplitQuery()
+                    .Select(r => r.ToRepairsOutDTO())
+                    .ToListAsync();
+                return Results.Ok(repairsOut);
+            })
+            .WithName("GetAllRepairsOut")
+            .Produces<List<RepairsOutDTO>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .RequirePermissions(Permission.Read);
         
         group.MapGet("/{id}", async ([FromServices] ApplicationDbContext context,
             Guid id) =>

@@ -18,6 +18,10 @@ public static class RepairsInEndpoints
 
         group.MapGet("/", async ([FromServices] ApplicationDbContext context, [FromQuery] int skip = 0, [FromQuery] int take = 50) =>
             {
+                if (take < 0)
+                {
+                    return Results.BadRequest();
+                }
                 var repairsIn = await context.RepairsIns
                     .AsNoTracking()
                     .Include(r => r.Cistern)
@@ -35,7 +39,66 @@ public static class RepairsInEndpoints
                     .Include(r => r.Station)
                     .AsSplitQuery()
                     .Skip(skip)
-                    .Take(Math.Min(take, 100))
+                    .Take(take)
+                    .Select(r => r.ToRepairsInDTO())
+                    .ToListAsync();
+                return Results.Ok(repairsIn);
+            })
+            .WithName("GetRepairsIn")
+            .Produces<List<RepairsInDTO>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .RequirePermissions(Permission.Read);
+        
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
+            {
+                var repairsIn = await context.RepairsIns
+                    .AsNoTracking()
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Type)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Manufacturer)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Model)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Owner)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(r => r.Affiliation)
+                    .Include(r => r.RepairType)
+                    .Include(r => r.Depot)
+                    .Include(r => r.Station)
+                    .AsSplitQuery()
+                    .Select(r => r.ToRepairsInDTO())
+                    .ToListAsync();
+                return Results.Ok(repairsIn);
+            })
+            .WithName("GetAllRepairsIn")
+            .Produces<List<RepairsInDTO>>(StatusCodes.Status200OK)
+            .RequirePermissions(Permission.Read);
+        
+        group.MapGet("/", async ([FromServices] ApplicationDbContext context, [FromQuery] int skip = 0, [FromQuery] int take = 50) =>
+            {
+                if (take < 0)
+                {
+                    return Results.BadRequest();
+                }
+                var repairsIn = await context.RepairsIns
+                    .AsNoTracking()
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Type)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Manufacturer)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Model)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(c => c.Owner)
+                    .Include(r => r.Cistern)
+                    .ThenInclude(r => r.Affiliation)
+                    .Include(r => r.RepairType)
+                    .Include(r => r.Depot)
+                    .Include(r => r.Station)
+                    .AsSplitQuery()
+                    .Skip(skip)
+                    .Take(take)
                     .Select(r => r.ToRepairsInDTO())
                     .ToListAsync();
                 return Results.Ok(repairsIn);
