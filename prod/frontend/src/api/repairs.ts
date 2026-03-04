@@ -8,8 +8,8 @@ const REPIN_LAST_NUM_ENDPOINT = '/api/RepairsIn/latest/byCisternNumber';
 const REPIN_ALL_NUM_ENDPOINT = '/api/RepairsIn/byCisternNumber';
 const REPOUT_LAST_NUM_ENDPOINT = '/api/RepairsOut/latest/byCisternNumber';
 const REPOUT_ALL_NUM_ENDPOINT = '/api/RepairsOut/byCisternNumber';
-const REPIN_ALL_ENDPOINT = '/api/RepairsIn';
-const REPOUT_ALL_ENDPOINT = '/api/RepairsOut';
+const REPIN_ALL_ENDPOINT = '/api/RepairsIn/all';
+const REPOUT_ALL_ENDPOINT = '/api/RepairsOut/all';
 
 export interface RepairsIn {
   
@@ -81,12 +81,12 @@ export const CisternRepairs= {
   },
 
   getAllRepairsIn: async (): Promise<RepairsIn[]> => {
-    const response = await api.get<RepairsIn[]>(`${REPIN_ALL_ENDPOINT}?skip=0&take=1000`);
+    const response = await api.get<RepairsIn[]>(`${REPIN_ALL_ENDPOINT}`);
     return response.data;
   },
 
   getAllRepairsOut: async (): Promise<RepairsOut[]> => {
-    const response = await api.get<RepairsOut[]>(`${REPOUT_ALL_ENDPOINT}?skip=0&take=1000`);
+    const response = await api.get<RepairsOut[]>(`${REPOUT_ALL_ENDPOINT}`);
     return response.data;
   },
 
