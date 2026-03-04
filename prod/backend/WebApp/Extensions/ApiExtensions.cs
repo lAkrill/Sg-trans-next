@@ -54,6 +54,7 @@ public static class ApiExtensions
         app.MapDefectEndpoints();
         app.MapRepairsInEndpoints();
         app.MapRepairsOutEndpoints();
+        app.MapRepairsMatchingEndpoints();
         app.MapRoadEndpoints();
         app.MapUpdateEndpoints();
         app.MapRepairsFileEndpoints();
