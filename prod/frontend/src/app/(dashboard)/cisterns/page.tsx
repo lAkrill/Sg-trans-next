@@ -550,9 +550,9 @@ export default function CisternsPage() {
       <div className="flex gap-3 max-lg:flex-col">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
           <Train className="h-8 w-8" />
-          Вагоны
+          Вагоны-цистерны
         </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">Управление железнодорожными цистернами</p>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">Управление железнодорожными вагонами-цистернами</p>
       </div>
 
       {/* Controls */}
@@ -585,7 +585,7 @@ export default function CisternsPage() {
           <Link href="/cisterns/create">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Добавить цистерну
+              Добавить вагон-цистерну
             </Button>
           </Link>
         </div>
@@ -600,7 +600,7 @@ export default function CisternsPage() {
                 ? `Результаты поиска: "${searchTerm}"`
                 : isFilterMode
                 ? "Результаты фильтрации"
-                : "Список цистерн"}
+                : "Список вагонов-цистерн"}
             </CardTitle>
             <CardDescription>
               {isSearchMode
@@ -620,9 +620,9 @@ export default function CisternsPage() {
                 <Train className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600 dark:text-gray-400">
                   {isSearchMode
-                    ? `Цистерны с номером "${searchTerm}" не найдены`
+                    ? `Вагоны-цистерны с номером "${searchTerm}" не найдены`
                     : isFilterMode
-                    ? "По заданным фильтрам цистерны не найдены"
+                    ? "По заданным фильтрам вагоны-цистерны не найдены"
                     : "Нет данных для отображения"}
                 </p>
               </div>
@@ -693,7 +693,13 @@ export default function CisternsPage() {
                     <TableRow key={`${cistern.id}-${index}`}>
                       {visibleColumns.map((column) => (
                         <TableCell key={`${cistern.id}-${column}`} className={column === "number" ? "font-medium" : ""}>
-                          {getDisplayValue(cistern, column)}
+                          {column === "number" ? (
+                            <Link href={`/cisterns/${cistern.id}`} className="text-primary hover:underline">
+                              {getDisplayValue(cistern, column)}
+                            </Link>
+                          ) : (
+                            getDisplayValue(cistern, column)
+                          )}
                         </TableCell>
                       ))}
                       <TableCell className="text-right">

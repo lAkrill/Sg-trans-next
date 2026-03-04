@@ -31,16 +31,18 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { CisternRepairs } from "@/api/repairs";
-import type { RepairsIn, RepairsOut } from "@/api/repairs";
+import type { RepairsIn, RepairsOut, RepairsMatching } from "@/api/repairs";
 
 export default function RepairsPage() {
  
   const [repairsIn, setRepairsIn] = useState<RepairsIn[] | null>(null);
   const [repairsOut, setRepairsOut] = useState<RepairsOut[] | null>(null);
+  const [repairsMatching, setRepairsMatching] = useState<RepairsMatching[] | null>(null);
   const [activeTab, setActiveTab] = useState<"in" | "out" | "matched">("in");
   const [searchQuery, setSearchQuery] = useState("");
   const [pageIn, setPageIn] = useState(1);
   const [pageOut, setPageOut] = useState(1);
+  const [pageMatched, setPageMatched] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   const repairsInSorted = useMemo(() => {
@@ -57,8 +59,25 @@ export default function RepairsPage() {
     );
   }, [repairsOut]);
 
+  const repairsMatchingSorted = useMemo(() => {
+    if (!repairsMatching?.length) return repairsMatching ?? [];
+    return [...repairsMatching].sort(
+      (a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()
+    );
+  }, [repairsMatching]);
+
+  const matchedInIds = useMemo(() => {
+    if (!repairsMatching?.length) return new Set<string>();
+    return new Set(repairsMatching.map((m) => m.repairInId));
+  }, [repairsMatching]);
+
+  const matchedOutIds = useMemo(() => {
+    if (!repairsMatching?.length) return new Set<string>();
+    return new Set(repairsMatching.map((m) => m.repairOutId));
+  }, [repairsMatching]);
+
   const repairsInFiltered = useMemo(() => {
-    if (!searchQuery.trim()) return repairsInSorted ?? [];
+    if (activeTab !== "in" || !searchQuery.trim()) return repairsInSorted ?? [];
     const q = searchQuery.trim().toLowerCase();
     return (repairsInSorted ?? []).filter((r) => {
       const dateStr = r.dateIn ? new Date(r.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
@@ -75,10 +94,10 @@ export default function RepairsPage() {
       ].join(" ").toLowerCase();
       return searchable.includes(q);
     });
-  }, [repairsInSorted, searchQuery]);
+  }, [repairsInSorted, searchQuery, activeTab]);
 
   const repairsOutFiltered = useMemo(() => {
-    if (!searchQuery.trim()) return repairsOutSorted ?? [];
+    if (activeTab !== "out" || !searchQuery.trim()) return repairsOutSorted ?? [];
     const q = searchQuery.trim().toLowerCase();
     return (repairsOutSorted ?? []).filter((r) => {
       const dateInStr = r.dateIn ? new Date(r.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
@@ -98,9 +117,43 @@ export default function RepairsPage() {
     });
   }, [repairsOutSorted, searchQuery]);
 
+  const repairsMatchingFiltered = useMemo(() => {
+    if (!searchQuery.trim()) return repairsMatchingSorted ?? [];
+    const q = searchQuery.trim().toLowerCase();
+    return (repairsMatchingSorted ?? []).filter((m) => {
+      const dateTimeStr = m.dateTime ? new Date(m.dateTime).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
+      const dateInStr = m.repairIn?.dateIn ? new Date(m.repairIn.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
+      const dateOutInStr = m.repairOut?.dateIn ? new Date(m.repairOut.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
+      const dateOutStr = m.repairOut?.dateOut ? new Date(m.repairOut.dateOut).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
+      const cisternNum = m.repairIn?.cisternNumber ?? m.repairOut?.cisternNumber ?? m.cistern?.number ?? "";
+      const repairType = m.repairIn?.repairType?.name ?? m.repairOut?.repairType?.name ?? "";
+      const defectStr = m.repairIn?.defectName?.length ? m.repairIn.defectName.join(" ") : "";
+      const modernStr = m.repairOut?.modernName?.length ? m.repairOut.modernName.join(" ") : "";
+      const searchable = [
+        dateTimeStr,
+        dateInStr,
+        dateOutInStr,
+        dateOutStr,
+        cisternNum,
+        repairType,
+        m.repairIn?.vU23 ?? "",
+        m.repairOut?.vU36 ?? "",
+        m.repairIn?.depotName ?? "",
+        m.repairIn?.stationName ?? "",
+        m.repairIn?.roadName ?? "",
+        defectStr,
+        m.repairOut?.depotName ?? "",
+        m.repairOut?.roadName ?? "",
+        modernStr,
+      ].join(" ").toLowerCase();
+      return searchable.includes(q);
+    });
+  }, [repairsMatchingSorted, searchQuery, activeTab]);
+
   useEffect(() => {
     setPageIn(1);
     setPageOut(1);
+    setPageMatched(1);
   }, [searchQuery]);
 
   const repairsInPaginated = useMemo(() => {
@@ -115,10 +168,18 @@ export default function RepairsPage() {
     return list.slice(start, start + pageSize);
   }, [repairsOutFiltered, pageOut, pageSize]);
 
+  const repairsMatchingPaginated = useMemo(() => {
+    const list = repairsMatchingFiltered ?? [];
+    const start = (pageMatched - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [repairsMatchingFiltered, pageMatched, pageSize]);
+
   const totalCountIn = (repairsInFiltered ?? []).length;
   const totalCountOut = (repairsOutFiltered ?? []).length;
+  const totalCountMatched = (repairsMatchingFiltered ?? []).length;
   const totalPagesIn = Math.max(1, Math.ceil(totalCountIn / pageSize));
   const totalPagesOut = Math.max(1, Math.ceil(totalCountOut / pageSize));
+  const totalPagesMatched = Math.max(1, Math.ceil(totalCountMatched / pageSize));
 
   const handlePageChangeIn = useCallback((page: number) => {
     setPageIn(Math.max(1, Math.min(page, totalPagesIn)));
@@ -128,17 +189,24 @@ export default function RepairsPage() {
     setPageOut(Math.max(1, Math.min(page, totalPagesOut)));
   }, [totalPagesOut]);
 
+  const handlePageChangeMatched = useCallback((page: number) => {
+    setPageMatched(Math.max(1, Math.min(page, totalPagesMatched)));
+  }, [totalPagesMatched]);
+
   const handlePageSizeChange = useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
     setPageIn(1);
     setPageOut(1);
+    setPageMatched(1);
   }, []);
 
   const handleCisternSelect = useCallback(async () => {
     const res1 = await CisternRepairs.getAllRepairsIn();
     const res2 = await CisternRepairs.getAllRepairsOut();
+    const res3 = await CisternRepairs.getAllRepairsMatching();
     setRepairsIn(res1);
     setRepairsOut(res2);
+    setRepairsMatching(res3);
   }, []);
 
   useEffect(() => {
@@ -257,17 +325,10 @@ export default function RepairsPage() {
         <Search className="h-4 w-4 text-muted-foreground shrink-0" />
         <Input
           type="search"
-          placeholder={
-            activeTab === "in"
-              ? "Быстрый поиск по столбцам..."
-              : activeTab === "out"
-                ? "Быстрый поиск по столбцам..."
-                : "Выберите вкладку с данными для поиска"
-          }
+          placeholder="Быстрый поиск по столбцам..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-md"
-          disabled={activeTab === "matched"}
         />
       </div>
 
@@ -297,7 +358,14 @@ export default function RepairsPage() {
                       <TableBody>
                         {repairsInPaginated?.length ? (
                           repairsInPaginated.map((r) => (
-                            <TableRow key={r.id} className="even:bg-muted/30">
+                            <TableRow
+                              key={r.id}
+                              className={
+                                matchedInIds.has(r.id)
+                                  ? "even:bg-muted/30"
+                                  : "bg-rose-200/80 dark:bg-rose-900/60"
+                              }
+                            >
                               <TableCell className="whitespace-nowrap">
                                 {r.dateIn
                                   ? new Date(r.dateIn).toLocaleString("ru-RU", {
@@ -356,7 +424,14 @@ export default function RepairsPage() {
                       <TableBody>
                         {repairsOutPaginated?.length ? (
                           repairsOutPaginated.map((r) => (
-                            <TableRow key={r.id} className="even:bg-muted/30">
+                            <TableRow
+                              key={r.id}
+                              className={
+                                matchedOutIds.has(r.id)
+                                  ? "even:bg-muted/30"
+                                  : "bg-rose-200/80 dark:bg-rose-900/60"
+                              }
+                            >
                               <TableCell className="whitespace-nowrap">
                                 {r.dateIn
                                   ? new Date(r.dateIn).toLocaleString("ru-RU", {
@@ -405,22 +480,100 @@ export default function RepairsPage() {
               </TabsContent>
               <TabsContent value="matched" className="mt-4">
                 <Card>
-                  <CardContent className="px-4 py-0">
-                    <Table>
+                  <CardContent className="px-4 py-0 overflow-x-auto">
+                    <Table className="w-full text-xs">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Сопоставленные данные</TableHead>
+                          <TableHead className="whitespace-nowrap w-0">Дата сопоставления</TableHead>
+                          <TableHead className="whitespace-nowrap w-0">№ Вагона</TableHead>
+                          <TableHead className="whitespace-nowrap w-0">Дата приёма</TableHead>
+                          <TableHead className="whitespace-nowrap w-0">Дата нач. ремонта</TableHead>
+                          <TableHead className="whitespace-nowrap w-0">Дата выпуска</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Тип ремонта</TableHead>
+                          <TableHead className="whitespace-nowrap w-0">ВУ23</TableHead>
+                          <TableHead className="whitespace-nowrap w-0">ВУ36</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Депо (приём)</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Станция</TableHead>
+                          <TableHead className="whitespace-nowrap w-0">Дорога (приём)</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Дефекты</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Депо (выпуск)</TableHead>
+                          <TableHead className="whitespace-nowrap w-0">Дорога (выпуск)</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Модернизации</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        <TableRow>
-                          <TableCell colSpan={1} className="text-center text-muted-foreground py-8">
-                            Раздел в разработке
-                          </TableCell>
-                        </TableRow>
+                        {repairsMatchingPaginated?.length ? (
+                          repairsMatchingPaginated.map((m) => (
+                            <TableRow key={m.id} className="even:bg-muted/30">
+                              <TableCell className="whitespace-nowrap">
+                                {m.dateTime
+                                  ? new Date(m.dateTime).toLocaleString("ru-RU", {
+                                      dateStyle: "short",
+                                      timeStyle: "short",
+                                    })
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap">{m.repairIn?.cisternNumber ?? m.repairOut?.cisternNumber ?? m.cistern?.number ?? "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">
+                                {m.repairIn?.dateIn
+                                  ? new Date(m.repairIn.dateIn).toLocaleString("ru-RU", {
+                                      dateStyle: "short",
+                                      timeStyle: "short",
+                                    })
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap">
+                                {m.repairOut?.dateIn
+                                  ? new Date(m.repairOut.dateIn).toLocaleString("ru-RU", {
+                                      dateStyle: "short",
+                                      timeStyle: "short",
+                                    })
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap">
+                                {m.repairOut?.dateOut
+                                  ? new Date(m.repairOut.dateOut).toLocaleString("ru-RU", {
+                                      dateStyle: "short",
+                                      timeStyle: "short",
+                                    })
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">
+                                {m.repairIn?.repairType?.name ?? m.repairOut?.repairType?.name ?? "—"}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap">{m.repairIn?.vU23 ?? "—"}</TableCell>
+                              <TableCell className="whitespace-nowrap">{m.repairOut?.vU36 ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairIn?.depotName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairIn?.stationName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairIn?.roadName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">
+                                {m.repairIn?.defectName?.length ? m.repairIn.defectName.join(", ") : "—"}
+                              </TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairOut?.depotName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairOut?.roadName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">
+                                {m.repairOut?.modernName?.length ? m.repairOut.modernName.join(", ") : "—"}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={15} className="text-center text-muted-foreground py-8">
+                              Нет данных
+                            </TableCell>
+                          </TableRow>
+                        )}
                       </TableBody>
                     </Table>
                   </CardContent>
+                  <div className="mt-4 px-4 pb-2">
+                    <RepairsPagination
+                      currentPage={pageMatched}
+                      totalPages={totalPagesMatched}
+                      totalCount={totalCountMatched}
+                      onPageChange={handlePageChangeMatched}
+                    />
+                  </div>
                 </Card>
               </TabsContent>
             </Tabs>

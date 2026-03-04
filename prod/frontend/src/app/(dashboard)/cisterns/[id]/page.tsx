@@ -151,7 +151,7 @@ export default function CisternPassportPage() {
 
         {/* Repairs Tab */}
         <TabsContent value="repairs">
-          <RepairsTab CicternNumber={cistern.number}/>
+          <RepairsTab CicternNumber={cistern.number} CisternId={cisternId}/>
         </TabsContent>
       </Tabs>
     </div>

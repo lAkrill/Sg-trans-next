@@ -5,9 +5,9 @@ import { RailwayCisternListDTO} from "../types/cisterns";
 
 
 const REPIN_LAST_NUM_ENDPOINT = '/api/RepairsIn/latest/byCisternNumber';
-const REPIN_ALL_NUM_ENDPOINT = '/api/RepairsIn/byCisternNumber';
+const REPIN_ALL_NUM_ENDPOINT = '/api/RepairsIn/byCisternNumberAll';
 const REPOUT_LAST_NUM_ENDPOINT = '/api/RepairsOut/latest/byCisternNumber';
-const REPOUT_ALL_NUM_ENDPOINT = '/api/RepairsOut/byCisternNumber';
+const REPOUT_ALL_NUM_ENDPOINT = '/api/RepairsOut/byCisternNumberAll';
 const REPIN_ALL_ENDPOINT = '/api/RepairsIn/all';
 const REPOUT_ALL_ENDPOINT = '/api/RepairsOut/all';
 
@@ -59,6 +59,18 @@ export interface RepairsOut {
 
 }
 
+export interface RepairsMatching {
+  id: string;
+  cisternId: string;
+  repairInId: string;
+  repairOutId: string;
+  dateTime: string;
+  cistern: RailwayCisternListDTO;
+  repairIn: RepairsIn;
+  repairOut: RepairsOut;
+}
+
+
 export const CisternRepairs= {
   getLastRepairsNumIn: async (Num: string): Promise<RepairsIn> => {
     const response = await api.get<RepairsIn>(`${REPIN_LAST_NUM_ENDPOINT}/${Num}`);
@@ -66,7 +78,7 @@ export const CisternRepairs= {
   },
 
   getAllRepairsNumIn: async (Num: string): Promise<RepairsIn[]> => {
-    const response = await api.get<RepairsIn[]>(`${REPIN_ALL_NUM_ENDPOINT}/${Num}?skip=0&take=50`);
+    const response = await api.get<RepairsIn[]>(`${REPIN_ALL_NUM_ENDPOINT}/${Num}`);
     return response.data;
   },
 
@@ -76,7 +88,7 @@ export const CisternRepairs= {
   },
 
   getAllRepairsNumOut: async (Num: string): Promise<RepairsOut[]> => {
-    const response = await api.get<RepairsOut[]>(`${REPOUT_ALL_NUM_ENDPOINT}/${Num}?skip=0&take=50`);
+    const response = await api.get<RepairsOut[]>(`${REPOUT_ALL_NUM_ENDPOINT}/${Num}`);
     return response.data;
   },
 
@@ -90,4 +102,13 @@ export const CisternRepairs= {
     return response.data;
   },
 
+  getAllRepairsMatching: async (): Promise<RepairsMatching[]> => {
+    const response = await api.get<RepairsMatching[]>(`/api/RepairsMatching/all`);
+    return response.data;
+  },
+ 
+  getRepairsMatchingById: async (id: string): Promise<RepairsMatching[]> => {
+    const response = await api.get<RepairsMatching[]>(`/api/RepairsMatching/byCisternId/${id}`);
+    return response.data;
+  },
 };
