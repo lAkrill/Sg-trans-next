@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 
 const DISLOCATION_LAST_ENDPOINT = '/api/dislocations/last-location/by-number';
 const DISLOCATION_ALL_ENDPOINT = '/api/dislocations/locations/by-number';
+const DISLOCATION_IN_RANGE_ENDPOINT = 'api/dislocations/locations/in-range/by-number/{cisternNumber}?cisternNumber=';
 
 export interface CisternLastLocation {
   id: string;
@@ -52,6 +53,14 @@ export const CisternDislocation= {
 
   getAllLocation: async (Num: string): Promise<CisternAllLocation[]> => {
     const response = await api.get<CisternAllLocation[]>(`${DISLOCATION_ALL_ENDPOINT}/${Num}`);
+    return response.data;
+  },
+
+  getLocationsInRange: async (Num: string, startDate: string, endDate: string): Promise<CisternAllLocation[]> => {
+    const response = await api.post<CisternAllLocation[]>(
+      `${DISLOCATION_IN_RANGE_ENDPOINT}${Num}`,
+      { from: startDate, to: endDate }
+    );
     return response.data;
   },
 };

@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Button } from "@/components/ui";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { MapPin, MapIcon } from "lucide-react";
 import { CisternDislocation } from "@/api/dislocations";
@@ -9,15 +9,29 @@ import "@/lib/leaflet/dist/leaflet.css";
 import L, {Map, TileLayer, Marker, Circle, Polygon, Popup, Tooltip, Icon} from "@/lib/leaflet/dist/leaflet-src.js";
 
 
-// Определяем тип пропсов
+function getDefaultDateRange() {
+  const today = new Date();
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  return {
+    from: oneYearAgo.toISOString().slice(0, 10),
+    to: today.toISOString().slice(0, 10),
+  };
+}
+
 type LocationTabProps = {
-  CicternNumber: string; // или другой тип, например объект
+  CicternNumber: string;
 };
 
 export function LocationTab({CicternNumber}:LocationTabProps) {
+  const defaultRange = useMemo(() => getDefaultDateRange(), []);
 
   const [location, setLocation] = useState<CisternLastLocation | null>(null);
   const [locationAll, setLocationAll] = useState<CisternAllLocation[] | null>(null);
+  const [locationInRange, setLocationInRange] = useState<CisternAllLocation[] | null>(null);
+  const [dateFrom, setDateFrom] = useState<string>(defaultRange.from);
+  const [dateTo, setDateTo] = useState<string>(defaultRange.to);
+  const [rangeLoading, setRangeLoading] = useState(false);
   const [milage, setMilage] = useState<CisternMilage | null>(null);
   const [remainMilage, setRemainMilage] = useState<number>(0);
   const myIcon = new Icon({
@@ -27,14 +41,39 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 	});
 
   const handleCisternSelect = useCallback(async () => {
-    const res1 = await CisternDislocation.getLastLocation( CicternNumber);
-    const res2 = await CisternDislocation.getAllLocation( CicternNumber);
-    const res3 = await CisternMilages.getLastMilage( CicternNumber);
+    const range = getDefaultDateRange();
+    setDateFrom(range.from);
+    setDateTo(range.to);
 
-    setLocation(res1); // сохраняем  в state
+    const [res1, res2, res3, resRange] = await Promise.all([
+      CisternDislocation.getLastLocation(CicternNumber),
+      CisternDislocation.getAllLocation(CicternNumber),
+      CisternMilages.getLastMilage(CicternNumber),
+      CisternDislocation.getLocationsInRange(CicternNumber, range.from, range.to),
+    ]);
+
+    setLocation(res1);
     setLocationAll(res2);
+    setLocationInRange(resRange);
     setMilage(res3);
     setRemainMilage(res3.milageNorm - res3.milage);
+  }, [CicternNumber]);
+
+  const handleLoadRange = useCallback(async () => {
+    if (!dateFrom || !dateTo) return;
+    setRangeLoading(true);
+    try {
+      const data = await CisternDislocation.getLocationsInRange(CicternNumber, dateFrom, dateTo);
+      setLocationInRange(data);
+    } finally {
+      setRangeLoading(false);
+    }
+  }, [CicternNumber, dateFrom, dateTo]);
+
+  const handleResetRange = useCallback(() => {
+    setDateFrom("");
+    setDateTo("");
+    setLocationInRange(null);
   }, []);
 
 
@@ -172,31 +211,80 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
             <MapIcon className="h-5 w-5" />
             Интерактивная карта
           </CardTitle>
-          <CardDescription>Отображение текущего местоположения цистерны на карте</CardDescription>
+          <CardDescription>Отображение текущего местоположения вагона-цистерны на карте</CardDescription>
 
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="flex h-[480px] rounded-lg overflow-hidden border ml-[24px] mr-[24px] mb-[24px]">
+        <CardContent className="px-0 gap-2 px-5">
+          <div className="flex gap-2 h-[480px] rounded-lg mb-[24px]">
+            <Card className="w-2/3 shrink-0 h-full overflow-hidden py-0">
+              <CardContent className="p-0 h-full">
+                <div id="map" className="w-full h-full min-h-[480px]" />
+              </CardContent>
+            </Card>
+            <Card className="w-1/3 shrink-0 h-full overflow-hidden py-0">
+              <CardContent className="h-full p-4 bg-gray-50 flex flex-col gap-3">
+                <div>
+                  <h3 className="font-semibold">История перемещения</h3>
+                  <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs text-muted-foreground">Период</label>
+                      <div className="flex gap-2 items-end">
+                        <div className="flex-1 min-w-0">
+                          <Input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <span className="text-muted-foreground shrink-0">—</span>
+                        <div className="flex-1 min-w-0">
+                          <Input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-center">
+                        <Button
+                          size="sm"
+                          onClick={handleLoadRange}
+                          disabled={!dateFrom || !dateTo || rangeLoading}
+                        >
+                          {rangeLoading ? "Загрузка…" : "Показать"}
+                        </Button>
+                        {(dateFrom || dateTo || locationInRange) && (
+                          <Button size="sm" variant="outline" onClick={handleResetRange}>
+                            Сбросить
+                          </Button>
+                        )}
+                      </div>
+                    </div>             
+                  </div>
 
-            <div id="map" className="w-2/3 h-full" />
-            {/* Список станций */}
-            <div className="w-1/3 h-full overflow-y-auto border-l p-4 bg-gray-50 ml-[24px]">
-              <h3 className="font-semibold mb-2">История перемещения</h3>
-              <ul className="space-y-2">
-                  {locationAll && groupStations(locationAll).map((item, idx) => (
-                    <li key={idx} className="text-sm">
-                      <p className={item.count > 3 ? "text-red-600" : "text-black"}>
-                        <b>{item.name} ({item.code})</b> — простой вагона <b>{item.count}</b> дней
-                      </p>
-                      <p className={item.count > 3 ? "text-red-600" : "text-gray-600"}>
-                        Последняя дата операции: <b>{new Date(item.date).toLocaleDateString()}</b>
-                      </p>
-                    </li>
-                  ))}
-              </ul>
-            </div>
+                </div>
+                <div className="overflow-y-auto">
+                  <ul className="space-y-2 flex-1 min-h-0">
+                    {(locationInRange ?? locationAll) && groupStations(locationInRange ?? locationAll ?? []).map((item, idx) => (
+                      <li key={idx} className="text-sm">
+                        <p className={item.count > 3 ? "text-red-600" : "text-black"}>
+                          <b>{item.name} ({item.code})</b> — простой вагона <b>{item.count}</b> дней
+                        </p>
+                        <p className={item.count > 3 ? "text-red-600" : "text-gray-600"}>
+                          Последняя дата операции: <b>{new Date(item.date).toLocaleDateString()}</b>
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
+
+        
       </Card>
     </div>
   );
