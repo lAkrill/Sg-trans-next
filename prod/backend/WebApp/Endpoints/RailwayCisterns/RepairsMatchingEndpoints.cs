@@ -44,6 +44,7 @@ public static class RepairsMatchingEndpoints
                         .ThenInclude(ro => ro.RepairType)
                     .Include(r => r.RepairOut)
                         .ThenInclude(ro => ro.Depot)
+                    .OrderByDescending(r => r.RepairIn.DateIn)
                     .AsSplitQuery()
                     .Select(r => r.ToRepairsMatchingDTO())
                     .ToListAsync();

@@ -36,6 +36,7 @@ public static class RepairsOutEndpoints
                     .ThenInclude(r=>r.Affiliation)
                 .Include(r=>r.RepairType)
                 .Include(r=> r.Depot)
+                .OrderByDescending(r => r.DateOut)
                 .AsSplitQuery()
                 .Skip(skip)
                 .Take(take)
@@ -64,6 +65,7 @@ public static class RepairsOutEndpoints
                     .ThenInclude(r=>r.Affiliation)
                     .Include(r=>r.RepairType)
                     .Include(r=> r.Depot)
+                    .OrderByDescending(r => r.DateOut)
                     .AsSplitQuery()
                     .Select(r => r.ToRepairsOutDTO())
                     .ToListAsync();
@@ -174,7 +176,7 @@ public static class RepairsOutEndpoints
                     .Include(r => r.RepairType)
                     .Include(r => r.Depot)
                     .AsSplitQuery()
-                    .OrderByDescending(r => r.DateIn)
+                    .OrderByDescending(r => r.DateOut)
                     .Skip(skip)
                     .Take(take)
                     .Select(r => r.ToRepairsOutDTO())
@@ -205,7 +207,7 @@ public static class RepairsOutEndpoints
                     .Include(r => r.RepairType)
                     .Include(r => r.Depot)
                     .AsSplitQuery()
-                    .OrderByDescending(r => r.DateIn)
+                    .OrderByDescending(r => r.DateOut)
                     .Select(r => r.ToRepairsOutDTO())
                     .ToListAsync();
                 return Results.Ok(repairsOut);
@@ -233,7 +235,7 @@ public static class RepairsOutEndpoints
                     .Include(r => r.RepairType)
                     .Include(r => r.Depot)
                     .AsSplitQuery()
-                    .OrderByDescending(r => r.DateIn)
+                    .OrderByDescending(r => r.DateOut)
                     .Select(r => r.ToRepairsOutDTO())
                     .FirstOrDefaultAsync();
 

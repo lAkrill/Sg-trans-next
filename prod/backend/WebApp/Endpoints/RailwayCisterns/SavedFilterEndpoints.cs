@@ -56,14 +56,8 @@ public static class SavedFilterEndpoints
 
                     if (!string.IsNullOrEmpty(f.FilterJson))
                     {
-                        if (f.FilterType.Name == "RailwayCisterns")
-                        {
-                            dto.Filters = JsonSerializer.Deserialize<Dictionary<string, object>>(f.FilterJson, JsonOptions);
-                        }
-                        else
-                        {
-                            dto.Filters = JsonSerializer.Deserialize<Dictionary<string, object>>(f.FilterJson, JsonOptions);
-                        }
+                        // Support for all filter types: RailwayCisterns, Parts, RepairsIn, RepairsOut, RepairsMatching
+                        dto.Filters = JsonSerializer.Deserialize<Dictionary<string, object>>(f.FilterJson, JsonOptions);
                     }
 
                     if (!string.IsNullOrEmpty(f.SortFieldsJson))
@@ -116,14 +110,7 @@ public static class SavedFilterEndpoints
 
                 if (!string.IsNullOrEmpty(filter.FilterJson))
                 {
-                    if (filter.FilterType.Name == "RailwayCisterns")
-                    {
-                        result.Filters = JsonSerializer.Deserialize<Dictionary<string, object>>(filter.FilterJson, JsonOptions);
-                    }
-                    else
-                    {
-                        result.Filters = JsonSerializer.Deserialize<Dictionary<string, object>>(filter.FilterJson, JsonOptions);
-                    }
+                    result.Filters = JsonSerializer.Deserialize<Dictionary<string, object>>(filter.FilterJson, JsonOptions);
                 }
 
                 if (!string.IsNullOrEmpty(filter.SortFieldsJson))
@@ -267,14 +254,8 @@ public static class SavedFilterEndpoints
 
                     if (!string.IsNullOrEmpty(f.FilterJson))
                     {
-                        if (f.FilterType.Name == "RailwayCisterns")
-                        {
-                            dto.Filters = JsonSerializer.Deserialize<Dictionary<string, object>>(f.FilterJson, JsonOptions);
-                        }
-                        else
-                        {
-                            dto.Filters = JsonSerializer.Deserialize<Dictionary<string, object>>(f.FilterJson, JsonOptions);
-                        }
+                        // Support for all filter types: RailwayCisterns, Parts, RepairsIn, RepairsOut, RepairsMatching
+                        dto.Filters = JsonSerializer.Deserialize<Dictionary<string, object>>(f.FilterJson, JsonOptions);
                     }
 
                     if (!string.IsNullOrEmpty(f.SortFieldsJson))
@@ -317,14 +298,5 @@ public static class SavedFilterEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
             .RequirePermissions(Permission.Delete);
-    }
-
-    private static async Task<bool> IsRailwayCisternFilterType(Guid filterTypeId, ApplicationDbContext context)
-    {
-        var filterType = await context.Set<FilterType>()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(ft => ft.Id == filterTypeId);
-            
-        return filterType?.Name == "RailwayCisterns";
     }
 }

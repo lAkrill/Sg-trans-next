@@ -66,6 +66,7 @@ public static class RepairsInEndpoints
                     .Include(r => r.RepairType)
                     .Include(r => r.Depot)
                     .Include(r => r.Station)
+                    .OrderByDescending(r => r.DateIn)
                     .AsSplitQuery()
                     .Select(r => r.ToRepairsInDTO())
                     .ToListAsync();

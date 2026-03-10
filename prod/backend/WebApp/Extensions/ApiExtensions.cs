@@ -58,6 +58,9 @@ public static class ApiExtensions
         app.MapRoadEndpoints();
         app.MapUpdateEndpoints();
         app.MapRepairsFileEndpoints();
+        app.MapRepairsInFilterEndpoints();
+        app.MapRepairsOutFilterEndpoints();
+        app.MapRepairsMatchingFilterEndpoints();
     }
 
     public static void AddApiAuthentication(

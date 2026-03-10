@@ -206,6 +206,10 @@ public static class PartFilterEndpoints
         }
 
         var selectedProperties = new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
+        
+        // ID части всегда добавляется, даже если не выбрана в selectedColumns
+        selectedProperties["id"] = p.Id;
+        
         foreach (var column in selectedColumns)
         {
             var normalizedColumn = column.ToLower();
@@ -213,7 +217,7 @@ public static class PartFilterEndpoints
             {
                 // Основные поля
                 case "id":
-                    selectedProperties["id"] = p.Id;
+                    // ID уже добавлён выше, пропускаем
                     break;
 
                 // PartType
@@ -226,161 +230,96 @@ public static class PartFilterEndpoints
                 case "parttype.code":
                     selectedProperties["partTypeCode"] = p.PartType.Code;
                     break;
-                // case "parttype":
-                //     selectedProperties["partType"] = new { p.PartType.Id, p.PartType.Name, p.PartType.Code };
-                //     break;
 
                 // StampNumber
                 case "stampnumber.id":
-                    selectedProperties["stampNumberId"] = p.StampNumber?.Id;
+                    selectedProperties["stampNumberId"] = p.StampNumber?.Id ?? Guid.Empty;
                     break;
                 case "stampnumber.value":
-                    selectedProperties["stampNumberValue"] = p.StampNumber?.Value;
+                    selectedProperties["stampNumberValue"] = p.StampNumber?.Value ?? "";
                     break;
 
                 // Status
                 case "status.id":
-                    selectedProperties["statusId"] = p.Status?.Id;
+                    selectedProperties["statusId"] = p.Status?.Id ?? Guid.Empty;
                     break;
                 case "status.name":
-                    selectedProperties["statusName"] = p.Status?.Name;
+                    selectedProperties["statusName"] = p.Status?.Name ?? "";
                     break;
                 case "status.code":
-                    selectedProperties["statusCode"] = p.Status?.Code;
+                    selectedProperties["statusCode"] = p.Status?.Code ?? 0;
                     break;
-                // case "status":
-                //     selectedProperties["status"] = new { p.Status.Id, p.Status.Name, p.Status.Code };
-                //     break;
 
                 // WheelPair
                 case "wheelpair.thicknessleft":
-                    selectedProperties["wheelPairThicknessLeft"] = p.WheelPair?.ThicknessLeft;
+                    selectedProperties["wheelPairThicknessLeft"] = p.WheelPair?.ThicknessLeft ?? 0;
                     break;
                 case "wheelpair.thicknessright":
-                    selectedProperties["wheelPairThicknessRight"] = p.WheelPair?.ThicknessRight;
+                    selectedProperties["wheelPairThicknessRight"] = p.WheelPair?.ThicknessRight ?? 0;
                     break;
                 case "wheelpair.wheeltype":
-                    selectedProperties["wheelPairWheelType"] = p.WheelPair?.WheelType;
+                    selectedProperties["wheelPairWheelType"] = p.WheelPair?.WheelType ?? "";
                     break;
-                // case "wheelpair":
-                //     if (p.WheelPair != null)
-                //     {
-                //         selectedProperties["wheelPair"] = new
-                //         {
-                //             p.WheelPair.ThicknessLeft,
-                //             p.WheelPair.ThicknessRight,
-                //             p.WheelPair.WheelType
-                //         };
-                //     }
-                //     break;
 
                 // SideFrame
                 case "sideframe.servicelifeyears":
-                    selectedProperties["sideFrameServiceLifeYears"] = p.SideFrame?.ServiceLifeYears;
+                    selectedProperties["sideFrameServiceLifeYears"] = p.SideFrame?.ServiceLifeYears ?? 0;
                     break;
                 case "sideframe.extendeduntil":
-                    selectedProperties["sideFrameExtendedUntil"] = p.SideFrame?.ExtendedUntil;
+                    selectedProperties["sideFrameExtendedUntil"] = p.SideFrame?.ExtendedUntil ?? default(DateOnly);
                     break;
-                // case "sideframe":
-                //     if (p.SideFrame != null)
-                //     {
-                //         selectedProperties["sideFrame"] = new
-                //         {
-                //             p.SideFrame.ServiceLifeYears,
-                //             p.SideFrame.ExtendedUntil
-                //         };
-                //     }
-                //     break;
 
                 // Bolster
                 case "bolster.servicelifeyears":
-                    selectedProperties["bolsterServiceLifeYears"] = p.Bolster?.ServiceLifeYears;
+                    selectedProperties["bolsterServiceLifeYears"] = p.Bolster?.ServiceLifeYears ?? 0;
                     break;
                 case "bolster.extendeduntil":
-                    selectedProperties["bolsterExtendedUntil"] = p.Bolster?.ExtendedUntil;
+                    selectedProperties["bolsterExtendedUntil"] = p.Bolster?.ExtendedUntil ?? default(DateOnly);
                     break;
-                // case "bolster":
-                //     if (p.Bolster != null)
-                //     {
-                //         selectedProperties["bolster"] = new
-                //         {
-                //             p.Bolster.ServiceLifeYears,
-                //             p.Bolster.ExtendedUntil
-                //         };
-                //     }
-                //     break;
 
                 // ShockAbsorber
                 case "shockabsorber.model":
-                    selectedProperties["shockAbsorberModel"] = p.ShockAbsorber?.Model;
+                    selectedProperties["shockAbsorberModel"] = p.ShockAbsorber?.Model ?? "";
                     break;
                 case "shockabsorber.manufacturercode":
-                    selectedProperties["shockAbsorberManufacturerCode"] = p.ShockAbsorber?.ManufacturerCode;
+                    selectedProperties["shockAbsorberManufacturerCode"] = p.ShockAbsorber?.ManufacturerCode ?? "";
                     break;
                 case "shockabsorber.nextrepairdate":
-                    selectedProperties["shockAbsorberNextRepairDate"] = p.ShockAbsorber?.NextRepairDate;
+                    selectedProperties["shockAbsorberNextRepairDate"] = p.ShockAbsorber?.NextRepairDate ?? default(DateOnly);
                     break;
                 case "shockabsorber.servicelifeyears":
-                    selectedProperties["shockAbsorberServiceLifeYears"] = p.ShockAbsorber?.ServiceLifeYears;
+                    selectedProperties["shockAbsorberServiceLifeYears"] = p.ShockAbsorber?.ServiceLifeYears ?? 0;
                     break;
-                // case "shockabsorber":
-                //     if (p.ShockAbsorber != null)
-                //     {
-                //         selectedProperties["shockAbsorber"] = new
-                //         {
-                //             p.ShockAbsorber.Model,
-                //             p.ShockAbsorber.ManufacturerCode,
-                //             p.ShockAbsorber.NextRepairDate,
-                //             p.ShockAbsorber.ServiceLifeYears
-                //         };
-                //     }
-                //     break;
 
                 // Depot
                 case "depot.id":
-                    selectedProperties["depotId"] = p.Depot?.Id;
+                    selectedProperties["depotId"] = p.Depot?.Id ?? Guid.Empty;
                     break;
                 case "depot.name":
-                    selectedProperties["depotName"] = p.Depot?.Name;
+                    selectedProperties["depotName"] = p.Depot?.Name ?? "";
                     break;
                 case "depot.code":
-                    selectedProperties["depotCode"] = p.Depot?.Code;
+                    selectedProperties["depotCode"] = p.Depot?.Code ?? "";
                     break;
                 case "depot.location":
-                    selectedProperties["depotLocation"] = p.Depot?.Location;
+                    selectedProperties["depotLocation"] = p.Depot?.Location ?? "";
                     break;
                 case "depot.shortname":
-                    selectedProperties["depotShortName"] = p.Depot?.ShortName;
+                    selectedProperties["depotShortName"] = p.Depot?.ShortName ?? "";
                     break;
-                // case "depot":
-                //     if (p.Depot != null)
-                //     {
-                //         selectedProperties["depot"] = new
-                //         {
-                //             p.Depot.Id,
-                //             p.Depot.Name,
-                //             p.Depot.Code,
-                //             p.Depot.ShortName,
-                //             p.Depot.Location
-                //         };
-                //     }
-                //     break;
 
                 // Базовые поля
                 case "depotid":
-                    selectedProperties["depotId"] = p.DepotId;
+                    selectedProperties["depotId"] = p.DepotId ?? Guid.Empty;
                     break;
                 case "serialnumber":
-                    selectedProperties["serialNumber"] = p.SerialNumber;
+                    selectedProperties["serialNumber"] = p.SerialNumber ?? "";
                     break;
                 case "manufactureyear":
-                    selectedProperties["manufactureYear"] = p.ManufactureYear;
+                    selectedProperties["manufactureYear"] = p.ManufactureYear ?? default(DateOnly);
                     break;
-                // case "currentlocation":
-                //     selectedProperties["currentLocation"] = p.CurrentLocation;
-                //     break;
                 case "notes":
-                    selectedProperties["notes"] = p.Notes;
+                    selectedProperties["notes"] = p.Notes ?? "";
                     break;
                 case "createdat":
                     selectedProperties["createdAt"] = p.CreatedAt;
@@ -391,28 +330,28 @@ public static class PartFilterEndpoints
 
                 // Поля документа
                 case "code":
-                    selectedProperties["code"] = p.Code;
+                    selectedProperties["code"] = p.Code ?? 0;
                     break;
                 case "document.id":
-                    selectedProperties["documentId"] = p.Document?.Id;
+                    selectedProperties["documentId"] = p.Document?.Id ?? Guid.Empty;
                     break;
                 case "document.number":
-                    selectedProperties["documentNumber"] = p.Document?.Number;
+                    selectedProperties["documentNumber"] = p.Document?.Number ?? "";
                     break;
                 case "document.type":
-                    selectedProperties["documentType"] = p.Document?.Type;
+                    selectedProperties["documentType"] = p.Document?.Type ?? 0;
                     break;
                 case "document.date":
-                    selectedProperties["documentDate"] = p.Document?.Date;
+                    selectedProperties["documentDate"] = p.Document?.Date ?? default(DateOnly);
                     break;
                 case "document.author":
-                    selectedProperties["documentAuthor"] = p.Document?.Author;
+                    selectedProperties["documentAuthor"] = p.Document?.Author ?? "";
                     break;
                 case "document.price":
-                    selectedProperties["documentPrice"] = p.Document?.Price;
+                    selectedProperties["documentPrice"] = p.Document?.Price ?? 0;
                     break;
                 case "document.note":
-                    selectedProperties["documentNote"] = p.Document?.Note;
+                    selectedProperties["documentNote"] = p.Document?.Note ?? "";
                     break;
             }
         }
@@ -432,6 +371,7 @@ public static class PartFilterEndpoints
             .Include(p => p.Coupler)
             .Include(p => p.ShockAbsorber)
             .Include(p => p.Depot)
+            .Include(p => p.Document)
             .AsQueryable();
 
         if (filters == null)
@@ -456,10 +396,7 @@ public static class PartFilterEndpoints
             if (filters.ManufactureYear.To.HasValue)
                 query = query.Where(p => p.ManufactureYear <= filters.ManufactureYear.To);
         }
-        //
-        // if (filters.Locations != null && filters.Locations.Any())
-        //     query = query.Where(p => p.CurrentLocation != null && filters.Locations.Contains(p.CurrentLocation));
-
+       
         if (filters.StatusIds != null && filters.StatusIds.Any())
             query = query.Where(p => filters.StatusIds.Contains(p.StatusId));
 
@@ -579,13 +516,13 @@ public static class PartFilterEndpoints
         return sort.FieldName.ToLower() switch
         {
             "parttypename" => sort.Descending ? query.OrderByDescending(p => p.PartType.Name) : query.OrderBy(p => p.PartType.Name),
-            "stampnumber" => sort.Descending ? query.OrderByDescending(p => p.StampNumber != null ? p.StampNumber.Value : null) 
-                : query.OrderBy(p => p.StampNumber != null ? p.StampNumber.Value : null),
-            "serialnumber" => sort.Descending ? query.OrderByDescending(p => p.SerialNumber) : query.OrderBy(p => p.SerialNumber),
+            "stampnumber" => sort.Descending ? query.OrderByDescending(p => p.StampNumber != null ? p.StampNumber.Value : "") 
+                : query.OrderBy(p => p.StampNumber != null ? p.StampNumber.Value : ""),
+            "serialnumber" => sort.Descending ? query.OrderByDescending(p => p.SerialNumber ?? "") : query.OrderBy(p => p.SerialNumber ?? ""),
             "manufactureyear" => sort.Descending ? query.OrderByDescending(p => p.ManufactureYear) : query.OrderBy(p => p.ManufactureYear),
             // "currentlocation" => sort.Descending ? query.OrderByDescending(p => p.CurrentLocation) : query.OrderBy(p => p.CurrentLocation),
             "statusname" => sort.Descending ? query.OrderByDescending(p => p.Status.Name) : query.OrderBy(p => p.Status.Name),
-            "notes" => sort.Descending ? query.OrderByDescending(p => p.Notes) : query.OrderBy(p => p.Notes),
+            "notes" => sort.Descending ? query.OrderByDescending(p => p.Notes ?? "") : query.OrderBy(p => p.Notes ?? ""),
             "createdat" => sort.Descending ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt),
             "updatedat" => sort.Descending ? query.OrderByDescending(p => p.UpdatedAt) : query.OrderBy(p => p.UpdatedAt),
             
@@ -597,8 +534,8 @@ public static class PartFilterEndpoints
                 query.OrderByDescending(p => p.WheelPair != null ? p.WheelPair.ThicknessRight : null) : 
                 query.OrderBy(p => p.WheelPair != null ? p.WheelPair.ThicknessRight : null),
             "wheeltype" => sort.Descending ? 
-                query.OrderByDescending(p => p.WheelPair != null ? p.WheelPair.WheelType : null) : 
-                query.OrderBy(p => p.WheelPair != null ? p.WheelPair.WheelType : null),
+                query.OrderByDescending(p => p.WheelPair != null ? p.WheelPair.WheelType ?? "" : "") : 
+                query.OrderBy(p => p.WheelPair != null ? p.WheelPair.WheelType ?? "" : ""),
             
             // Специфичные поля для боковых рам и надрессорных балок
             "servicelifeyears" => sort.Descending ? 
@@ -614,11 +551,11 @@ public static class PartFilterEndpoints
             
             // Специфичные поля для поглощающих аппаратов
             "model" => sort.Descending ? 
-                query.OrderByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model : null) : 
-                query.OrderBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model : null),
+                query.OrderByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model ?? "" : "") : 
+                query.OrderBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model ?? "" : ""),
             "manufacturercode" => sort.Descending ? 
-                query.OrderByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode : null) : 
-                query.OrderBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode : null),
+                query.OrderByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode ?? "" : "") : 
+                query.OrderBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode ?? "" : ""),
             "nextrepairdate" => sort.Descending ? 
                 query.OrderByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.NextRepairDate : null) : 
                 query.OrderBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.NextRepairDate : null),
@@ -651,13 +588,13 @@ public static class PartFilterEndpoints
         {
             "parttypename" => sort.Descending ? query.ThenByDescending(p => p.PartType.Name) : query.ThenBy(p => p.PartType.Name),
             "stampnumber" => sort.Descending ? 
-                query.ThenByDescending(p => p.StampNumber != null ? p.StampNumber.Value : null) : 
-                query.ThenBy(p => p.StampNumber != null ? p.StampNumber.Value : null),
-            "serialnumber" => sort.Descending ? query.ThenByDescending(p => p.SerialNumber) : query.ThenBy(p => p.SerialNumber),
+                query.ThenByDescending(p => p.StampNumber != null ? p.StampNumber.Value : "") : 
+                query.ThenBy(p => p.StampNumber != null ? p.StampNumber.Value : ""),
+            "serialnumber" => sort.Descending ? query.ThenByDescending(p => p.SerialNumber ?? "") : query.ThenBy(p => p.SerialNumber ?? ""),
             "manufactureyear" => sort.Descending ? query.ThenByDescending(p => p.ManufactureYear) : query.ThenBy(p => p.ManufactureYear),
             // "currentlocation" => sort.Descending ? query.ThenByDescending(p => p.CurrentLocation) : query.ThenBy(p => p.CurrentLocation),
             "statusname" => sort.Descending ? query.ThenByDescending(p => p.Status.Name) : query.ThenBy(p => p.Status.Name),
-            "notes" => sort.Descending ? query.ThenByDescending(p => p.Notes) : query.ThenBy(p => p.Notes),
+            "notes" => sort.Descending ? query.ThenByDescending(p => p.Notes ?? "") : query.ThenBy(p => p.Notes ?? ""),
             "createdat" => sort.Descending ? query.ThenByDescending(p => p.CreatedAt) : query.ThenBy(p => p.CreatedAt),
             "updatedat" => sort.Descending ? query.ThenByDescending(p => p.UpdatedAt) : query.ThenBy(p => p.UpdatedAt),
             
@@ -669,8 +606,8 @@ public static class PartFilterEndpoints
                 query.ThenByDescending(p => p.WheelPair != null ? p.WheelPair.ThicknessRight : null) : 
                 query.ThenBy(p => p.WheelPair != null ? p.WheelPair.ThicknessRight : null),
             "wheeltype" => sort.Descending ? 
-                query.ThenByDescending(p => p.WheelPair != null ? p.WheelPair.WheelType : null) : 
-                query.ThenBy(p => p.WheelPair != null ? p.WheelPair.WheelType : null),
+                query.ThenByDescending(p => p.WheelPair != null ? p.WheelPair.WheelType ?? "" : "") : 
+                query.ThenBy(p => p.WheelPair != null ? p.WheelPair.WheelType ?? "" : ""),
             
             // Специфичные поля для боковых рам и надрессорных балок
             "servicelifeyears" => sort.Descending ? 
@@ -686,11 +623,11 @@ public static class PartFilterEndpoints
             
             // Специфичные поля для поглощающих аппаратов
             "model" => sort.Descending ? 
-                query.ThenByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model : null) : 
-                query.ThenBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model : null),
+                query.ThenByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model ?? "" : "") : 
+                query.ThenBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model ?? "" : ""),
             "manufacturercode" => sort.Descending ? 
-                query.ThenByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode : null) : 
-                query.ThenBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode : null),
+                query.ThenByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode ?? "" : "") : 
+                query.ThenBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode ?? "" : ""),
             "nextrepairdate" => sort.Descending ? 
                 query.ThenByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.NextRepairDate : null) : 
                 query.ThenBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.NextRepairDate : null),

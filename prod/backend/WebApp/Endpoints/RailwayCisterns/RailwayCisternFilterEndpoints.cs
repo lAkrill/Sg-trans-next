@@ -215,8 +215,8 @@ public static class RailwayCisternFilterEndpoints
                 ? query.OrderByDescending(rc => rc.Type.Name)
                 : query.OrderBy(rc => rc.Type.Name),
             "modelname" => sort.Descending
-                ? query.OrderByDescending(rc => rc.Model.Name)
-                : query.OrderBy(rc => rc.Model.Name),
+                ? query.OrderByDescending(rc => rc.Model != null ? rc.Model.Name : "")
+                : query.OrderBy(rc => rc.Model != null ? rc.Model.Name : ""),
             "commissioningdate" => sort.Descending
                 ? query.OrderByDescending(rc => rc.CommissioningDate)
                 : query.OrderBy(rc => rc.CommissioningDate),
@@ -230,12 +230,14 @@ public static class RailwayCisternFilterEndpoints
                 ? query.OrderByDescending(rc => rc.RegistrationDate)
                 : query.OrderBy(rc => rc.RegistrationDate),
             "registrarname" => sort.Descending
-                ? query.OrderByDescending(rc => rc.Registrar.Name)
-                : query.OrderBy(rc => rc.Registrar.Name),
-            "notes" => sort.Descending ? query.OrderByDescending(rc => rc.Notes) : query.OrderBy(rc => rc.Notes),
+                ? query.OrderByDescending(rc => rc.Registrar != null ? rc.Registrar.Name : "")
+                : query.OrderBy(rc => rc.Registrar != null ? rc.Registrar.Name : ""),
+            "notes" => sort.Descending
+                ? query.OrderByDescending(rc => rc.Notes ?? "")
+                : query.OrderBy(rc => rc.Notes ?? ""),
             "ownername" => sort.Descending
-                ? query.OrderByDescending(rc => rc.Owner.Name)
-                : query.OrderBy(rc => rc.Owner.Name),
+                ? query.OrderByDescending(rc => rc.Owner != null ? rc.Owner.Name : "")
+                : query.OrderBy(rc => rc.Owner != null ? rc.Owner.Name : ""),
             "techconditions" => sort.Descending
                 ? query.OrderByDescending(rc => rc.TechConditions)
                 : query.OrderBy(rc => rc.TechConditions),
@@ -325,8 +327,8 @@ public static class RailwayCisternFilterEndpoints
                 ? query.ThenByDescending(rc => rc.Type.Name)
                 : query.ThenBy(rc => rc.Type.Name),
             "modelname" => sort.Descending
-                ? query.ThenByDescending(rc => rc.Model.Name)
-                : query.ThenBy(rc => rc.Model.Name),
+                ? query.ThenByDescending(rc => rc.Model != null ? rc.Model.Name : "")
+                : query.ThenBy(rc => rc.Model != null ? rc.Model.Name : ""),
             "commissioningdate" => sort.Descending
                 ? query.ThenByDescending(rc => rc.CommissioningDate)
                 : query.ThenBy(rc => rc.CommissioningDate),
@@ -340,24 +342,32 @@ public static class RailwayCisternFilterEndpoints
                 ? query.ThenByDescending(rc => rc.RegistrationDate)
                 : query.ThenBy(rc => rc.RegistrationDate),
             "registrarname" => sort.Descending
-                ? query.ThenByDescending(rc => rc.Registrar.Name)
-                : query.ThenBy(rc => rc.Registrar.Name),
-            "notes" => sort.Descending ? query.ThenByDescending(rc => rc.Notes) : query.ThenBy(rc => rc.Notes),
+                ? query.ThenByDescending(rc => rc.Registrar != null ? rc.Registrar.Name : "")
+                : query.ThenBy(rc => rc.Registrar != null ? rc.Registrar.Name : ""),
+            "notes" => sort.Descending
+                ? query.ThenByDescending(rc => rc.Notes ?? "")
+                : query.ThenBy(rc => rc.Notes ?? ""),
             "ownername" => sort.Descending
-                ? query.ThenByDescending(rc => rc.Owner.Name)
-                : query.ThenBy(rc => rc.Owner.Name),
+                ? query.ThenByDescending(rc => rc.Owner != null ? rc.Owner.Name : "")
+                : query.ThenBy(rc => rc.Owner != null ? rc.Owner.Name : ""),
             "techconditions" => sort.Descending
-                ? query.ThenByDescending(rc => rc.TechConditions)
-                : query.ThenBy(rc => rc.TechConditions),
-            "pripiska" => sort.Descending ? query.ThenByDescending(rc => rc.Pripiska) : query.ThenBy(rc => rc.Pripiska),
+                ? query.ThenByDescending(rc => rc.TechConditions ?? "")
+                : query.ThenBy(rc => rc.TechConditions ?? ""),
+            "pripiska" => sort.Descending
+                ? query.ThenByDescending(rc => rc.Pripiska ?? "")
+                : query.ThenBy(rc => rc.Pripiska ?? ""),
             "reregistrationdate" => sort.Descending
                 ? query.ThenByDescending(rc => rc.ReRegistrationDate)
                 : query.ThenBy(rc => rc.ReRegistrationDate),
-            "pressure" => sort.Descending ? query.ThenByDescending(rc => rc.Pressure) : query.ThenBy(rc => rc.Pressure),
+            "pressure" => sort.Descending
+                ? query.ThenByDescending(rc => rc.Pressure)
+                : query.ThenBy(rc => rc.Pressure),
             "testpressure" => sort.Descending
                 ? query.ThenByDescending(rc => rc.TestPressure)
                 : query.ThenBy(rc => rc.TestPressure),
-            "rent" => sort.Descending ? query.ThenByDescending(rc => rc.Rent) : query.ThenBy(rc => rc.Rent),
+            "rent" => sort.Descending
+                ? query.ThenByDescending(rc => rc.Rent ?? "")
+                : query.ThenBy(rc => rc.Rent ?? ""),
             "affiliationvalue" => sort.Descending
                 ? query.ThenByDescending(rc => rc.Affiliation.Value)
                 : query.ThenBy(rc => rc.Affiliation.Value),
@@ -644,6 +654,10 @@ public static class RailwayCisternFilterEndpoints
         }
 
         var selectedProperties = new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
+        
+        // ID цистерны всегда добавляется, даже если не выбрана в selectedColumns
+        selectedProperties["id"] = rc.Id;
+        
         foreach (var column in selectedColumns)
         {
             var normalizedColumn = column.ToLower();
@@ -651,7 +665,7 @@ public static class RailwayCisternFilterEndpoints
             {
                 // Основные поля
                 case "id":
-                    selectedProperties["id"] = rc.Id;
+                    // ID уже добавлён выше, пропускаем
                     break;
                 case "number":
                     selectedProperties["number"] = rc.Number;
@@ -668,7 +682,7 @@ public static class RailwayCisternFilterEndpoints
                     selectedProperties["manufacturerCountry"] = rc.Manufacturer.Country;
                     break;
                 case "manufacturer.shortname":
-                    selectedProperties["manufacturerShortName"] = rc.Manufacturer.ShortName;
+                    selectedProperties["manufacturerShortName"] = rc.Manufacturer.ShortName ?? "";
                     break;
                 case "manufacturer.code":
                     selectedProperties["manufacturerCode"] = rc.Manufacturer.Code;
@@ -687,38 +701,38 @@ public static class RailwayCisternFilterEndpoints
 
                 // Model
                 case "model.id":
-                    selectedProperties["modelId"] = rc.ModelId;
+                    selectedProperties["modelId"] = rc.ModelId ?? Guid.Empty;
                     break;
                 case "model.name":
-                    selectedProperties["modelName"] = rc.Model?.Name;
+                    selectedProperties["modelName"] = rc.Model?.Name ?? "";
                     break;
 
                 // Owner
                 case "owner.id":
-                    selectedProperties["ownerId"] = rc.OwnerId;
+                    selectedProperties["ownerId"] = rc.OwnerId ?? Guid.Empty;
                     break;
                 case "owner.name":
-                    selectedProperties["ownerName"] = rc.Owner?.Name;
+                    selectedProperties["ownerName"] = rc.Owner?.Name ?? "";
                     break;
                 case "owner.unp":
-                    selectedProperties["ownerUnp"] = rc.Owner?.UNP;
+                    selectedProperties["ownerUnp"] = rc.Owner?.UNP ?? "";
                     break;
                 case "owner.shortname":
-                    selectedProperties["ownerShortName"] = rc.Owner?.ShortName;
+                    selectedProperties["ownerShortName"] = rc.Owner?.ShortName ?? "";
                     break;
                 case "owner.address":
-                    selectedProperties["ownerAddress"] = rc.Owner?.Address;
+                    selectedProperties["ownerAddress"] = rc.Owner?.Address ?? "";
                     break;
                 case "owner.treatrepairs":
-                    selectedProperties["ownerTreatRepairs"] = rc.Owner?.TreatRepairs;
+                    selectedProperties["ownerTreatRepairs"] = rc.Owner?.TreatRepairs ?? false;
                     break;
 
                 // Registrar
                 case "registrar.id":
-                    selectedProperties["registrarId"] = rc.RegistrarId;
+                    selectedProperties["registrarId"] = rc.RegistrarId ?? Guid.Empty;
                     break;
                 case "registrar.name":
-                    selectedProperties["registrarName"] = rc.Registrar?.Name;
+                    selectedProperties["registrarName"] = rc.Registrar?.Name ?? "";
                     break;
 
                 // Affiliation
@@ -734,7 +748,7 @@ public static class RailwayCisternFilterEndpoints
                     selectedProperties["buildDate"] = rc.BuildDate;
                     break;
                 case "notes":
-                    selectedProperties["notes"] = rc.Notes??"";
+                    selectedProperties["notes"] = rc.Notes ?? "";
                     break;
                 case "tareweight":
                     selectedProperties["tareWeight"] = rc.TareWeight;
@@ -752,13 +766,13 @@ public static class RailwayCisternFilterEndpoints
                     selectedProperties["volume"] = rc.Volume;
                     break;
                 case "fillingvolume":
-                    selectedProperties["fillingVolume"] = rc.FillingVolume;
+                    selectedProperties["fillingVolume"] = rc.FillingVolume ?? 0;
                     break;
                 case "initialtareweight":
-                    selectedProperties["initialTareWeight"] = rc.InitialTareWeight;
+                    selectedProperties["initialTareWeight"] = rc.InitialTareWeight ?? 0;
                     break;
                 case "commissioningdate":
-                    selectedProperties["commissioningDate"] = rc.CommissioningDate;
+                    selectedProperties["commissioningDate"] = rc.CommissioningDate ?? default(DateOnly);
                     break;
                 case "serialnumber":
                     selectedProperties["serialNumber"] = rc.SerialNumber;
@@ -770,13 +784,13 @@ public static class RailwayCisternFilterEndpoints
                     selectedProperties["registrationDate"] = rc.RegistrationDate;
                     break;
                 case "techconditions":
-                    selectedProperties["techConditions"] = rc.TechConditions;
+                    selectedProperties["techConditions"] = rc.TechConditions ?? "";
                     break;
                 case "pripiska":
-                    selectedProperties["pripiska"] = rc.Pripiska;
+                    selectedProperties["pripiska"] = rc.Pripiska ?? "";
                     break;
                 case "reregistrationdate":
-                    selectedProperties["reRegistrationDate"] = rc.ReRegistrationDate;
+                    selectedProperties["reRegistrationDate"] = rc.ReRegistrationDate ?? default(DateOnly);
                     break;
                 case "pressure":
                     selectedProperties["pressure"] = rc.Pressure;
@@ -785,22 +799,22 @@ public static class RailwayCisternFilterEndpoints
                     selectedProperties["testPressure"] = rc.TestPressure;
                     break;
                 case "rent":
-                    selectedProperties["rent"] = rc.Rent;
+                    selectedProperties["rent"] = rc.Rent ?? "";
                     break;
                 case "servicelifeyears":
                     selectedProperties["serviceLifeYears"] = rc.ServiceLifeYears;
                     break;
                 case "periodmajorrepair":
-                    selectedProperties["periodMajorRepair"] = rc.PeriodMajorRepair;
+                    selectedProperties["periodMajorRepair"] = rc.PeriodMajorRepair ?? default(DateOnly);
                     break;
                 case "periodperiodictest":
-                    selectedProperties["periodPeriodicTest"] = rc.PeriodPeriodicTest;
+                    selectedProperties["periodPeriodicTest"] = rc.PeriodPeriodicTest ?? default(DateOnly);
                     break;
                 case "periodintermediatetest":
-                    selectedProperties["periodIntermediateTest"] = rc.PeriodIntermediateTest;
+                    selectedProperties["periodIntermediateTest"] = rc.PeriodIntermediateTest ?? default(DateOnly);
                     break;
                 case "perioddepotrepair":
-                    selectedProperties["periodDepotRepair"] = rc.PeriodDepotRepair;
+                    selectedProperties["periodDepotRepair"] = rc.PeriodDepotRepair ?? default(DateOnly);
                     break;
                 case "dangerclass":
                     selectedProperties["dangerClass"] = rc.DangerClass;
