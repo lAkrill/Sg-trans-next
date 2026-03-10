@@ -4,8 +4,6 @@ import { useEffect, useCallback, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   Tabs,
   TabsContent,
   TabsList,
@@ -29,12 +27,47 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import { api } from "@/lib/api";
 import { CisternRepairs } from "@/api/repairs";
 import type { RepairsIn, RepairsOut, RepairsMatching } from "@/api/repairs";
+import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
+import { useRepairsInFilter, useRepairsOutFilter } from "@/hooks";
+import type {
+  RepairsInFilterCriteria,
+  RepairsOutFilterCriteria,
+  RepairsSortCriteria,
+} from "@/types/repairs";
+
+function countRepairsInFilters(f: RepairsInFilterCriteria): number {
+  let n = 0;
+  if (f.cisternNumbers?.length) n++;
+  if (f.typeRepairIds?.length) n++;
+  if (f.depotIds?.length) n++;
+  if (f.depotNames?.length) n++;
+  if (f.vu23?.length) n++;
+  if (f.roadNames?.length) n++;
+  if (f.roadCodes?.length) n++;
+  if (f.stationNames?.length) n++;
+  if (f.stationIds?.length) n++;
+  if (f.dateIn?.from || f.dateIn?.to) n++;
+  if (f.adminRoadCodes?.length) n++;
+  return n;
+}
+
+function countRepairsOutFilters(f: RepairsOutFilterCriteria): number {
+  let n = 0;
+  if (f.cisternNumbers?.length) n++;
+  if (f.typeRepairIds?.length) n++;
+  if (f.depotIds?.length) n++;
+  if (f.depotNames?.length) n++;
+  if (f.vu36?.length) n++;
+  if (f.roadNames?.length) n++;
+  if (f.roadCodes?.length) n++;
+  if (f.dateIn?.from || f.dateIn?.to) n++;
+  if (f.dateOut?.from || f.dateOut?.to) n++;
+  return n;
+}
 
 export default function RepairsPage() {
- 
   const [repairsIn, setRepairsIn] = useState<RepairsIn[] | null>(null);
   const [repairsOut, setRepairsOut] = useState<RepairsOut[] | null>(null);
   const [repairsMatching, setRepairsMatching] = useState<RepairsMatching[] | null>(null);
@@ -45,19 +78,78 @@ export default function RepairsPage() {
   const [pageMatched, setPageMatched] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Filters (like cisterns page)
+  const [filterTableType, setFilterTableType] = useState<RepairsFilterTableType>("in");
+  const [filtersIn, setFiltersIn] = useState<RepairsInFilterCriteria>({});
+  const [filtersOut, setFiltersOut] = useState<RepairsOutFilterCriteria>({});
+  const [sortFields, setSortFields] = useState<RepairsSortCriteria[]>([]);
+
+  const hasFiltersIn =
+    countRepairsInFilters(filtersIn) > 0 ||
+    (filterTableType === "in" && sortFields.length > 0);
+  const hasFiltersOut =
+    countRepairsOutFilters(filtersOut) > 0 ||
+    (filterTableType === "out" && sortFields.length > 0);
+  const isFilterModeIn =
+    activeTab === "in" && filterTableType === "in" && hasFiltersIn;
+  const isFilterModeOut =
+    activeTab === "out" && filterTableType === "out" && hasFiltersOut;
+
+  const filterRequestIn = useMemo(
+    () => ({
+      filters: hasFiltersIn ? filtersIn : undefined,
+      sortFields: sortFields.length ? sortFields : undefined,
+      page: pageIn,
+      pageSize,
+    }),
+    [filtersIn, hasFiltersIn, sortFields, pageIn, pageSize]
+  );
+
+  const filterRequestOut = useMemo(
+    () => ({
+      filters: hasFiltersOut ? filtersOut : undefined,
+      sortFields: sortFields.length ? sortFields : undefined,
+      page: pageOut,
+      pageSize,
+    }),
+    [filtersOut, hasFiltersOut, sortFields, pageOut, pageSize]
+  );
+
+  const { data: filterDataIn, isLoading: isFilterLoadingIn } = useRepairsInFilter(
+    filterRequestIn,
+    isFilterModeIn
+  );
+
+  const { data: filterDataOut, isLoading: isFilterLoadingOut } = useRepairsOutFilter(
+    filterRequestOut,
+    isFilterModeOut
+  );
+
+  const repairsInSource = useMemo(() => {
+    if (isFilterModeIn && filterDataIn?.items) return filterDataIn.items;
+    return repairsIn ?? [];
+  }, [isFilterModeIn, filterDataIn?.items, repairsIn]);
+
+  const repairsOutSource = useMemo(() => {
+    if (isFilterModeOut && filterDataOut?.items) return filterDataOut.items;
+    return repairsOut ?? [];
+  }, [isFilterModeOut, filterDataOut?.items, repairsOut]);
+
   const repairsInSorted = useMemo(() => {
-    if (!repairsIn?.length) return repairsIn ?? [];
-    return [...repairsIn].sort(
+    if (!repairsInSource?.length) return repairsInSource ?? [];
+    if (isFilterModeIn) return repairsInSource;
+    return [...repairsInSource].sort(
       (a, b) => new Date(b.dateIn).getTime() - new Date(a.dateIn).getTime()
     );
-  }, [repairsIn]);
+  }, [repairsInSource, isFilterModeIn]);
 
   const repairsOutSorted = useMemo(() => {
-    if (!repairsOut?.length) return repairsOut ?? [];
-    return [...repairsOut].sort(
+    if (!repairsOutSource?.length) return repairsOutSource ?? [];
+    if (isFilterModeOut) return repairsOutSource;
+    return [...repairsOutSource].sort(
       (a, b) => new Date(b.dateOut).getTime() - new Date(a.dateOut).getTime()
     );
-  }, [repairsOut]);
+  }, [repairsOutSource, isFilterModeOut]);
 
   const repairsMatchingSorted = useMemo(() => {
     if (!repairsMatching?.length) return repairsMatching ?? [];
@@ -77,6 +169,7 @@ export default function RepairsPage() {
   }, [repairsMatching]);
 
   const repairsInFiltered = useMemo(() => {
+    if (isFilterModeIn) return repairsInSorted ?? [];
     if (activeTab !== "in" || !searchQuery.trim()) return repairsInSorted ?? [];
     const q = searchQuery.trim().toLowerCase();
     return (repairsInSorted ?? []).filter((r) => {
@@ -94,9 +187,10 @@ export default function RepairsPage() {
       ].join(" ").toLowerCase();
       return searchable.includes(q);
     });
-  }, [repairsInSorted, searchQuery, activeTab]);
+  }, [repairsInSorted, searchQuery, activeTab, isFilterModeIn]);
 
   const repairsOutFiltered = useMemo(() => {
+    if (isFilterModeOut) return repairsOutSorted ?? [];
     if (activeTab !== "out" || !searchQuery.trim()) return repairsOutSorted ?? [];
     const q = searchQuery.trim().toLowerCase();
     return (repairsOutSorted ?? []).filter((r) => {
@@ -115,7 +209,7 @@ export default function RepairsPage() {
       ].join(" ").toLowerCase();
       return searchable.includes(q);
     });
-  }, [repairsOutSorted, searchQuery]);
+  }, [repairsOutSorted, searchQuery, activeTab, isFilterModeOut]);
 
   const repairsMatchingFiltered = useMemo(() => {
     if (!searchQuery.trim()) return repairsMatchingSorted ?? [];
@@ -157,16 +251,18 @@ export default function RepairsPage() {
   }, [searchQuery]);
 
   const repairsInPaginated = useMemo(() => {
+    if (isFilterModeIn) return repairsInFiltered ?? [];
     const list = repairsInFiltered ?? [];
     const start = (pageIn - 1) * pageSize;
     return list.slice(start, start + pageSize);
-  }, [repairsInFiltered, pageIn, pageSize]);
+  }, [repairsInFiltered, pageIn, pageSize, isFilterModeIn]);
 
   const repairsOutPaginated = useMemo(() => {
+    if (isFilterModeOut) return repairsOutFiltered ?? [];
     const list = repairsOutFiltered ?? [];
     const start = (pageOut - 1) * pageSize;
     return list.slice(start, start + pageSize);
-  }, [repairsOutFiltered, pageOut, pageSize]);
+  }, [repairsOutFiltered, pageOut, pageSize, isFilterModeOut]);
 
   const repairsMatchingPaginated = useMemo(() => {
     const list = repairsMatchingFiltered ?? [];
@@ -174,11 +270,25 @@ export default function RepairsPage() {
     return list.slice(start, start + pageSize);
   }, [repairsMatchingFiltered, pageMatched, pageSize]);
 
-  const totalCountIn = (repairsInFiltered ?? []).length;
-  const totalCountOut = (repairsOutFiltered ?? []).length;
+  const totalCountIn = isFilterModeIn
+    ? (filterDataIn?.totalCount ?? 0)
+    : (repairsInFiltered ?? []).length;
+  const totalCountOut = isFilterModeOut
+    ? (filterDataOut?.totalCount ?? 0)
+    : (repairsOutFiltered ?? []).length;
   const totalCountMatched = (repairsMatchingFiltered ?? []).length;
-  const totalPagesIn = Math.max(1, Math.ceil(totalCountIn / pageSize));
-  const totalPagesOut = Math.max(1, Math.ceil(totalCountOut / pageSize));
+  const totalPagesIn = Math.max(
+    1,
+    isFilterModeIn
+      ? (filterDataIn?.totalPages ?? 1)
+      : Math.ceil(totalCountIn / pageSize)
+  );
+  const totalPagesOut = Math.max(
+    1,
+    isFilterModeOut
+      ? (filterDataOut?.totalPages ?? 1)
+      : Math.ceil(totalCountOut / pageSize)
+  );
   const totalPagesMatched = Math.max(1, Math.ceil(totalCountMatched / pageSize));
 
   const handlePageChangeIn = useCallback((page: number) => {
@@ -198,6 +308,22 @@ export default function RepairsPage() {
     setPageIn(1);
     setPageOut(1);
     setPageMatched(1);
+  }, []);
+
+  const activeFiltersCount = useMemo(() => {
+    const filterCount =
+      filterTableType === "in"
+        ? countRepairsInFilters(filtersIn)
+        : countRepairsOutFilters(filtersOut);
+    return filterCount + sortFields.length;
+  }, [filterTableType, filtersIn, filtersOut, sortFields]);
+
+  const handleClearFilters = useCallback(() => {
+    setFiltersIn({});
+    setFiltersOut({});
+    setSortFields([]);
+    setPageIn(1);
+    setPageOut(1);
   }, []);
 
   const handleCisternSelect = useCallback(async () => {
@@ -321,14 +447,28 @@ export default function RepairsPage() {
        
       </div>
 
-      <div className="flex items-center gap-2">
-        <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-        <Input
-          type="search"
-          placeholder="Быстрый поиск по столбцам..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-md"
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input
+            type="search"
+            placeholder="Быстрый поиск по столбцам..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+        <RepairsFilters
+          filterTableType={filterTableType}
+          onFilterTableTypeChange={setFilterTableType}
+          filtersIn={filtersIn}
+          filtersOut={filtersOut}
+          onFiltersInChange={setFiltersIn}
+          onFiltersOutChange={setFiltersOut}
+          sortFields={sortFields}
+          onSortFieldsChange={setSortFields}
+          onClearFilters={handleClearFilters}
+          activeFiltersCount={activeFiltersCount}
         />
       </div>
 
@@ -356,7 +496,16 @@ export default function RepairsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {repairsInPaginated?.length ? (
+                        {isFilterLoadingIn ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={8}
+                              className="text-center text-muted-foreground py-8"
+                            >
+                              Загрузка...
+                            </TableCell>
+                          </TableRow>
+                        ) : repairsInPaginated?.length ? (
                           repairsInPaginated.map((r) => (
                             <TableRow
                               key={r.id}
@@ -422,7 +571,16 @@ export default function RepairsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {repairsOutPaginated?.length ? (
+                        {isFilterLoadingOut ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={8}
+                              className="text-center text-muted-foreground py-8"
+                            >
+                              Загрузка...
+                            </TableCell>
+                          </TableRow>
+                        ) : repairsOutPaginated?.length ? (
                           repairsOutPaginated.map((r) => (
                             <TableRow
                               key={r.id}

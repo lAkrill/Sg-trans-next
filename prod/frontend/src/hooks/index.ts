@@ -19,6 +19,7 @@ export * from './vessels.hook';
 
 export * from './auth.hook';
 export * from './cisterns.hook';
+export * from './repairs.hook';
 export * from './debounce.hook';
 
 export * from './version.hook';

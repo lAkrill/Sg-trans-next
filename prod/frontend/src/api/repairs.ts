@@ -1,10 +1,14 @@
 import { api } from "@/lib/api";
 
-import { DepotDTO, StationDTO, RepairTypeDTO} from "../types/directories";
-import { RailwayCisternListDTO} from "../types/cisterns";
+import { DepotDTO, StationDTO, RepairTypeDTO } from "../types/directories";
+import { RailwayCisternListDTO } from "../types/cisterns";
+import type {
+  RepairsInFilterSortDTO,
+  RepairsOutFilterSortDTO,
+  PaginatedRepairsResponse,
+} from "@/types/repairs";
 
-
-const REPIN_LAST_NUM_ENDPOINT = '/api/RepairsIn/latest/byCisternNumber';
+const REPIN_LAST_NUM_ENDPOINT = "/api/RepairsIn/latest/byCisternNumber";
 const REPIN_ALL_NUM_ENDPOINT = '/api/RepairsIn/byCisternNumberAll';
 const REPOUT_LAST_NUM_ENDPOINT = '/api/RepairsOut/latest/byCisternNumber';
 const REPOUT_ALL_NUM_ENDPOINT = '/api/RepairsOut/byCisternNumberAll';
@@ -109,6 +113,26 @@ export const CisternRepairs= {
  
   getRepairsMatchingById: async (id: string): Promise<RepairsMatching[]> => {
     const response = await api.get<RepairsMatching[]>(`/api/RepairsMatching/byCisternId/${id}`);
+    return response.data;
+  },
+
+  filterRepairsIn: async (
+    filterData: RepairsInFilterSortDTO
+  ): Promise<PaginatedRepairsResponse<RepairsIn>> => {
+    const response = await api.post<PaginatedRepairsResponse<RepairsIn>>(
+      "/api/repairs-in/filter",
+      filterData
+    );
+    return response.data;
+  },
+
+  filterRepairsOut: async (
+    filterData: RepairsOutFilterSortDTO
+  ): Promise<PaginatedRepairsResponse<RepairsOut>> => {
+    const response = await api.post<PaginatedRepairsResponse<RepairsOut>>(
+      "/api/repairs-out/filter",
+      filterData
+    );
     return response.data;
   },
 };
