@@ -17,6 +17,7 @@ public static class ApiExtensions
     {
         app.MapVersionEndpoints();
         app.MapUsersEndpoints();
+        app.MapExportEndpoints();
 
         app.MapSavedFilterEndpoints();
         app.MapFilterTypeEndpoints();
