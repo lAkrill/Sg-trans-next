@@ -26,7 +26,10 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
 } from "lucide-react";
+import Image from "next/image";
+import { api } from "@/lib/api";
 import { CisternRepairs } from "@/api/repairs";
 import type { RepairsIn, RepairsOut, RepairsMatching } from "@/api/repairs";
 import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
@@ -77,6 +80,8 @@ export default function RepairsPage() {
   const [pageOut, setPageOut] = useState(1);
   const [pageMatched, setPageMatched] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
 
   // Filters (like cisterns page)
   const [filterTableType, setFilterTableType] = useState<RepairsFilterTableType>("in");
@@ -326,13 +331,189 @@ export default function RepairsPage() {
     setPageOut(1);
   }, []);
 
+  const handleExport = useCallback(async (type: "pdf" | "doc" | "xls") => {
+    type ExportColumn = {
+      key: string;
+      label: string;
+      type: "string";
+    };
+
+    let columns: ExportColumn[] = [];
+    let data: Record<string, string>[] = [];
+
+    if (activeTab === "in") {
+      columns = [
+        { key: "dateIn", label: "Дата приёма", type: "string" },
+        { key: "number", label: "Номер вагона", type: "string" },
+        { key: "repairType", label: "Тип ремонта", type: "string" },
+        { key: "vu23", label: "ВУ23", type: "string" },
+        { key: "depot", label: "Депо", type: "string" },
+        { key: "station", label: "Станция", type: "string" },
+        { key: "road", label: "Дорога", type: "string" },
+        { key: "defects", label: "Дефекты", type: "string" },
+      ];
+      data = (repairsInFiltered ?? []).map((r) => ({
+        dateIn: r.dateIn
+          ? new Date(r.dateIn).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        number: r.cisternNumber ?? "—",
+        repairType: r.repairType?.name ?? "—",
+        vu23: r.vU23 ?? "—",
+        depot: r.depotName ?? "—",
+        station: r.stationName ?? "—",
+        road: r.roadName ?? "—",
+        defects: r.defectName?.length ? r.defectName.join(", ") : "—",
+      }));
+    } else if (activeTab === "out") {
+      columns = [
+        { key: "dateIn", label: "Дата начала ремонта", type: "string" },
+        { key: "dateOut", label: "Дата выпуска", type: "string" },
+        { key: "number", label: "Номер вагона", type: "string" },
+        { key: "repairType", label: "Тип ремонта", type: "string" },
+        { key: "vu36", label: "ВУ36", type: "string" },
+        { key: "depot", label: "Депо", type: "string" },
+        { key: "road", label: "Дорога", type: "string" },
+        { key: "modern", label: "Модернизации", type: "string" },
+      ];
+      data = (repairsOutFiltered ?? []).map((r) => ({
+        dateIn: r.dateIn
+          ? new Date(r.dateIn).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        dateOut: r.dateOut
+          ? new Date(r.dateOut).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        number: r.cisternNumber ?? "—",
+        repairType: r.repairType?.name ?? "—",
+        vu36: r.vU36 ?? "—",
+        depot: r.depotName ?? "—",
+        road: r.roadName ?? "—",
+        modern: r.modernName?.length ? r.modernName.join(", ") : "—",
+      }));
+    } else {
+      columns = [
+        { key: "dateTime", label: "Дата сопоставления", type: "string" },
+        { key: "number", label: "Номер вагона", type: "string" },
+        { key: "dateIn", label: "Дата приёма", type: "string" },
+        { key: "dateOutIn", label: "Дата нач. ремонта", type: "string" },
+        { key: "dateOut", label: "Дата выпуска", type: "string" },
+        { key: "repairType", label: "Тип ремонта", type: "string" },
+        { key: "vu23", label: "ВУ23", type: "string" },
+        { key: "vu36", label: "ВУ36", type: "string" },
+        { key: "depotIn", label: "Депо (приём)", type: "string" },
+        { key: "station", label: "Станция", type: "string" },
+        { key: "roadIn", label: "Дорога (приём)", type: "string" },
+        { key: "defects", label: "Дефекты", type: "string" },
+        { key: "depotOut", label: "Депо (выпуск)", type: "string" },
+        { key: "roadOut", label: "Дорога (выпуск)", type: "string" },
+        { key: "modern", label: "Модернизации", type: "string" },
+      ];
+      data = (repairsMatchingFiltered ?? []).map((m) => ({
+        dateTime: m.dateTime
+          ? new Date(m.dateTime).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        number:
+          m.repairIn?.cisternNumber ?? m.repairOut?.cisternNumber ?? m.cistern?.number ?? "—",
+        dateIn: m.repairIn?.dateIn
+          ? new Date(m.repairIn.dateIn).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        dateOutIn: m.repairOut?.dateIn
+          ? new Date(m.repairOut.dateIn).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        dateOut: m.repairOut?.dateOut
+          ? new Date(m.repairOut.dateOut).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        repairType: m.repairIn?.repairType?.name ?? m.repairOut?.repairType?.name ?? "—",
+        vu23: m.repairIn?.vU23 ?? "—",
+        vu36: m.repairOut?.vU36 ?? "—",
+        depotIn: m.repairIn?.depotName ?? "—",
+        station: m.repairIn?.stationName ?? "—",
+        roadIn: m.repairIn?.roadName ?? "—",
+        defects: m.repairIn?.defectName?.length ? m.repairIn.defectName.join(", ") : "—",
+        depotOut: m.repairOut?.depotName ?? "—",
+        roadOut: m.repairOut?.roadName ?? "—",
+        modern: m.repairOut?.modernName?.length ? m.repairOut.modernName.join(", ") : "—",
+      }));
+    }
+
+    const extensionByType: Record<"pdf" | "doc" | "xls", string> = {
+      pdf: "pdf",
+      doc: "docx",
+      xls: "xlsx",
+    };
+    const mimeByType: Record<"pdf" | "doc" | "xls", string> = {
+      pdf: "application/pdf",
+      doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    };
+
+    setExportingType(type);
+    try {
+      const response = await api.post(
+        "/api/export/table",
+        {
+          type,
+          columns,
+          data,
+          fileName:
+            type === "pdf" ? "ExportPDF" : type === "doc" ? "ExportDOC" : "ExportXLS",
+        },
+        {
+          responseType: "blob",
+        }
+      );
+
+      const fileBaseName =
+        type === "pdf" ? "ExportPDF" : type === "doc" ? "ExportDOC" : "ExportXLS";
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: mimeByType[type] })
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${fileBaseName}.${extensionByType[type]}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(`Export ${type.toUpperCase()} failed`, error);
+    } finally {
+      setExportingType(null);
+    }
+  }, [activeTab, repairsInFiltered, repairsOutFiltered, repairsMatchingFiltered]);
+
   const handleCisternSelect = useCallback(async () => {
-    const res1 = await CisternRepairs.getAllRepairsIn();
-    const res2 = await CisternRepairs.getAllRepairsOut();
-    const res3 = await CisternRepairs.getAllRepairsMatching();
-    setRepairsIn(res1);
-    setRepairsOut(res2);
-    setRepairsMatching(res3);
+    setIsInitialLoading(true);
+    try {
+      const res1 = await CisternRepairs.getAllRepairsIn();
+      const res2 = await CisternRepairs.getAllRepairsOut();
+      const res3 = await CisternRepairs.getAllRepairsMatching();
+      setRepairsIn(res1);
+      setRepairsOut(res2);
+      setRepairsMatching(res3);
+    } finally {
+      setIsInitialLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -458,18 +639,64 @@ export default function RepairsPage() {
             className="max-w-md"
           />
         </div>
-        <RepairsFilters
-          filterTableType={filterTableType}
-          onFilterTableTypeChange={setFilterTableType}
-          filtersIn={filtersIn}
-          filtersOut={filtersOut}
-          onFiltersInChange={setFiltersIn}
-          onFiltersOutChange={setFiltersOut}
-          sortFields={sortFields}
-          onSortFieldsChange={setSortFields}
-          onClearFilters={handleClearFilters}
-          activeFiltersCount={activeFiltersCount}
-        />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт DOC"
+              onClick={() => handleExport("doc")}
+              disabled={!!exportingType || isInitialLoading}
+            >
+              {exportingType === "doc" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_word.svg" alt="Экспорт DOC" width={16} height={16} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт PDF"
+              onClick={() => handleExport("pdf")}
+              disabled={!!exportingType || isInitialLoading}
+            >
+              {exportingType === "pdf" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_pdf.png" alt="Экспорт PDF" width={16} height={16} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт XLS"
+              onClick={() => handleExport("xls")}
+              disabled={!!exportingType || isInitialLoading}
+            >
+              {exportingType === "xls" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_excel.svg" alt="Экспорт XLS" width={16} height={16} />
+              )}
+            </Button>
+          </div>
+          <RepairsFilters
+            filterTableType={filterTableType}
+            onFilterTableTypeChange={setFilterTableType}
+            filtersIn={filtersIn}
+            filtersOut={filtersOut}
+            onFiltersInChange={setFiltersIn}
+            onFiltersOutChange={setFiltersOut}
+            sortFields={sortFields}
+            onSortFieldsChange={setSortFields}
+            onClearFilters={handleClearFilters}
+            activeFiltersCount={activeFiltersCount}
+          />
+        </div>
       </div>
 
 
@@ -496,13 +723,16 @@ export default function RepairsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {isFilterLoadingIn ? (
+                        {isInitialLoading || isFilterLoadingIn ? (
                           <TableRow>
                             <TableCell
                               colSpan={8}
                               className="text-center text-muted-foreground py-8"
                             >
-                              Загрузка...
+                              <div className="inline-flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Загрузка данных...</span>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ) : repairsInPaginated?.length ? (
@@ -571,13 +801,16 @@ export default function RepairsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {isFilterLoadingOut ? (
+                        {isInitialLoading || isFilterLoadingOut ? (
                           <TableRow>
                             <TableCell
                               colSpan={8}
                               className="text-center text-muted-foreground py-8"
                             >
-                              Загрузка...
+                              <div className="inline-flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Загрузка данных...</span>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ) : repairsOutPaginated?.length ? (
@@ -660,7 +893,16 @@ export default function RepairsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {repairsMatchingPaginated?.length ? (
+                        {isInitialLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={15} className="text-center text-muted-foreground py-8">
+                              <div className="inline-flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Загрузка данных...</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : repairsMatchingPaginated?.length ? (
                           repairsMatchingPaginated.map((m) => (
                             <TableRow key={m.id} className="even:bg-muted/30">
                               <TableCell className="whitespace-nowrap">
