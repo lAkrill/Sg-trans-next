@@ -350,6 +350,7 @@ export default function RepairsPage() {
         { key: "depot", label: "Депо", type: "string" },
         { key: "station", label: "Станция", type: "string" },
         { key: "road", label: "Дорога", type: "string" },
+        { key: "defectCode", label: "Код дефектов", type: "string" },
         { key: "defects", label: "Дефекты", type: "string" },
       ];
       data = (repairsInFiltered ?? []).map((r) => ({
@@ -362,9 +363,10 @@ export default function RepairsPage() {
         number: r.cisternNumber ?? "—",
         repairType: r.repairType?.name ?? "—",
         vu23: r.vU23 ?? "—",
-        depot: r.depotName ?? "—",
-        station: r.stationName ?? "—",
+        depot: r.depotName ? `${r.depotName} (${r.depotCode})` : "—",
+        station: r.stationName ? `${r.stationName} (${r.stationCode})` : "—",
         road: r.roadName ?? "—",
+        defectCode: r.defectCode?.length ? r.defectCode.join(", ") : "—",
         defects: r.defectName?.length ? r.defectName.join(", ") : "—",
       }));
     } else if (activeTab === "out") {
@@ -376,6 +378,7 @@ export default function RepairsPage() {
         { key: "vu36", label: "ВУ36", type: "string" },
         { key: "depot", label: "Депо", type: "string" },
         { key: "road", label: "Дорога", type: "string" },
+        { key: "modernCode", label: "Код модификации", type: "string" },
         { key: "modern", label: "Модернизации", type: "string" },
       ];
       data = (repairsOutFiltered ?? []).map((r) => ({
@@ -394,8 +397,9 @@ export default function RepairsPage() {
         number: r.cisternNumber ?? "—",
         repairType: r.repairType?.name ?? "—",
         vu36: r.vU36 ?? "—",
-        depot: r.depotName ?? "—",
+        depot: r.depotName ? `${r.depotName} (${r.depotCode})` : "—",
         road: r.roadName ?? "—",
+        modernCode: r.modernCode?.length ? r.modernCode.join(", ") : "—",
         modern: r.modernName?.length ? r.modernName.join(", ") : "—",
       }));
     } else {
@@ -446,11 +450,11 @@ export default function RepairsPage() {
         repairType: m.repairIn?.repairType?.name ?? m.repairOut?.repairType?.name ?? "—",
         vu23: m.repairIn?.vU23 ?? "—",
         vu36: m.repairOut?.vU36 ?? "—",
-        depotIn: m.repairIn?.depotName ?? "—",
-        station: m.repairIn?.stationName ?? "—",
+        depotIn: m.repairIn?.depotName ? `${m.repairIn?.depotName} (${m.repairIn?.depotCode})` : "—",
+        station: m.repairIn?.stationName ? `${m.repairIn?.stationName} (${m.repairIn?.stationCode})` : "—",
         roadIn: m.repairIn?.roadName ?? "—",
         defects: m.repairIn?.defectName?.length ? m.repairIn.defectName.join(", ") : "—",
-        depotOut: m.repairOut?.depotName ?? "—",
+        depotOut: m.repairOut?.depotName ? `${m.repairOut?.depotName} (${m.repairOut?.depotCode})` : "—",
         roadOut: m.repairOut?.roadName ?? "—",
         modern: m.repairOut?.modernName?.length ? m.repairOut.modernName.join(", ") : "—",
       }));
@@ -719,6 +723,7 @@ export default function RepairsPage() {
                           <TableHead className="whitespace-normal py-2 min-w-0">Депо</TableHead>
                           <TableHead className="whitespace-normal py-2 min-w-0">Станция</TableHead>
                           <TableHead className="whitespace-nowrap w-0">Дорога</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Код дефектов</TableHead>
                           <TableHead className="whitespace-normal py-2 min-w-0">Дефекты</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -726,7 +731,7 @@ export default function RepairsPage() {
                         {isInitialLoading || isFilterLoadingIn ? (
                           <TableRow>
                             <TableCell
-                              colSpan={8}
+                              colSpan={9}
                               className="text-center text-muted-foreground py-8"
                             >
                               <div className="inline-flex items-center gap-2">
@@ -756,9 +761,12 @@ export default function RepairsPage() {
                               <TableCell className="whitespace-nowrap">{r.cisternNumber}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{r.repairType?.name ?? "—"}</TableCell>
                               <TableCell className="whitespace-nowrap">{r.vU23 ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{r.depotName ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{r.stationName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{r.depotName ? `${r.depotName} (${r.depotCode})` : "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{r.stationName ? `${r.stationName} (${r.stationCode})` : "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{r.roadName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">
+                                {r.defectCode?.length ? r.defectCode.join(", ") : "—"}
+                              </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {r.defectName?.length ? r.defectName.join(", ") : "—"}
                               </TableCell>
@@ -766,7 +774,7 @@ export default function RepairsPage() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                               Нет данных
                             </TableCell>
                           </TableRow>
@@ -797,6 +805,7 @@ export default function RepairsPage() {
                           <TableHead className="whitespace-nowrap w-0">ВУ36</TableHead>
                           <TableHead className="whitespace-normal py-2 min-w-0">Депо</TableHead>
                           <TableHead className="whitespace-nowrap w-0">Дорога</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Код модификации</TableHead>
                           <TableHead className="whitespace-normal py-2 min-w-0">Модернизации</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -804,7 +813,7 @@ export default function RepairsPage() {
                         {isInitialLoading || isFilterLoadingOut ? (
                           <TableRow>
                             <TableCell
-                              colSpan={8}
+                              colSpan={9}
                               className="text-center text-muted-foreground py-8"
                             >
                               <div className="inline-flex items-center gap-2">
@@ -842,8 +851,11 @@ export default function RepairsPage() {
                               <TableCell className="whitespace-nowrap">{r.cisternNumber}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{r.repairType?.name ?? "—"}</TableCell>
                               <TableCell className="whitespace-nowrap">{r.vU36 ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{r.depotName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{r.depotName ? `${r.depotName} (${r.depotCode})` : "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{r.roadName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">
+                                {r.modernCode?.length ? r.modernCode.join(", ") : "—"}
+                              </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {r.modernName?.length ? r.modernName.join(", ") : "—"}
                               </TableCell>
@@ -851,7 +863,7 @@ export default function RepairsPage() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                               Нет данных
                             </TableCell>
                           </TableRow>
@@ -943,13 +955,16 @@ export default function RepairsPage() {
                               </TableCell>
                               <TableCell className="whitespace-nowrap">{m.repairIn?.vU23 ?? "—"}</TableCell>
                               <TableCell className="whitespace-nowrap">{m.repairOut?.vU36 ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairIn?.depotName ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairIn?.stationName ?? "—"}</TableCell>
+
+                             
+
+                              <TableCell className="whitespace-normal break-words min-w-0"> {m.repairIn?.depotName ? `${m.repairIn?.depotName} (${m.repairIn?.depotCode})` : "—"} </TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0"> {m.repairIn?.stationName ? `${m.repairIn?.stationName} (${m.repairIn?.stationCode})` : "—"} </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{m.repairIn?.roadName ?? "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {m.repairIn?.defectName?.length ? m.repairIn.defectName.join(", ") : "—"}
                               </TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairOut?.depotName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0"> {m.repairOut?.depotName ? `${m.repairOut?.depotName} (${m.repairOut?.depotCode})` : "—"} </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{m.repairOut?.roadName ?? "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {m.repairOut?.modernName?.length ? m.repairOut.modernName.join(", ") : "—"}
