@@ -10,9 +10,8 @@ public class RepairsMatchingDTO
     public Guid RepairOutId { get; set; }
     public DateTime DateTime { get; set; }
 
-    public RailwayCisternListDTO Cistern { get; set; } = null!;
-    public RepairsInListDTO RepairIn { get; set; } = null!;
-    public RepairsOutListDTO RepairOut { get; set; } = null!;
+    public RepairsInDTO RepairIn { get; set; } = null!;
+    public RepairsOutDTO RepairOut { get; set; } = null!;
 }
 
 public class CreateRepairsMatchingDTO
@@ -43,23 +42,9 @@ public static class RepairsMatchingDTOMapper
             RepairOutId = repairsMatching.RepairOutId,
             DateTime = repairsMatching.DateTime,
 
-            Cistern = new RailwayCisternListDTO()
-            {
-                Id = repairsMatching.Cistern.Id,
-                Number = repairsMatching.Cistern.Number,
-                ManufacturerName = repairsMatching.Cistern.Manufacturer.Name,
-                BuildDate = repairsMatching.Cistern.BuildDate,
-                TypeName = repairsMatching.Cistern.Type.Name,
-                ModelName = repairsMatching.Cistern.Model.Name,
-                OwnerName = repairsMatching.Cistern.Owner.Name,
-                RegistrationNumber = repairsMatching.Cistern.RegistrationNumber,
-                RegistrationDate = repairsMatching.Cistern.RegistrationDate,
-                AffiliationValue = repairsMatching.Cistern.Affiliation.Value
-            },
+            RepairIn = repairsMatching.RepairIn.ToRepairsInDTO(),
 
-            RepairIn = repairsMatching.RepairIn.ToRepairsInListDTO(),
-
-            RepairOut = repairsMatching.RepairOut.ToRepairsOutListDTO()
+            RepairOut = repairsMatching.RepairOut.ToRepairsOutDTO()
         };
     }
 
