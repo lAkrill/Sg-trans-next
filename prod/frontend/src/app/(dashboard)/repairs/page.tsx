@@ -26,7 +26,10 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
 } from "lucide-react";
+import Image from "next/image";
+import { api } from "@/lib/api";
 import { CisternRepairs } from "@/api/repairs";
 import type { RepairsIn, RepairsOut, RepairsMatching } from "@/api/repairs";
 import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
@@ -77,6 +80,8 @@ export default function RepairsPage() {
   const [pageOut, setPageOut] = useState(1);
   const [pageMatched, setPageMatched] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
 
   // Filters (like cisterns page)
   const [filterTableType, setFilterTableType] = useState<RepairsFilterTableType>("in");
@@ -326,13 +331,193 @@ export default function RepairsPage() {
     setPageOut(1);
   }, []);
 
+  const handleExport = useCallback(async (type: "pdf" | "doc" | "xls") => {
+    type ExportColumn = {
+      key: string;
+      label: string;
+      type: "string";
+    };
+
+    let columns: ExportColumn[] = [];
+    let data: Record<string, string>[] = [];
+
+    if (activeTab === "in") {
+      columns = [
+        { key: "dateIn", label: "Дата приёма", type: "string" },
+        { key: "number", label: "Номер вагона", type: "string" },
+        { key: "repairType", label: "Тип ремонта", type: "string" },
+        { key: "vu23", label: "ВУ23", type: "string" },
+        { key: "depot", label: "Депо", type: "string" },
+        { key: "station", label: "Станция", type: "string" },
+        { key: "road", label: "Дорога", type: "string" },
+        { key: "defectCode", label: "Код дефектов", type: "string" },
+        { key: "defects", label: "Дефекты", type: "string" },
+      ];
+      data = (repairsInFiltered ?? []).map((r) => ({
+        dateIn: r.dateIn
+          ? new Date(r.dateIn).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        number: r.cisternNumber ?? "—",
+        repairType: r.repairType?.name ?? "—",
+        vu23: r.vU23 ?? "—",
+        depot: r.depotName ? `${r.depotName} (${r.depotCode})` : "—",
+        station: r.stationName ? `${r.stationName} (${r.stationCode})` : "—",
+        road: r.roadName ?? "—",
+        defectCode: r.defectCode?.length ? r.defectCode.join(", ") : "—",
+        defects: r.defectName?.length ? r.defectName.join(", ") : "—",
+      }));
+    } else if (activeTab === "out") {
+      columns = [
+        { key: "dateIn", label: "Дата начала ремонта", type: "string" },
+        { key: "dateOut", label: "Дата выпуска", type: "string" },
+        { key: "number", label: "Номер вагона", type: "string" },
+        { key: "repairType", label: "Тип ремонта", type: "string" },
+        { key: "vu36", label: "ВУ36", type: "string" },
+        { key: "depot", label: "Депо", type: "string" },
+        { key: "road", label: "Дорога", type: "string" },
+        { key: "modernCode", label: "Код модификации", type: "string" },
+        { key: "modern", label: "Модернизации", type: "string" },
+      ];
+      data = (repairsOutFiltered ?? []).map((r) => ({
+        dateIn: r.dateIn
+          ? new Date(r.dateIn).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        dateOut: r.dateOut
+          ? new Date(r.dateOut).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        number: r.cisternNumber ?? "—",
+        repairType: r.repairType?.name ?? "—",
+        vu36: r.vU36 ?? "—",
+        depot: r.depotName ? `${r.depotName} (${r.depotCode})` : "—",
+        road: r.roadName ?? "—",
+        modernCode: r.modernCode?.length ? r.modernCode.join(", ") : "—",
+        modern: r.modernName?.length ? r.modernName.join(", ") : "—",
+      }));
+    } else {
+      columns = [
+        { key: "dateTime", label: "Дата сопоставления", type: "string" },
+        { key: "number", label: "Номер вагона", type: "string" },
+        { key: "dateIn", label: "Дата приёма", type: "string" },
+        { key: "dateOutIn", label: "Дата нач. ремонта", type: "string" },
+        { key: "dateOut", label: "Дата выпуска", type: "string" },
+        { key: "repairType", label: "Тип ремонта", type: "string" },
+        { key: "vu23", label: "ВУ23", type: "string" },
+        { key: "vu36", label: "ВУ36", type: "string" },
+        { key: "depotIn", label: "Депо (приём)", type: "string" },
+        { key: "station", label: "Станция", type: "string" },
+        { key: "roadIn", label: "Дорога (приём)", type: "string" },
+        { key: "defects", label: "Дефекты", type: "string" },
+        { key: "depotOut", label: "Депо (выпуск)", type: "string" },
+        { key: "roadOut", label: "Дорога (выпуск)", type: "string" },
+        { key: "modern", label: "Модернизации", type: "string" },
+      ];
+      data = (repairsMatchingFiltered ?? []).map((m) => ({
+        dateTime: m.dateTime
+          ? new Date(m.dateTime).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        number:
+          m.repairIn?.cisternNumber ?? m.repairOut?.cisternNumber ?? m.cistern?.number ?? "—",
+        dateIn: m.repairIn?.dateIn
+          ? new Date(m.repairIn.dateIn).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        dateOutIn: m.repairOut?.dateIn
+          ? new Date(m.repairOut.dateIn).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        dateOut: m.repairOut?.dateOut
+          ? new Date(m.repairOut.dateOut).toLocaleString("ru-RU", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
+          : "—",
+        repairType: m.repairIn?.repairType?.name ?? m.repairOut?.repairType?.name ?? "—",
+        vu23: m.repairIn?.vU23 ?? "—",
+        vu36: m.repairOut?.vU36 ?? "—",
+        depotIn: m.repairIn?.depotName ? `${m.repairIn?.depotName} (${m.repairIn?.depotCode})` : "—",
+        station: m.repairIn?.stationName ? `${m.repairIn?.stationName} (${m.repairIn?.stationCode})` : "—",
+        roadIn: m.repairIn?.roadName ?? "—",
+        defects: m.repairIn?.defectName?.length ? m.repairIn.defectName.join(", ") : "—",
+        depotOut: m.repairOut?.depotName ? `${m.repairOut?.depotName} (${m.repairOut?.depotCode})` : "—",
+        roadOut: m.repairOut?.roadName ?? "—",
+        modern: m.repairOut?.modernName?.length ? m.repairOut.modernName.join(", ") : "—",
+      }));
+    }
+
+    const extensionByType: Record<"pdf" | "doc" | "xls", string> = {
+      pdf: "pdf",
+      doc: "docx",
+      xls: "xlsx",
+    };
+    const mimeByType: Record<"pdf" | "doc" | "xls", string> = {
+      pdf: "application/pdf",
+      doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    };
+
+    setExportingType(type);
+    try {
+      const response = await api.post(
+        "/api/export/table",
+        {
+          type,
+          columns,
+          data,
+          fileName:
+            type === "pdf" ? "ExportPDF" : type === "doc" ? "ExportDOC" : "ExportXLS",
+        },
+        {
+          responseType: "blob",
+        }
+      );
+
+      const fileBaseName =
+        type === "pdf" ? "ExportPDF" : type === "doc" ? "ExportDOC" : "ExportXLS";
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: mimeByType[type] })
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${fileBaseName}.${extensionByType[type]}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(`Export ${type.toUpperCase()} failed`, error);
+    } finally {
+      setExportingType(null);
+    }
+  }, [activeTab, repairsInFiltered, repairsOutFiltered, repairsMatchingFiltered]);
+
   const handleCisternSelect = useCallback(async () => {
-    const res1 = await CisternRepairs.getAllRepairsIn();
-    const res2 = await CisternRepairs.getAllRepairsOut();
-    const res3 = await CisternRepairs.getAllRepairsMatching();
-    setRepairsIn(res1);
-    setRepairsOut(res2);
-    setRepairsMatching(res3);
+    setIsInitialLoading(true);
+    try {
+      const res1 = await CisternRepairs.getAllRepairsIn();
+      const res2 = await CisternRepairs.getAllRepairsOut();
+      const res3 = await CisternRepairs.getAllRepairsMatching();
+      setRepairsIn(res1);
+      setRepairsOut(res2);
+      setRepairsMatching(res3);
+    } finally {
+      setIsInitialLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -458,18 +643,64 @@ export default function RepairsPage() {
             className="max-w-md"
           />
         </div>
-        <RepairsFilters
-          filterTableType={filterTableType}
-          onFilterTableTypeChange={setFilterTableType}
-          filtersIn={filtersIn}
-          filtersOut={filtersOut}
-          onFiltersInChange={setFiltersIn}
-          onFiltersOutChange={setFiltersOut}
-          sortFields={sortFields}
-          onSortFieldsChange={setSortFields}
-          onClearFilters={handleClearFilters}
-          activeFiltersCount={activeFiltersCount}
-        />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт DOC"
+              onClick={() => handleExport("doc")}
+              disabled={!!exportingType || isInitialLoading}
+            >
+              {exportingType === "doc" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_word.svg" alt="Экспорт DOC" width={16} height={16} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт PDF"
+              onClick={() => handleExport("pdf")}
+              disabled={!!exportingType || isInitialLoading}
+            >
+              {exportingType === "pdf" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_pdf.png" alt="Экспорт PDF" width={16} height={16} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт XLS"
+              onClick={() => handleExport("xls")}
+              disabled={!!exportingType || isInitialLoading}
+            >
+              {exportingType === "xls" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_excel.svg" alt="Экспорт XLS" width={16} height={16} />
+              )}
+            </Button>
+          </div>
+          <RepairsFilters
+            filterTableType={filterTableType}
+            onFilterTableTypeChange={setFilterTableType}
+            filtersIn={filtersIn}
+            filtersOut={filtersOut}
+            onFiltersInChange={setFiltersIn}
+            onFiltersOutChange={setFiltersOut}
+            sortFields={sortFields}
+            onSortFieldsChange={setSortFields}
+            onClearFilters={handleClearFilters}
+            activeFiltersCount={activeFiltersCount}
+          />
+        </div>
       </div>
 
 
@@ -492,17 +723,21 @@ export default function RepairsPage() {
                           <TableHead className="whitespace-normal py-2 min-w-0">Депо</TableHead>
                           <TableHead className="whitespace-normal py-2 min-w-0">Станция</TableHead>
                           <TableHead className="whitespace-nowrap w-0">Дорога</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Код дефектов</TableHead>
                           <TableHead className="whitespace-normal py-2 min-w-0">Дефекты</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {isFilterLoadingIn ? (
+                        {isInitialLoading || isFilterLoadingIn ? (
                           <TableRow>
                             <TableCell
-                              colSpan={8}
+                              colSpan={9}
                               className="text-center text-muted-foreground py-8"
                             >
-                              Загрузка...
+                              <div className="inline-flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Загрузка данных...</span>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ) : repairsInPaginated?.length ? (
@@ -526,9 +761,12 @@ export default function RepairsPage() {
                               <TableCell className="whitespace-nowrap">{r.cisternNumber}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{r.repairType?.name ?? "—"}</TableCell>
                               <TableCell className="whitespace-nowrap">{r.vU23 ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{r.depotName ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{r.stationName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{r.depotName ? `${r.depotName} (${r.depotCode})` : "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{r.stationName ? `${r.stationName} (${r.stationCode})` : "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{r.roadName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">
+                                {r.defectCode?.length ? r.defectCode.join(", ") : "—"}
+                              </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {r.defectName?.length ? r.defectName.join(", ") : "—"}
                               </TableCell>
@@ -536,7 +774,7 @@ export default function RepairsPage() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                               Нет данных
                             </TableCell>
                           </TableRow>
@@ -567,17 +805,21 @@ export default function RepairsPage() {
                           <TableHead className="whitespace-nowrap w-0">ВУ36</TableHead>
                           <TableHead className="whitespace-normal py-2 min-w-0">Депо</TableHead>
                           <TableHead className="whitespace-nowrap w-0">Дорога</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Код модификации</TableHead>
                           <TableHead className="whitespace-normal py-2 min-w-0">Модернизации</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {isFilterLoadingOut ? (
+                        {isInitialLoading || isFilterLoadingOut ? (
                           <TableRow>
                             <TableCell
-                              colSpan={8}
+                              colSpan={9}
                               className="text-center text-muted-foreground py-8"
                             >
-                              Загрузка...
+                              <div className="inline-flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Загрузка данных...</span>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ) : repairsOutPaginated?.length ? (
@@ -609,8 +851,11 @@ export default function RepairsPage() {
                               <TableCell className="whitespace-nowrap">{r.cisternNumber}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{r.repairType?.name ?? "—"}</TableCell>
                               <TableCell className="whitespace-nowrap">{r.vU36 ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{r.depotName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">{r.depotName ? `${r.depotName} (${r.depotCode})` : "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{r.roadName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">
+                                {r.modernCode?.length ? r.modernCode.join(", ") : "—"}
+                              </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {r.modernName?.length ? r.modernName.join(", ") : "—"}
                               </TableCell>
@@ -618,7 +863,7 @@ export default function RepairsPage() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                               Нет данных
                             </TableCell>
                           </TableRow>
@@ -660,7 +905,16 @@ export default function RepairsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {repairsMatchingPaginated?.length ? (
+                        {isInitialLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={15} className="text-center text-muted-foreground py-8">
+                              <div className="inline-flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Загрузка данных...</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : repairsMatchingPaginated?.length ? (
                           repairsMatchingPaginated.map((m) => (
                             <TableRow key={m.id} className="even:bg-muted/30">
                               <TableCell className="whitespace-nowrap">
@@ -701,13 +955,16 @@ export default function RepairsPage() {
                               </TableCell>
                               <TableCell className="whitespace-nowrap">{m.repairIn?.vU23 ?? "—"}</TableCell>
                               <TableCell className="whitespace-nowrap">{m.repairOut?.vU36 ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairIn?.depotName ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairIn?.stationName ?? "—"}</TableCell>
+
+                             
+
+                              <TableCell className="whitespace-normal break-words min-w-0"> {m.repairIn?.depotName ? `${m.repairIn?.depotName} (${m.repairIn?.depotCode})` : "—"} </TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0"> {m.repairIn?.stationName ? `${m.repairIn?.stationName} (${m.repairIn?.stationCode})` : "—"} </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{m.repairIn?.roadName ?? "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {m.repairIn?.defectName?.length ? m.repairIn.defectName.join(", ") : "—"}
                               </TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">{m.repairOut?.depotName ?? "—"}</TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0"> {m.repairOut?.depotName ? `${m.repairOut?.depotName} (${m.repairOut?.depotCode})` : "—"} </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">{m.repairOut?.roadName ?? "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {m.repairOut?.modernName?.length ? m.repairOut.modernName.join(", ") : "—"}

@@ -14,6 +14,8 @@ const REPOUT_LAST_NUM_ENDPOINT = '/api/RepairsOut/latest/byCisternNumber';
 const REPOUT_ALL_NUM_ENDPOINT = '/api/RepairsOut/byCisternNumberAll';
 const REPIN_ALL_ENDPOINT = '/api/RepairsIn/all';
 const REPOUT_ALL_ENDPOINT = '/api/RepairsOut/all';
+const REPIN_PAGE_ENDPOINT = '/api/RepairsIn';
+const REPOUT_PAGE_ENDPOINT = '/api/RepairsOut';
 
 export interface RepairsIn {
   
@@ -93,6 +95,16 @@ export const CisternRepairs= {
 
   getAllRepairsNumOut: async (Num: string): Promise<RepairsOut[]> => {
     const response = await api.get<RepairsOut[]>(`${REPOUT_ALL_NUM_ENDPOINT}/${Num}`);
+    return response.data;
+  },
+
+  getRepairsInPage: async (skip: number, take: number): Promise<RepairsIn[]> => {
+    const response = await api.get<RepairsIn[]>(`${REPIN_PAGE_ENDPOINT}?skip=${skip}&take=${take}`);
+    return response.data;
+  },
+
+  getRepairsOutPage: async (skip: number, take: number): Promise<RepairsOut[]> => {
+    const response = await api.get<RepairsOut[]>(`${REPOUT_PAGE_ENDPOINT}?skip=${skip}&take=${take}`);
     return response.data;
   },
 
