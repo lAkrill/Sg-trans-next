@@ -9,6 +9,7 @@ public class RepairsMatchingDTO
     public Guid RepairInId { get; set; }
     public Guid RepairOutId { get; set; }
     public DateTime DateTime { get; set; }
+    public int RepairPeriod { get; set; } 
 
     public RepairsInDTO RepairIn { get; set; } = null!;
     public RepairsOutDTO RepairOut { get; set; } = null!;
@@ -20,6 +21,7 @@ public class CreateRepairsMatchingDTO
     public Guid RepairInId { get; set; }
     public Guid RepairOutId { get; set; }
     public DateTime DateTime { get; set; }
+    public int RepairPeriod { get; set; } = 0;
 }
 
 public class UpdateRepairsMatchingDTO
@@ -28,6 +30,7 @@ public class UpdateRepairsMatchingDTO
     public Guid RepairInId { get; set; }
     public Guid RepairOutId { get; set; }
     public DateTime DateTime { get; set; }
+    public int RepairPeriod { get; set; } = 0;
 }
 
 public static class RepairsMatchingDTOMapper
@@ -41,6 +44,7 @@ public static class RepairsMatchingDTOMapper
             RepairInId = repairsMatching.RepairInId,
             RepairOutId = repairsMatching.RepairOutId,
             DateTime = repairsMatching.DateTime,
+            RepairPeriod = repairsMatching.RepairPeriod,
 
             RepairIn = repairsMatching.RepairIn.ToRepairsInDTO(),
 
@@ -56,7 +60,8 @@ public static class RepairsMatchingDTOMapper
             CisternId = createRepairsMatchingDTO.CisternId,
             RepairInId = createRepairsMatchingDTO.RepairInId,
             RepairOutId = createRepairsMatchingDTO.RepairOutId,
-            DateTime = createRepairsMatchingDTO.DateTime
+            DateTime = createRepairsMatchingDTO.DateTime,
+            RepairPeriod = createRepairsMatchingDTO.RepairPeriod
         };
     }
 
@@ -66,5 +71,6 @@ public static class RepairsMatchingDTOMapper
         repairsMatching.RepairInId = updateRepairsMatchingDTO.RepairInId;
         repairsMatching.RepairOutId = updateRepairsMatchingDTO.RepairOutId;
         repairsMatching.DateTime = updateRepairsMatchingDTO.DateTime;
+        repairsMatching.RepairPeriod = updateRepairsMatchingDTO.RepairPeriod;
     }
 }

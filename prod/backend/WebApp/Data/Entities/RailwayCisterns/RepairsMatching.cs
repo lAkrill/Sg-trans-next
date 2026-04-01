@@ -7,6 +7,7 @@ public class RepairsMatching
     public Guid RepairInId { get; set; }
     public Guid RepairOutId { get; set; }
     public DateTime DateTime { get; set; }
+    public int RepairPeriod { get; set; } = 0;
 
     public RailwayCistern Cistern { get; set; } = null!;
     public RepairsIn RepairIn { get; set; } = null!;

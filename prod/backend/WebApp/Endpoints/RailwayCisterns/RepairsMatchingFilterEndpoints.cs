@@ -111,6 +111,7 @@ public static class RepairsMatchingFilterEndpoints
                 r.RepairInId,
                 r.RepairOutId,
                 r.DateTime,
+                r.RepairPeriod,
                 Cistern = r.Cistern != null ? new { r.Cistern.Id, r.Cistern.Number } : null,
                 RepairIn = r.RepairIn != null ? new { r.RepairIn.Id, r.RepairIn.VU23, r.RepairIn.DateIn } : null,
                 RepairOut = r.RepairOut != null ? new { r.RepairOut.Id, r.RepairOut.VU36, r.RepairOut.DateOut } : null
@@ -141,6 +142,9 @@ public static class RepairsMatchingFilterEndpoints
                 case "datetime":
                     selectedProperties["dateTime"] = r.DateTime;
                     break;
+                case "repairperiod":
+                    selectedProperties["repairPeriod"] = r.RepairPeriod;
+                    break;      
                 case "cistern.id":
                     selectedProperties["cisternId"] = r.Cistern?.Id ?? Guid.Empty;
                     break;
@@ -190,6 +194,12 @@ public static class RepairsMatchingFilterEndpoints
 
         if (filters.RepairOutIds != null && filters.RepairOutIds.Any())
             query = query.Where(r => filters.RepairOutIds.Contains(r.RepairOutId));
+
+        if (filters.RepairPeriod != null 
+            && filters.RepairPeriod.From>=0
+            && filters.RepairPeriod.To>= filters.RepairPeriod.From)
+            query = query.Where(r => r.RepairPeriod>=filters.RepairPeriod.From
+                && r.RepairPeriod<=filters.RepairPeriod.To);
 
         if (filters.DateTime != null)
         {

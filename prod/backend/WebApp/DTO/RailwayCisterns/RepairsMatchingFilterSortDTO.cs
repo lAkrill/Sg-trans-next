@@ -24,4 +24,5 @@ public class RepairsMatchingFilterCriteria
     public List<Guid>? RepairInIds { get; set; }
     public List<Guid>? RepairOutIds { get; set; }
     public DateTimeRange? DateTime { get; set; }
+    public IntRange? RepairPeriod{get;set;}
 }

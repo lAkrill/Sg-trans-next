@@ -18,6 +18,10 @@ public partial class RepairsMatchingConfiguration : IEntityTypeConfiguration<Rep
         entity.Property(e => e.RepairOutId).HasColumnName("RepairOutId").IsRequired();
         entity.Property(e => e.DateTime).HasColumnName("DateTime").IsRequired()
             .HasColumnType("timestamp without time zone");
+        entity.Property(e => e.RepairPeriod).HasColumnName("RepairPeriod")
+            .HasDefaultValue(0)
+            .IsRequired()
+            .HasColumnType("integer");
         
         entity.HasOne(e => e.Cistern)
             .WithMany()
