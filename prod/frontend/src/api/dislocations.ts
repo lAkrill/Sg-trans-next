@@ -4,6 +4,8 @@ const DISLOCATION_LAST_ENDPOINT = '/api/dislocations/last-location/by-number';
 const DISLOCATION_ALL_ENDPOINT = '/api/dislocations/locations/by-number';
 const DISLOCATION_IN_RANGE_ENDPOINT = 'api/dislocations/locations/in-range/by-number/{cisternNumber}?cisternNumber=';
 
+const DISLOCATIONS_CISTERNS_LAST_LOCATION = '/api/dislocations/cisterns-last-location'
+
 export interface CisternLastLocation {
   id: string;
   dateOpr: string;
@@ -44,10 +46,42 @@ export interface CisternAllLocation {
   nameShip: string;
 }
 
+export interface AllCisternLastLocation {
+  id: string;
+  dateOpr: string;
+  downtime: number;
+  lat: number;
+  lon: number;
+  dateRas: string;
+  numCistern: string;
+  codeStationOpr: string;
+  nameStationOpr: string;
+  roadDislocation: string;
+  operationShort: string;
+  operationNote: string;
+  codeStationOut: string;
+  nameStationOut: string;
+  codeStationEnd: string;
+  nameStationEnd: string;
+  codeShip: string;
+  nameShip: string;
+  weightShip: number;
+  numTrain: string;
+  indxTrain: string;
+  codeConsignor: string;
+  codeConsignee: string;
+  codeWagonOwner: string;
+  numShipmen: string;
+}
 
 export const CisternDislocation= {
   getLastLocation: async (Num: string): Promise<CisternLastLocation> => {
     const response = await api.get<CisternLastLocation>(`${DISLOCATION_LAST_ENDPOINT}/${Num}`);
+    return response.data;
+  },
+
+  getAllCisternsLocation: async (): Promise<AllCisternLastLocation[]> => {
+    const response = await api.get<AllCisternLastLocation[]>(`${DISLOCATIONS_CISTERNS_LAST_LOCATION}`);
     return response.data;
   },
 

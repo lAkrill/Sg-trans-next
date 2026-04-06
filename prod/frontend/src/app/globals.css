@@ -120,6 +120,20 @@
     top: 9px;
 }
 
+/* Прокрутка длинного списка вагонов в Leaflet popup (контент задаётся строкой, не React) */
+.leaflet-popup-content .locations-wagon-popup-scroll {
+  max-height: min(50vh, 280px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  box-sizing: border-box;
+  text-align: left;
+  -webkit-overflow-scrolling: touch;
+}
+.leaflet-popup-content .locations-wagon-popup-scroll > div + div {
+  margin-top: 0.25rem;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
