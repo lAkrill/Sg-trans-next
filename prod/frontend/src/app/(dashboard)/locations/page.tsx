@@ -33,7 +33,10 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
 } from "lucide-react";
+import Image from "next/image";
+import { api } from "@/lib/api";
 
 import "@/lib/leaflet/dist/leaflet.css";
 import L, {
@@ -72,6 +75,16 @@ function coordGroupKey(lat: number, lon: number): string {
   return `${lat.toFixed(6)},${lon.toFixed(6)}`;
 }
 
+function markerIconForRows(rows: AllCisternLastLocation[]) {
+  if (rows.some((r) => r.downtime != null && r.downtime > 4)) {
+    return tankWarningIcon;
+  }
+  if (rows.some((r) => (r.codeShip?.trim() ?? "") === "000000")) {
+    return tankEmptyIcon;
+  }
+  return tankFullIcon;
+}
+
 function stationGroupKey(row: AllCisternLastLocation): string | null {
   const code = row.codeStationOpr?.trim();
   const name = row.nameStationOpr?.trim();
@@ -91,6 +104,7 @@ export default function LocationsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
 
   const mapInstanceRef = useRef<InstanceType<typeof LeafletMap> | null>(null);
   const markersLayerRef = useRef<LayerGroup | null>(null);
@@ -161,6 +175,90 @@ export default function LocationsPage() {
     setPageSize(newPageSize);
     setPage(1);
   }, []);
+
+  const handleExport = useCallback(async (type: "pdf" | "doc" | "xls") => {
+    type ExportColumn = {
+      key: string;
+      label: string;
+      type: "string";
+    };
+
+    const columns: ExportColumn[] = [
+      { key: "dateOpr", label: "Дата операции", type: "string" },
+      { key: "numCistern", label: "№ Вагона", type: "string" },
+      { key: "codeStationOpr", label: "Код стан. операции", type: "string" },
+      { key: "nameStationOpr", label: "Станция операции", type: "string" },
+      { key: "operationNote", label: "Операция", type: "string" },
+      { key: "codeShip", label: "Код груза", type: "string" },
+      { key: "nameShip", label: "Груз", type: "string" },
+      { key: "codeStationOut", label: "Код. стан. назвачения", type: "string" },
+      { key: "nameStationOut", label: "Станция назначения", type: "string" },
+      { key: "downtime", label: "Простой", type: "string" },
+    ];
+
+    const data = locationFiltered.map((row) => ({
+      dateOpr: row.dateOpr
+        ? new Date(row.dateOpr).toLocaleString("ru-RU", {
+            dateStyle: "short",
+            timeStyle: "short",
+          })
+        : "—",
+      numCistern: row.numCistern ?? "—",
+      codeStationOpr: row.codeStationOpr ?? "—",
+      nameStationOpr: row.nameStationOpr ?? "—",
+      operationNote: row.operationNote ?? "—",
+      codeShip: row.codeShip ?? "—",
+      nameShip: row.nameShip ?? "—",
+      codeStationOut: row.codeStationOut ?? "—",
+      nameStationOut: row.nameStationOut ?? "—",
+      downtime: row.downtime != null ? String(row.downtime) : "—",
+    }));
+
+    const extensionByType: Record<"pdf" | "doc" | "xls", string> = {
+      pdf: "pdf",
+      doc: "docx",
+      xls: "xlsx",
+    };
+    const mimeByType: Record<"pdf" | "doc" | "xls", string> = {
+      pdf: "application/pdf",
+      doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    };
+
+    setExportingType(type);
+    try {
+      const response = await api.post(
+        "/api/export/table",
+        {
+          type,
+          columns,
+          data,
+          fileName:
+            type === "pdf" ? "ExportPDF" : type === "doc" ? "ExportDOC" : "ExportXLS",
+        },
+        {
+          responseType: "blob",
+        }
+      );
+
+      const fileBaseName =
+        type === "pdf" ? "ExportPDF" : type === "doc" ? "ExportDOC" : "ExportXLS";
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: mimeByType[type] })
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${fileBaseName}.${extensionByType[type]}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(`Export ${type.toUpperCase()} failed`, error);
+    } finally {
+      setExportingType(null);
+    }
+  }, [locationFiltered]);
 
   const getVisiblePages = (currentPage: number, total: number) => {
     const delta = 1;
@@ -322,9 +420,7 @@ export default function LocationsPage() {
         withCoords.reduce((s, r) => s + r.lon!, 0) / withCoords.length;
       validLatLngs.push([lat, lon]);
 
-      const icon = rows.some((r) => r.downtime != null && r.downtime > 4)
-        ? tankWarningIcon
-        : tankFullIcon;
+      const icon = markerIconForRows(rows);
 
       const popupLines = rows.map((row) => {
         const wagonLabel = row.numCistern?.trim() || "—";
@@ -407,15 +503,61 @@ export default function LocationsPage() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-4 w-full">
             <CardTitle>Список вагонов-цистерн</CardTitle>
-            <div className="flex items-center gap-2 min-w-0 flex-1 max-w-md justify-end">
-              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-              <Input
-                type="search"
-                placeholder="Быстрый поиск по столбцам..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="max-w-md w-full"
-              />
+            <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1 justify-end">
+              <div className="flex items-center gap-1 rounded-md border bg-background p-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Экспорт DOC"
+                  onClick={() => handleExport("doc")}
+                  disabled={!!exportingType || location === null}
+                >
+                  {exportingType === "doc" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Image src="/icon_word.svg" alt="Экспорт DOC" width={16} height={16} />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Экспорт PDF"
+                  onClick={() => handleExport("pdf")}
+                  disabled={!!exportingType || location === null}
+                >
+                  {exportingType === "pdf" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Image src="/icon_pdf.png" alt="Экспорт PDF" width={16} height={16} />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Экспорт XLS"
+                  onClick={() => handleExport("xls")}
+                  disabled={!!exportingType || location === null}
+                >
+                  {exportingType === "xls" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Image src="/icon_excel.svg" alt="Экспорт XLS" width={16} height={16} />
+                  )}
+                </Button>
+              </div>
+              <div className="flex items-center gap-2 min-w-0 max-w-md flex-1">
+                <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Input
+                  type="search"
+                  placeholder="Быстрый поиск по столбцам..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-md w-full"
+                />
+              </div>
             </div>
            </div>
          </CardHeader>
