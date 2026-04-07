@@ -1,20 +1,70 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Button } from "@/components/ui";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { MapPin, MapIcon } from "lucide-react";
 import { CisternDislocation } from "@/api/dislocations";
 import { CisternMilages } from "@/api/milages";
 import type { CisternMilage } from "@/api/milages";
 import type { CisternLastLocation, CisternAllLocation } from "@/api/dislocations";
 import "@/lib/leaflet/dist/leaflet.css";
-import L, {Map, TileLayer, Marker, Circle, Polygon, Popup, Tooltip, Icon} from "@/lib/leaflet/dist/leaflet-src.js";
+import {
+  Map as LeafletMap,
+  TileLayer,
+  Icon,
+  LayerGroup,
+  LatLngBounds,
+  Marker,
+  Polyline,
+} from "@/lib/leaflet/dist/leaflet-src.js";
 
+const tankFullIcon = new Icon({
+  iconUrl: "/tank_full.png",
+  iconSize: [38, 27],
+});
+
+const tankEmptyIcon = new Icon({
+  iconUrl: "/tank_empty.png",
+  iconSize: [38, 27],
+});
+
+const tankWarningIcon = new Icon({
+  iconUrl: "/tank_warning.png",
+  iconSize: [38, 27],
+});
+
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Дни простоя на станции для записи с индексом `index` (подряд идущие операции с той же станцией по имени). */
+function downtimeDaysAtIndex(ordered: CisternAllLocation[], index: number): number {
+  const station = ordered[index].nameStationOpr;
+  let start = index;
+  while (start > 0 && ordered[start - 1].nameStationOpr === station) start--;
+  let end = index;
+  while (end < ordered.length - 1 && ordered[end + 1].nameStationOpr === station) end++;
+  const t0 = new Date(ordered[start].dateOpr).getTime();
+  const t1 = new Date(ordered[end].dateOpr).getTime();
+  return Math.trunc((t1 - t0) / (1000 * 3600 * 24));
+}
+
+function markerIconForLocation(loc: CisternAllLocation, downtimeDays: number): Icon {
+  const code = String(loc.codeShip ?? "").trim();
+  if (downtimeDays > 5) return tankWarningIcon;
+  if (code !== "" && code !== "000000") return tankFullIcon;
+  return tankEmptyIcon;
+}
 
 function getDefaultDateRange() {
   const today = new Date();
-  const oneYearAgo = new Date(today);
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const oneMonthAgo = new Date(today);
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
   return {
-    from: oneYearAgo.toISOString().slice(0, 10),
+    from: oneMonthAgo.toISOString().slice(0, 10),
     to: today.toISOString().slice(0, 10),
   };
 }
@@ -34,11 +84,8 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
   const [rangeLoading, setRangeLoading] = useState(false);
   const [milage, setMilage] = useState<CisternMilage | null>(null);
   const [remainMilage, setRemainMilage] = useState<number>(0);
-  const myIcon = new Icon({
-			iconUrl: '../tank.png',
-			iconSize: [38, 27],
-		
-	});
+  const mapRef = useRef<InstanceType<typeof LeafletMap> | null>(null);
+  const markersLayerRef = useRef<InstanceType<typeof LayerGroup> | null>(null);
 
   const handleCisternSelect = useCallback(async () => {
     const range = getDefaultDateRange();
@@ -84,48 +131,114 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 
   
   useEffect(() => {
+    const el = document.getElementById("map");
+    if (!el) return;
 
-    if (!location) return;
+    const firstCoord =
+      locationInRange?.find((loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lon)) ??
+      location ??
+      locationAll?.find((loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lon));
+    if (!firstCoord) return;
 
-    // если карта уже создана, не пересоздаём
-    if (L.DomUtil.get("map")?._leaflet_id) {
+    let map = mapRef.current;
+    if (!map) {
+      map = new LeafletMap("map").setView([firstCoord.lat, firstCoord.lon], 6);
+
+      const osm = new TileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 15,
+        attribution:
+          '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        opacity: 0.7,
+      });
+
+      osm.on("tileload", function (e: { tile: { style: CSSStyleDeclaration } }) {
+        e.tile.style.filter = "grayscale(100%) brightness(0.95)";
+      });
+
+      osm.addTo(map);
+
+      new TileLayer("https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a>',
+        maxZoom: 15,
+        opacity: 1,
+      }).addTo(map);
+
+      const markersLayer = new LayerGroup().addTo(map);
+      markersLayerRef.current = markersLayer;
+      mapRef.current = map;
+    }
+
+    const markersLayer = markersLayerRef.current;
+    if (!map || !markersLayer) return;
+
+    markersLayer.clearLayers();
+
+    const rows = locationInRange ?? [];
+    const withCoords = rows.filter(
+      (loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lon)
+    );
+    const orderedCoords = [...withCoords].sort(
+      (a, b) => new Date(a.dateOpr).getTime() - new Date(b.dateOpr).getTime()
+    );
+
+    const tooltipHtml = (loc: CisternAllLocation | CisternLastLocation) => {
+      const title = `${loc.nameStationOpr} (${loc.codeStationOpr})`;
+      const op = loc.operationNote || loc.operationShort || "";
+      return (
+        `<strong>${escapeHtml(title)}</strong><br/>` +
+        `${escapeHtml(new Date(loc.dateOpr).toLocaleString())}<br/>` +
+        `${escapeHtml(op)}`
+      );
+    };
+
+    type MarkerWithTooltip = Marker & {
+      bindTooltip: (content: string, options?: object) => Marker & { openTooltip: () => Marker };
+      openTooltip: () => Marker;
+    };
+
+    if (orderedCoords.length >= 2) {
+      new Polyline(
+        orderedCoords.map((l) => [l.lat, l.lon] as [number, number]),
+        {
+          color: "#2563eb",
+          weight: 2,
+          opacity: 0.85,
+          dashArray: "8 10",
+        }
+      ).addTo(markersLayer);
+    }
+
+    orderedCoords.forEach((loc, idx) => {
+      const downtimeDays = downtimeDaysAtIndex(orderedCoords, idx);
+      const icon = markerIconForLocation(loc, downtimeDays);
+      const marker = new Marker([loc.lat, loc.lon], { icon }) as MarkerWithTooltip;
+      marker
+        .bindTooltip(tooltipHtml(loc), { direction: "top", className: "custom-tooltip" })
+        .addTo(markersLayer);
+    });
+
+    if (withCoords.length === 0) {
+      if (location && Number.isFinite(location.lat) && Number.isFinite(location.lon)) {
+        map.setView([location.lat, location.lon], 13);
+      }
       return;
     }
 
-    
-    const map = new Map('map').setView([location.lat,	location.lon], 13);
+    if (withCoords.length > 1) {
+      const bounds = new LatLngBounds(withCoords.map((l) => [l.lat, l.lon] as [number, number]));
+      map.fitBounds(bounds, { padding: [48, 48], maxZoom: 14 });
+    } else if (withCoords.length === 1) {
+      map.setView([withCoords[0].lat, withCoords[0].lon], 13);
+    }
+  }, [location, locationAll, locationInRange, CicternNumber]);
 
-		 const osm  = new TileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 15,
-			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-			opacity: 0.7
-		 });
-
-     		// Применяем фильтр после загрузки тайлов
-		osm.on('tileload', function(e) {
-			e.tile.style.filter = 'grayscale(100%) brightness(0.95)';
-		});
-
-    		osm.addTo(map);
-		
-		// Транспортный слой OpenStreetMap (аналог layers=T на openstreetmap.org)
-		// 1. Железнодорожный транспорт (OpenRailwayMap)
-		var railwayLayer = new TileLayer('https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
-			attribution: '&copy; <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a>',
-			maxZoom: 15,
-			opacity: 1
-		}).addTo(map);
-
-    const mark = new Marker([location.lat,	location.lon], {icon: myIcon}).addTo(map)
-    .bindTooltip(`${CicternNumber}`, {
-			permanent: true,
-			direction: 'top',
-			className: 'custom-tooltip'
-		})
-		.openTooltip();
-
-    
-  },  [location]);
+  useEffect(() => {
+    return () => {
+      mapRef.current?.remove();
+      mapRef.current = null;
+      markersLayerRef.current = null;
+    };
+  }, []);
 
 
   // утилита для группировки подряд идущих станций

@@ -902,6 +902,7 @@ export default function RepairsPage() {
                           <TableHead className="whitespace-normal py-2 min-w-0">Депо (выпуск)</TableHead>
                           <TableHead className="whitespace-nowrap w-0">Дорога (выпуск)</TableHead>
                           <TableHead className="whitespace-normal py-2 min-w-0">Модернизации</TableHead>
+                          <TableHead className="whitespace-normal py-2 min-w-0">Период ремонта</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -968,6 +969,9 @@ export default function RepairsPage() {
                               <TableCell className="whitespace-normal break-words min-w-0">{m.repairOut?.roadName ?? "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {m.repairOut?.modernName?.length ? m.repairOut.modernName.join(", ") : "—"}
+                              </TableCell>
+                              <TableCell className="whitespace-normal break-words min-w-0">
+                                {m.repairPeriod}
                               </TableCell>
                             </TableRow>
                           ))

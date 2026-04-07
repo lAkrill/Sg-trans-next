@@ -74,6 +74,7 @@ export interface RepairsMatching {
   cistern: RailwayCisternListDTO;
   repairIn: RepairsIn;
   repairOut: RepairsOut;
+  repairPeriod: number;
 }
 
 
