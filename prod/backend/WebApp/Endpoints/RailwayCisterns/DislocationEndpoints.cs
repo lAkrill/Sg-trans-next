@@ -365,7 +365,7 @@ public static class DislocationEndpoints
                         return new CisternsLastDislocationDTO()
                         {
                             Id = latestRecord.Id,
-                            IsSGTrans = latestRecord.CisternId == null? false : true,
+                            IsSGTrans = latestRecord.CisternId.Value.ToString() == "fc52c718-fcc3-4d39-88cb-18baab40b66c"? false : true,
                             DateOpr = latestRecord.DateOpr,
                             Downtime = (DateTime.Now - arrivalDate).Days,
                             NumCistern = latestRecord.NumCistern,
