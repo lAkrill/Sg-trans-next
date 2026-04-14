@@ -1,3 +1,5 @@
+using WebApp.DTO.Common;
+
 namespace WebApp.DTO.RailwayCisterns;
 
 public class DislocationDTO
@@ -89,6 +91,7 @@ public class DislocationListDTO
 public class CisternsLastDislocationDTO
 {
     public Guid Id { get; set; }
+    public bool IsSGTrans {get; set;}
     public DateTime DateOpr { get; set; }
     public int Downtime { get; set; }
     public string NumCistern { get; set; } = "";
@@ -112,4 +115,13 @@ public class CisternsLastDislocationDTO
     public string? NumShipmen { get; set; }
     public double Lat { get; set; }
     public double Lon { get; set; }
+}
+
+
+public class CisternsLastDislocationFilterDTO
+{
+    public bool? IsSGTrans { get; set;}
+    public DateTimeRange? DateOpr { get; set;}
+    public IntRange? Downtime { get; set; }
+    public DecimalRange? WeightShip { get; set; }
 }

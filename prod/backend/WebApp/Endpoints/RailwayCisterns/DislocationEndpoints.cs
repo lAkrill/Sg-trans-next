@@ -324,18 +324,24 @@ public static class DislocationEndpoints
             .RequirePermissions(Permission.Read);
 
         // Get last cistern dislocations
-        group.MapGet("/cisterns-last-location", async (
-                [FromServices] ApplicationDbContext context
+        group.MapPost("/cisterns-last-location", async (
+                [FromServices] ApplicationDbContext context,
+                [FromBody] CisternsLastDislocationFilterDTO filter
             ) =>
             {
-                var dislocation = await context.Dislocations
+                var dislocations = await context.Dislocations
                     .AsNoTracking()
                     .Include(d => d.StationOpr)
+                    .Where(d => 
+                        (filter.DateOpr == null || (d.DateOpr >= filter.DateOpr.From && d.DateOpr <= filter.DateOpr.To)) &&
+                        (filter.WeightShip == null || (d.WeightShip >= filter.WeightShip.From && d.WeightShip <= filter.WeightShip.To)) &&
+                        (filter.IsSGTrans == null || (filter.IsSGTrans.Value ? d.CisternId != null : d.CisternId == null))
+                    )
                     .OrderByDescending(d => d.DateOpr)
                     .ToListAsync();
 
-                var result = dislocation
-                    .GroupBy(d => d.CisternId)
+                var result = dislocations
+                    .GroupBy(d => d.NumCistern)
                     .Select(g =>
                     {
                         var history = g.ToList(); // Список уже отсортирован благодаря OrderBy выше
@@ -359,6 +365,7 @@ public static class DislocationEndpoints
                         return new CisternsLastDislocationDTO()
                         {
                             Id = latestRecord.Id,
+                            IsSGTrans = latestRecord.CisternId == null? false : true,
                             DateOpr = latestRecord.DateOpr,
                             Downtime = (DateTime.Now - arrivalDate).Days,
                             NumCistern = latestRecord.NumCistern,
@@ -384,6 +391,10 @@ public static class DislocationEndpoints
                             Lon = latestRecord.StationOpr != null ? latestRecord.StationOpr.Lon : 0
                         };
                     })
+                    .ToList();
+
+                if(filter.Downtime != null)
+                    result = result.Where(d => d.Downtime >= filter.Downtime.From && d.Downtime <= filter.Downtime.To)
                     .ToList();
 
                 return result is null ? Results.NotFound() : Results.Ok(result);
