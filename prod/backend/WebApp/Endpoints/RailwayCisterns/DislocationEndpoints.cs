@@ -322,7 +322,6 @@ public static class DislocationEndpoints
             .WithName("GetDislocationsByDateRangeForCisternByNumber")
             .Produces<List<DislocationListDTO>>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
-
         // Get last cistern dislocations
         group.MapPost("/cisterns-last-location", async (
                 [FromServices] ApplicationDbContext context,
@@ -333,9 +332,10 @@ public static class DislocationEndpoints
                     .AsNoTracking()
                     .Include(d => d.StationOpr)
                     .Where(d => 
-                        (filter.DateOpr == null || (d.DateOpr >= filter.DateOpr.From && d.DateOpr <= filter.DateOpr.To)) &&
                         (filter.WeightShip == null || (d.WeightShip >= filter.WeightShip.From && d.WeightShip <= filter.WeightShip.To)) &&
-                        (filter.IsSGTrans == null || (filter.IsSGTrans.Value ? d.CisternId != null : d.CisternId == null))
+                        (filter.IsSGTrans == null || (filter.IsSGTrans.Value ? 
+                        d.CisternId.Value.ToString() != "fc52c718-fcc3-4d39-88cb-18baab40b66c":
+                        d.CisternId.Value.ToString() == "fc52c718-fcc3-4d39-88cb-18baab40b66c"))
                     )
                     .OrderByDescending(d => d.DateOpr)
                     .ToListAsync();
@@ -395,7 +395,11 @@ public static class DislocationEndpoints
 
                 if(filter.Downtime != null)
                     result = result.Where(d => d.Downtime >= filter.Downtime.From && d.Downtime <= filter.Downtime.To)
-                    .ToList();
+                                   .ToList();
+
+                if(filter.DateOpr != null)
+                    result = result.Where(d=>d.DateOpr >= filter.DateOpr.From && d.DateOpr <= filter.DateOpr.To)
+                                   .ToList();
 
                 return result is null ? Results.NotFound() : Results.Ok(result);
             })
