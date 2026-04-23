@@ -48,6 +48,7 @@ export interface CisternAllLocation {
 
 export interface AllCisternLastLocation {
   id: string;
+  isSGTrans:boolean
   dateOpr: string;
   downtime: number;
   lat: number;
@@ -74,14 +75,35 @@ export interface AllCisternLastLocation {
   numShipmen: string;
 }
 
+export interface CisternsLocationFilterPayload {
+  isSGTrans: boolean;
+  dateOpr: {
+    from: string;
+    to: string;
+  };
+  downtime: {
+    from: number;
+    to: number;
+  };
+  weightShip: {
+    from: number;
+    to: number;
+  };
+}
+
 export const CisternDislocation= {
   getLastLocation: async (Num: string): Promise<CisternLastLocation> => {
     const response = await api.get<CisternLastLocation>(`${DISLOCATION_LAST_ENDPOINT}/${Num}`);
     return response.data;
   },
 
-  getAllCisternsLocation: async (): Promise<AllCisternLastLocation[]> => {
-    const response = await api.get<AllCisternLastLocation[]>(`${DISLOCATIONS_CISTERNS_LAST_LOCATION}`);
+  getAllCisternsLocation: async (
+    payload?: Partial<CisternsLocationFilterPayload>
+  ): Promise<AllCisternLastLocation[]> => {
+    const response = await api.post<AllCisternLastLocation[]>(
+      `${DISLOCATIONS_CISTERNS_LAST_LOCATION}`,
+      payload ?? {}
+    );
     return response.data;
   },
 

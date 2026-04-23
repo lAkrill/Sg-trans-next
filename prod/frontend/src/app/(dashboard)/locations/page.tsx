@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import type { AllCisternLastLocation } from "@/api/dislocations";
+import type {
+  AllCisternLastLocation,
+  CisternsLocationFilterPayload,
+} from "@/api/dislocations";
 import { CisternDislocation } from "@/api/dislocations";
 
 import { 
@@ -99,21 +102,37 @@ function stationGroupKey(row: AllCisternLastLocation): string | null {
   return null;
 }
 
+function toIsoFromLocal(localValue: string): string {
+  return new Date(localValue).toISOString();
+}
+
 export default function LocationsPage() {
   const [location, setLocation] = useState<AllCisternLastLocation[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
+  const [isSGTransFilter, setIsSGTransFilter] = useState<"all" | "sgtrans">("all");
+  const [dateOprFrom, setDateOprFrom] = useState("");
+  const [dateOprTo, setDateOprTo] = useState("");
+  const [downtimeFrom, setDowntimeFrom] = useState("");
+  const [downtimeTo, setDowntimeTo] = useState("");
+  const [weightShipFrom, setWeightShipFrom] = useState("");
+  const [weightShipTo, setWeightShipTo] = useState("");
 
   const mapInstanceRef = useRef<InstanceType<typeof LeafletMap> | null>(null);
   const markersLayerRef = useRef<LayerGroup | null>(null);
 
 
-  const handleCisternSelect = useCallback(async () => {
-
-    const res1  = await CisternDislocation.getAllCisternsLocation();
-    setLocation(res1);
+  const handleCisternSelect = useCallback(async (payload?: Partial<CisternsLocationFilterPayload>) => {
+    setIsLoading(true);
+    try {
+      const res1 = await CisternDislocation.getAllCisternsLocation(payload);
+      setLocation(res1);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
 
@@ -121,6 +140,58 @@ export default function LocationsPage() {
     handleCisternSelect(); // вызываем при монтировании
  
    }, [handleCisternSelect]);
+
+  const applyLocationFilters = useCallback(() => {
+    const payload: Partial<CisternsLocationFilterPayload> = {};
+
+    if (isSGTransFilter === "sgtrans") {
+      payload.isSGTrans = true;
+    }
+    if (dateOprFrom && dateOprTo) {
+      payload.dateOpr = {
+        from: toIsoFromLocal(dateOprFrom),
+        to: toIsoFromLocal(dateOprTo),
+      };
+    }
+    if (downtimeFrom !== "" && downtimeTo !== "") {
+      payload.downtime = {
+        from: Number(downtimeFrom),
+        to: Number(downtimeTo),
+      };
+    }
+    if (weightShipFrom !== "" && weightShipTo !== "") {
+      payload.weightShip = {
+        from: Number(weightShipFrom),
+        to: Number(weightShipTo),
+      };
+    }
+
+    if (Object.keys(payload).length === 0) {
+      handleCisternSelect();
+      return;
+    }
+    handleCisternSelect(payload);
+  }, [
+    dateOprFrom,
+    dateOprTo,
+    downtimeFrom,
+    downtimeTo,
+    handleCisternSelect,
+    isSGTransFilter,
+    weightShipFrom,
+    weightShipTo,
+  ]);
+
+  const resetLocationFilters = useCallback(() => {
+    setIsSGTransFilter("all");
+    setDateOprFrom("");
+    setDateOprTo("");
+    setDowntimeFrom("");
+    setDowntimeTo("");
+    setWeightShipFrom("");
+    setWeightShipTo("");
+    handleCisternSelect();
+  }, [handleCisternSelect]);
 
   useEffect(() => {
     setPage(1);
@@ -562,6 +633,88 @@ export default function LocationsPage() {
            </div>
          </CardHeader>
          <CardContent className="p-4 h-full">
+              <div className="flex gap-2 flex-wrap items-end mb-4">
+                <div className="min-w-[180px]">
+                  <label className="text-xs text-muted-foreground mb-1 block">Дата операции с</label>
+                  <Input
+                    type="datetime-local"
+                    value={dateOprFrom}
+                    onChange={(e) => setDateOprFrom(e.target.value)}
+                  />
+                </div>
+                <div className="min-w-[180px]">
+                  <label className="text-xs text-muted-foreground mb-1 block">Дата операции по</label>
+                  <Input
+                    type="datetime-local"
+                    value={dateOprTo}
+                    onChange={(e) => setDateOprTo(e.target.value)}
+                  />
+                </div>
+                <div className="w-28">
+                  <label className="text-xs text-muted-foreground mb-1 block">Простой от</label>
+                  <Input
+                    type="number"
+                    value={downtimeFrom}
+                    onChange={(e) => setDowntimeFrom(e.target.value)}
+                  />
+                </div>
+                <div className="w-28">
+                  <label className="text-xs text-muted-foreground mb-1 block">Простой до</label>
+                  <Input
+                    type="number"
+                    value={downtimeTo}
+                    onChange={(e) => setDowntimeTo(e.target.value)}
+                  />
+                </div>
+                <div className="w-28">
+                  <label className="text-xs text-muted-foreground mb-1 block">Вес от</label>
+                  <Input
+                    type="number"
+                    value={weightShipFrom}
+                    onChange={(e) => setWeightShipFrom(e.target.value)}
+                  />
+                </div>
+                <div className="w-28">
+                  <label className="text-xs text-muted-foreground mb-1 block">Вес до</label>
+                  <Input
+                    type="number"
+                    value={weightShipTo}
+                    onChange={(e) => setWeightShipTo(e.target.value)}
+                  />
+                </div>
+                <div className="min-w-[170px]">
+                  <label className="text-xs text-muted-foreground mb-1 block">Принадлежность</label>
+                  <Select
+                    value={isSGTransFilter}
+                    onValueChange={(value: "all" | "sgtrans") => setIsSGTransFilter(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sgtrans">СГ-ТРАНС</SelectItem>
+                      <SelectItem value="all">Все</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={applyLocationFilters} disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Загрузка...
+                    </>
+                  ) : (
+                    "Применить фильтр"
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={resetLocationFilters}
+                  disabled={isLoading}
+                >
+                  Сбросить фильтр
+                </Button>
+              </div>
               <Table className="w-full text-xs">
                       <TableHeader>
                         <TableRow>
@@ -578,13 +731,13 @@ export default function LocationsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {location === null ? (
+                        {isLoading ? (
                           <TableRow>
                             <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                               Загрузка данных...
                             </TableCell>
                           </TableRow>
-                        ) : location.length === 0 ? (
+                        ) : !location || location.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                               Нет данных
