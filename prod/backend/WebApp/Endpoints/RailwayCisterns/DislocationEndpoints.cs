@@ -322,20 +322,26 @@ public static class DislocationEndpoints
             .WithName("GetDislocationsByDateRangeForCisternByNumber")
             .Produces<List<DislocationListDTO>>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
-
         // Get last cistern dislocations
-        group.MapGet("/cisterns-last-location", async (
-                [FromServices] ApplicationDbContext context
+        group.MapPost("/cisterns-last-location", async (
+                [FromServices] ApplicationDbContext context,
+                [FromBody] CisternsLastDislocationFilterDTO filter
             ) =>
             {
-                var dislocation = await context.Dislocations
+                var dislocations = await context.Dislocations
                     .AsNoTracking()
                     .Include(d => d.StationOpr)
+                    .Where(d => 
+                        (filter.WeightShip == null || (d.WeightShip >= filter.WeightShip.From && d.WeightShip <= filter.WeightShip.To)) &&
+                        (filter.IsSGTrans == null || (filter.IsSGTrans.Value ? 
+                        d.CisternId.Value.ToString() != "fc52c718-fcc3-4d39-88cb-18baab40b66c":
+                        d.CisternId.Value.ToString() == "fc52c718-fcc3-4d39-88cb-18baab40b66c"))
+                    )
                     .OrderByDescending(d => d.DateOpr)
                     .ToListAsync();
 
-                var result = dislocation
-                    .GroupBy(d => d.CisternId)
+                var result = dislocations
+                    .GroupBy(d => d.NumCistern)
                     .Select(g =>
                     {
                         var history = g.ToList(); // Список уже отсортирован благодаря OrderBy выше
@@ -359,6 +365,7 @@ public static class DislocationEndpoints
                         return new CisternsLastDislocationDTO()
                         {
                             Id = latestRecord.Id,
+                            IsSGTrans = latestRecord.CisternId.Value.ToString() == "fc52c718-fcc3-4d39-88cb-18baab40b66c"? false : true,
                             DateOpr = latestRecord.DateOpr,
                             Downtime = (DateTime.Now - arrivalDate).Days,
                             NumCistern = latestRecord.NumCistern,
@@ -385,6 +392,14 @@ public static class DislocationEndpoints
                         };
                     })
                     .ToList();
+
+                if(filter.Downtime != null)
+                    result = result.Where(d => d.Downtime >= filter.Downtime.From && d.Downtime <= filter.Downtime.To)
+                                   .ToList();
+
+                if(filter.DateOpr != null)
+                    result = result.Where(d=>d.DateOpr >= filter.DateOpr.From && d.DateOpr <= filter.DateOpr.To)
+                                   .ToList();
 
                 return result is null ? Results.NotFound() : Results.Ok(result);
             })
