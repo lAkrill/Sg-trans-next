@@ -119,6 +119,7 @@ export default function EditCisternPage() {
         periodPeriodicTest: cistern.periodPeriodicTest,
         periodIntermediateTest: cistern.periodIntermediateTest,
         periodDepotRepair: cistern.periodDepotRepair,
+        periodPPRRepair: cistern.periodPPRRepair,
       });
     }
   }, [cistern]);
@@ -334,9 +335,9 @@ export default function EditCisternPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <Train className="h-8 w-8" />
-              Редактировать цистерну {cistern.number}
+              Редактировать вагон-цистерну {cistern.number}
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">Изменение данных о железнодорожной цистерне</p>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">Изменение данных о железнодорожной вагон-цистерне</p>
           </div>
         </div>
       </div>
@@ -347,27 +348,27 @@ export default function EditCisternPage() {
           <Card>
             <CardHeader>
               <CardTitle>Основная информация</CardTitle>
-              <CardDescription>Базовые данные о цистерне</CardDescription>
+              <CardDescription>Базовые данные о вагон-цистерне</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="number">Номер цистерны *</Label>
+                <Label htmlFor="number">Номер вагон-цистерны *</Label>  
                 <Input
                   id="number"
                   value={formData.number || ""}
                   onChange={(e) => handleInputChange("number", e.target.value)}
-                  placeholder="Введите номер цистерны"
+                  placeholder="Введите номер вагон-цистерны"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="serialNumber">Серийный номер *</Label>
+                <Label htmlFor="serialNumber">Заводской номер *</Label>
                 <Input
                   id="serialNumber"
                   value={formData.serialNumber || ""}
                   onChange={(e) => handleInputChange("serialNumber", e.target.value)}
-                  placeholder="Введите серийный номер"
+                  placeholder="Введите заводской номер"
                   required
                 />
               </div>
@@ -399,7 +400,7 @@ export default function EditCisternPage() {
           <Card>
             <CardHeader>
               <CardTitle>Технические характеристики</CardTitle>
-              <CardDescription>Технические параметры цистерны</CardDescription>
+              <CardDescription>Технические параметры вагон-цистерны</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -486,7 +487,7 @@ export default function EditCisternPage() {
           <Card>
             <CardHeader>
               <CardTitle>Регистрационная информация</CardTitle>
-              <CardDescription>Данные о регистрации цистерны</CardDescription>
+              <CardDescription>Данные о регистрации вагон-цистерны</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -553,7 +554,7 @@ export default function EditCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="typeId">Тип вагона *</Label>
+                  <Label htmlFor="typeId">Тип вагон-цистерны *</Label>
                   <Select
                     key={`type-${selectValues.typeId}`}
                     value={selectValues.typeId || ""}
@@ -574,7 +575,7 @@ export default function EditCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="modelId">Модель вагона</Label>
+                  <Label htmlFor="modelId">Модель вагон-цистерны</Label>
                   <Select
                     key={`model-${selectValues.modelId}`}
                     value={selectValues.modelId || "none"}
@@ -871,7 +872,7 @@ export default function EditCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="periodIntermediateTest">Дата промежуточной проверки</Label>
+                  <Label htmlFor="periodIntermediateTest">Дата плановой промежуточной проверки</Label>
                   <Input
                     id="periodIntermediateTest"
                     type="date"
@@ -887,6 +888,16 @@ export default function EditCisternPage() {
                     type="date"
                     value={formData.periodDepotRepair || ""}
                     onChange={(e) => handleInputChange("periodDepotRepair", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="periodPPRRepair">Дата планового предупредительного ремонта</Label>
+                  <Input
+                    id="periodPPRRepair"
+                    type="date"
+                    value={formData.periodPPRRepair || ''}
+                    onChange={(e) => handleInputChange('periodPPRRepair', e.target.value)}
                   />
                 </div>
               </div>

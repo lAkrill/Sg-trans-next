@@ -22,15 +22,15 @@ import { WagonModelSelect } from "@/components/wagon-model-select";
 export const vesselsBaseConfig: BaseDirectoryConfig = {
   name: "vessels",
   endpoint: "vessels",
-  displayName: "Сосуды (вагоны)",
-  description: "Справочник сосудов и вагонов",
+  displayName: "Сосуды",
+  description: "Справочник сосудов",
   fields: [
     {
       key: "serialNumber",
       label: "Серийный номер",
       type: "text",
       required: true,
-      placeholder: "Введите серийный номер",
+      placeholder: "Введите заводской номер",
     },
     {
       key: "buildDate",
@@ -69,7 +69,7 @@ export const vesselsBaseConfig: BaseDirectoryConfig = {
     },
     {
       key: "railwayCisternId",
-      label: "Железнодорожная цистерна",
+      label: "Железнодорожная вагон-цистерна",
       type: "custom",
       required: true,
       customComponent: CisternSelect,
@@ -107,7 +107,7 @@ export const vesselsConfig: DirectoryConfig<
   },
   searchFields: ["serialNumber", "manufacturer"] as (keyof VesselListWithCisternNumberDTO)[],
   tableColumns: [
-    { key: "serialNumber", label: "Серийный номер" },
+    { key: "serialNumber", label: "Заводской номер" },
     { key: "buildDate", label: "Дата постройки" },
     { key: "manufacturer", label: "Производитель" },
     { key: "pressure", label: "Давление" },

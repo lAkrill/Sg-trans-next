@@ -701,7 +701,7 @@ export default function CreateCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="periodDepotRepair">Дата планового пункто-ремонтного ремонта</Label>
+                  <Label htmlFor="periodDepotRepair">Дата планового деповского ремонта</Label>
                   <Input
                     id="periodDepotRepair"
                     type="date"
@@ -709,6 +709,17 @@ export default function CreateCisternPage() {
                     onChange={(e) => handleInputChange('periodDepotRepair', e.target.value)}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="periodPPRRepair">Дата планового предупредительного ремонта</Label>
+                  <Input
+                    id="periodPPRRepair"
+                    type="date"
+                    value={formData.periodPPRRepair || ''}
+                    onChange={(e) => handleInputChange('periodPPRRepair', e.target.value)}
+                  />
+                </div>
+                
               </div>
             </CardContent>
           </Card>

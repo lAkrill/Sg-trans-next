@@ -48,7 +48,7 @@ export interface BaseDirectoryItem {
 export interface DirectoryFieldConfig {
   key: string;
   label: string;
-  type: "text" | "number" | "email" | "custom";
+  type: "text" | "number" | "email" | "date" | "custom";
   required?: boolean;
   placeholder?: string;
   customComponent?: React.ComponentType<{
@@ -259,6 +259,51 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  const isDateField = (fieldKey: string) => {
+    const key = fieldKey.toLowerCase();
+    return key.includes("date") || key.endsWith("at");
+  };
+
+  const getDateInputValue = (value: unknown) => {
+    if (!value) return "";
+
+    const date = value instanceof Date ? value : new Date(value as string | number);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTableCellValue = (value: unknown, columnKey: keyof T) => {
+    if (value === undefined || value === null || value === "") {
+      return "-";
+    }
+
+    const isDateColumn = isDateField(String(columnKey));
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toLocaleDateString("ru-RU");
+    }
+
+    if (isDateColumn && typeof value === "string") {
+      const parsedDate = new Date(value);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return parsedDate.toLocaleDateString("ru-RU");
+      }
+    }
+
+    if (isDateColumn && typeof value === "number") {
+      const parsedDate = new Date(value);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return parsedDate.toLocaleDateString("ru-RU");
+      }
+    }
+
+    return String(value);
+  };
+
   const filteredItems = items.filter((item) =>
     config.searchFields.some((field) => {
       const value = item[field];
@@ -414,9 +459,13 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                   ) : (
                     <Input
                       id={field.key}
-                      type={field.type}
+                      type={field.type === "date" || isDateField(field.key) ? "date" : field.type}
                       step={field.type === "number" ? "0.01" : undefined}
-                      value={String((formData as Record<string, unknown>)[field.key] || "")}
+                      value={
+                        field.type === "date" || isDateField(field.key)
+                          ? getDateInputValue((formData as Record<string, unknown>)[field.key])
+                          : String((formData as Record<string, unknown>)[field.key] || "")
+                      }
                       onChange={(e) => {
                         const value =
                           field.type === "number" ? (e.target.value ? parseFloat(e.target.value) : 0) : e.target.value;
@@ -480,7 +529,7 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                           key={String(column.key)}
                           className={column.key === config.tableColumns[0].key ? "font-medium" : ""}
                         >
-                          {column.render ? column.render(item[column.key], item) : String(item[column.key] || "-")}
+                          {column.render ? column.render(item[column.key], item) : formatTableCellValue(item[column.key], column.key)}
                         </TableCell>
                       ))}
                       <TableCell>
@@ -547,9 +596,13 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                 ) : (
                   <Input
                     id={`edit-${field.key}`}
-                    type={field.type}
+                    type={field.type === "date" || isDateField(field.key) ? "date" : field.type}
                     step={field.type === "number" ? "0.01" : undefined}
-                    value={String((formData as Record<string, unknown>)[field.key] || "")}
+                    value={
+                      field.type === "date" || isDateField(field.key)
+                        ? getDateInputValue((formData as Record<string, unknown>)[field.key])
+                        : String((formData as Record<string, unknown>)[field.key] || "")
+                    }
                     onChange={(e) => {
                       const value =
                         field.type === "number" ? (e.target.value ? parseFloat(e.target.value) : 0) : e.target.value;

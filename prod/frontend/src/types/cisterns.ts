@@ -71,6 +71,7 @@ export interface RailwayCisternDetailDTO {
   periodPeriodicTest?: string;
   periodIntermediateTest?: string;
   periodDepotRepair?: string;
+  periodPPRRepair?: string;
   dangerClass: number;
   substance: string;
   tareWeight2: number;
@@ -126,6 +127,7 @@ export interface CreateRailwayCisternDTO {
   periodPeriodicTest?: string;
   periodIntermediateTest?: string;
   periodDepotRepair?: string;
+  periodPPRRepair?: string;
   dangerClass: number;
   substance: string;
   tareWeight2: number;
@@ -217,6 +219,7 @@ export interface FilterCriteria {
   periodPeriodicTest?: NumberRange;
   periodIntermediateTest?: NumberRange;
   periodDepotRepair?: NumberRange;
+  periodPPRRepair?: NumberRange;
   dangerClasses?: number[];
   substances?: string[];
   tareWeight2?: NumberRange;
