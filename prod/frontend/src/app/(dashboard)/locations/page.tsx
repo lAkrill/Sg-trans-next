@@ -39,7 +39,9 @@ import {
   Loader2,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { api } from "@/lib/api";
+import { cisternsApi } from "@/api/cisterns";
 
 import "@/lib/leaflet/dist/leaflet.css";
 import L, {
@@ -72,6 +74,16 @@ function escapeHtml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** `Название (код)`; при одном из полей — только оно; пусто — «—». */
+function formatNameWithCode(name?: string | null, code?: string | null): string {
+  const n = (name ?? "").trim();
+  const c = (code ?? "").trim();
+  if (n && c) return `${n} (${c})`;
+  if (n) return n;
+  if (c) return `(${c})`;
+  return "—";
 }
 
 function coordGroupKey(lat: number, lon: number): string {
@@ -120,6 +132,7 @@ export default function LocationsPage() {
   const [downtimeTo, setDowntimeTo] = useState("");
   const [weightShipFrom, setWeightShipFrom] = useState("");
   const [weightShipTo, setWeightShipTo] = useState("");
+  const [cisternIdByNumber, setCisternIdByNumber] = useState<Map<string, string>>(() => new Map());
 
   const mapInstanceRef = useRef<InstanceType<typeof LeafletMap> | null>(null);
   const markersLayerRef = useRef<LayerGroup | null>(null);
@@ -140,6 +153,27 @@ export default function LocationsPage() {
     handleCisternSelect(); // вызываем при монтировании
  
    }, [handleCisternSelect]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const pairs = await cisternsApi.getAllIdAndNumbers();
+        if (cancelled) return;
+        const m = new Map<string, string>();
+        for (const { id, number } of pairs) {
+          const key = (number ?? "").trim();
+          if (key) m.set(key, id);
+        }
+        setCisternIdByNumber(m);
+      } catch {
+        if (!cancelled) setCisternIdByNumber(new Map());
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const applyLocationFilters = useCallback(() => {
     const payload: Partial<CisternsLocationFilterPayload> = {};
@@ -218,6 +252,10 @@ export default function LocationsPage() {
         row.nameShip,
         row.codeStationOut,
         row.nameStationOut,
+        row.codeStationEnd,
+        row.nameStationEnd,
+        row.numShipmen,
+        row.weightShip != null && Number.isFinite(Number(row.weightShip)) ? String(row.weightShip) : "",
         row.downtime != null ? String(row.downtime) : "",
       ]
         .join(" ")
@@ -257,13 +295,13 @@ export default function LocationsPage() {
     const columns: ExportColumn[] = [
       { key: "dateOpr", label: "Дата операции", type: "string" },
       { key: "numCistern", label: "№ Вагона", type: "string" },
-      { key: "codeStationOpr", label: "Код стан. операции", type: "string" },
-      { key: "nameStationOpr", label: "Станция операции", type: "string" },
+      { key: "stationOpr", label: "Станция операции", type: "string" },
       { key: "operationNote", label: "Операция", type: "string" },
-      { key: "codeShip", label: "Код груза", type: "string" },
-      { key: "nameShip", label: "Груз", type: "string" },
-      { key: "codeStationOut", label: "Код. стан. назвачения", type: "string" },
-      { key: "nameStationOut", label: "Станция назначения", type: "string" },
+      { key: "cargo", label: "Груз", type: "string" },
+      { key: "stationOut", label: "Станция отправления", type: "string" },
+      { key: "stationEnd", label: "Станция назначения", type: "string" },
+      { key: "numShipmen", label: "Номер отправки", type: "string" },
+      { key: "weightShip", label: "Вес", type: "string" },
       { key: "downtime", label: "Простой", type: "string" },
     ];
 
@@ -275,13 +313,16 @@ export default function LocationsPage() {
           })
         : "—",
       numCistern: row.numCistern ?? "—",
-      codeStationOpr: row.codeStationOpr ?? "—",
-      nameStationOpr: row.nameStationOpr ?? "—",
+      stationOpr: formatNameWithCode(row.nameStationOpr, row.codeStationOpr),
       operationNote: row.operationNote ?? "—",
-      codeShip: row.codeShip ?? "—",
-      nameShip: row.nameShip ?? "—",
-      codeStationOut: row.codeStationOut ?? "—",
-      nameStationOut: row.nameStationOut ?? "—",
+      cargo: formatNameWithCode(row.nameShip, row.codeShip),
+      stationOut: formatNameWithCode(row.nameStationOut, row.codeStationOut),
+      stationEnd: formatNameWithCode(row.nameStationEnd, row.codeStationEnd),
+      numShipmen: row.numShipmen != null && String(row.numShipmen).trim() !== "" ? String(row.numShipmen) : "—",
+      weightShip:
+        row.weightShip != null && Number.isFinite(Number(row.weightShip))
+          ? new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 }).format(Number(row.weightShip))
+          : "—",
       downtime: row.downtime != null ? String(row.downtime) : "—",
     }));
 
@@ -720,13 +761,13 @@ export default function LocationsPage() {
                         <TableRow>
                           <TableHead className="whitespace-nowrap w-0">Дата операции</TableHead>
                           <TableHead className="whitespace-nowrap w-0">№ Вагона</TableHead>
-                          <TableHead className="whitespace-normal w-0">Код стан. операции</TableHead>
-                          <TableHead className="whitespace-nowrap w-0">Станция операции</TableHead>
+                          <TableHead className="whitespace-normal w-0">Станция операции</TableHead>
                           <TableHead className="whitespace-normal w-0">Операция</TableHead>
-                          <TableHead className="whitespace-normal w-0">Код груза</TableHead>
                           <TableHead className="whitespace-normal w-0">Груз</TableHead>
-                          <TableHead className="whitespace-nowrap w-0">Код. стан. назвачения</TableHead>
-                          <TableHead className="whitespace-normal w-0">Станция назвачения</TableHead>
+                          <TableHead className="whitespace-normal w-0">Станция отправления</TableHead>
+                          <TableHead className="whitespace-normal w-0">Станция назначения</TableHead>
+                          <TableHead className="whitespace-normal w-0">Номер отправки</TableHead>
+                          <TableHead className="whitespace-normal w-0">Вес</TableHead>
                           <TableHead className="whitespace-normal w-0">Простой</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -750,7 +791,12 @@ export default function LocationsPage() {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          locationPaginated.map((row) => (
+                          locationPaginated.map((row) => {
+                            const wagonNum = row.numCistern?.trim() ?? "";
+                            const cisternPassportId = wagonNum
+                              ? cisternIdByNumber.get(wagonNum)
+                              : undefined;
+                            return (
                             <TableRow
                               key={row.id}
                               className={
@@ -767,31 +813,51 @@ export default function LocationsPage() {
                                     })
                                   : "—"}
                               </TableCell>
-                              <TableCell className="whitespace-nowrap">{row.numCistern ?? "—"}</TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">
-                                {row.codeStationOpr ?? "—"}
+                              <TableCell className="whitespace-nowrap">
+                                {wagonNum && cisternPassportId ? (
+                                  <Link
+                                    href={`/cisterns/${cisternPassportId}?tab=location`}
+                                    className="text-primary font-medium hover:underline"
+                                  >
+                                    {row.numCistern}
+                                  </Link>
+                                ) : (
+                                  row.numCistern ?? "—"
+                                )}
                               </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
-                                {row.nameStationOpr ?? "—"}
+                                {formatNameWithCode(row.nameStationOpr, row.codeStationOpr)}
                               </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
                                 {row.operationNote ?? "—"}
                               </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
-                                {row.codeShip ?? "—"}
+                                {formatNameWithCode(row.nameShip, row.codeShip)}
                               </TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
-                                {row.nameShip ?? "—"}
+                                {formatNameWithCode(row.nameStationOut, row.codeStationOut)}
                               </TableCell>
-                              <TableCell className="whitespace-nowrap">{row.codeStationOut ?? "—"}</TableCell>
                               <TableCell className="whitespace-normal break-words min-w-0">
-                                {row.nameStationOut ?? "—"}
+                                {formatNameWithCode(row.nameStationEnd, row.codeStationEnd)}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap">
+                                {row.numShipmen != null && String(row.numShipmen).trim() !== ""
+                                  ? String(row.numShipmen)
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-right tabular-nums">
+                                {row.weightShip != null && Number.isFinite(Number(row.weightShip))
+                                  ? new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 }).format(
+                                      Number(row.weightShip)
+                                    )
+                                  : "—"}
                               </TableCell>
                               <TableCell className="whitespace-nowrap">
                                 {row.downtime != null ? String(row.downtime) : "—"}
                               </TableCell>
                             </TableRow>
-                          ))
+                            );
+                          })
                         )}
                       </TableBody>
               </Table>

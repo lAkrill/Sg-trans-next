@@ -384,6 +384,11 @@ interface RepairsFiltersProps {
   onSortFieldsChange: (s: RepairsSortCriteria[]) => void;
   onClearFilters: () => void;
   activeFiltersCount: number;
+  /** Только строки без сопоставления (как розовая подсветка в таблицах «в ремонт» / «выпуск»). */
+  onlyUnmatchedRepairs: boolean;
+  onOnlyUnmatchedRepairsChange: (value: boolean) => void;
+  /** Нельзя совместить с серверной фильтрацией текущей вкладки. */
+  onlyUnmatchedRepairsDisabled?: boolean;
 }
 
 const REPAIRS_IN_SORT_OPTIONS = [
@@ -416,6 +421,9 @@ export function RepairsFilters({
   onSortFieldsChange,
   onClearFilters,
   activeFiltersCount,
+  onlyUnmatchedRepairs,
+  onOnlyUnmatchedRepairsChange,
+  onlyUnmatchedRepairsDisabled = false,
 }: RepairsFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -513,6 +521,42 @@ export function RepairsFilters({
                       <SelectItem value="out">Выпуск из ремонта</SelectItem>
                     </SelectContent>
                   </Select>
+                </CardContent>
+              </Card>
+              <Card className="gap-0 mb-[10px]">
+                <CardHeader className="py-2">
+                  <CardTitle className="text-base">Сопоставление</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-start gap-3 rounded-md border border-border/60 bg-muted/30 px-3 py-3">
+                    <Checkbox
+                      id="repairs-only-unmatched"
+                      checked={onlyUnmatchedRepairs}
+                      disabled={onlyUnmatchedRepairsDisabled}
+                      onCheckedChange={(v) =>
+                        onOnlyUnmatchedRepairsChange(v === true)
+                      }
+                      className="mt-0.5"
+                    />
+                    <div className="grid gap-1 leading-snug">
+                      <Label
+                        htmlFor="repairs-only-unmatched"
+                        className={`font-medium cursor-pointer ${onlyUnmatchedRepairsDisabled ? "cursor-not-allowed opacity-60" : ""}`}
+                      >
+                        Только без пары в сопоставлении
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Записи, которые в таблицах подсвечиваются розовым (нет связанной
+                        записи в «Сопоставленные данные»).
+                      </p>
+                      {onlyUnmatchedRepairsDisabled && (
+                        <p className="text-xs text-amber-600 dark:text-amber-500">
+                          Отключите серверные фильтры и сортировку на текущей вкладке, чтобы
+                          использовать этот режим.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
               <TabsList className="grid w-full grid-cols-2 mt-[10px]">

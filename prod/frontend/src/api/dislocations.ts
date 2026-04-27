@@ -44,6 +44,8 @@ export interface CisternAllLocation {
   nameStationEnd: string;
   codeShip: string;
   nameShip: string;
+  weightShip?: number;
+  numShipmen?: string;
 }
 
 export interface AllCisternLastLocation {

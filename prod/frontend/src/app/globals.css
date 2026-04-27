@@ -134,6 +134,74 @@
   margin-top: 0.25rem;
 }
 
+/* Стрелка направления на треке (LocationTab): убрать белый квадрат по умолчанию у DivIcon */
+.leaflet-div-icon.location-tab-route-arrow-root {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Popup с группой операций на станции (location-tab) */
+.leaflet-popup.location-tab-marker-popup .leaflet-popup-content {
+  margin: 10px 12px 10px 10px;
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+}
+.location-tab-popup {
+  text-align: left;
+  max-width: 300px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.location-tab-popup__title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 0.2rem;
+}
+.location-tab-popup__meta {
+  font-size: 11px;
+  color: oklch(0.5 0 0);
+  margin-bottom: 0.5rem;
+}
+.dark .location-tab-popup__meta {
+  color: oklch(0.7 0 0);
+}
+.location-tab-popup__list {
+  margin: 0;
+  padding-left: 1.1rem;
+  list-style-position: outside;
+}
+.location-tab-popup__item {
+  margin: 0;
+  padding-bottom: 0.5rem;
+}
+.location-tab-popup__item + .location-tab-popup__item {
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+  margin-top: 0.15rem;
+}
+.location-tab-popup__item:last-child {
+  padding-bottom: 0;
+}
+.location-tab-popup__time {
+  font-size: 11px;
+  color: oklch(0.45 0 0);
+}
+.dark .location-tab-popup__time {
+  color: oklch(0.72 0 0);
+}
+.location-tab-popup__op {
+  margin-top: 0.1rem;
+}
+.location-tab-popup__cargo {
+  font-size: 11px;
+  color: oklch(0.4 0 0);
+  margin-top: 0.15rem;
+}
+.dark .location-tab-popup__cargo {
+  color: oklch(0.7 0 0);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

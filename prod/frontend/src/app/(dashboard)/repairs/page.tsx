@@ -27,6 +27,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Loader2,
+  CalendarCog,
 } from "lucide-react";
 import Image from "next/image";
 import { api } from "@/lib/api";
@@ -74,6 +75,7 @@ export default function RepairsPage() {
   const [repairsIn, setRepairsIn] = useState<RepairsIn[] | null>(null);
   const [repairsOut, setRepairsOut] = useState<RepairsOut[] | null>(null);
   const [repairsMatching, setRepairsMatching] = useState<RepairsMatching[] | null>(null);
+  const [mainSection, setMainSection] = useState<"details" | "planning">("details");
   const [activeTab, setActiveTab] = useState<"in" | "out" | "matched">("in");
   const [searchQuery, setSearchQuery] = useState("");
   const [pageIn, setPageIn] = useState(1);
@@ -88,6 +90,7 @@ export default function RepairsPage() {
   const [filtersIn, setFiltersIn] = useState<RepairsInFilterCriteria>({});
   const [filtersOut, setFiltersOut] = useState<RepairsOutFilterCriteria>({});
   const [sortFields, setSortFields] = useState<RepairsSortCriteria[]>([]);
+  const [onlyUnmatchedRepairs, setOnlyUnmatchedRepairs] = useState(false);
 
   const hasFiltersIn =
     countRepairsInFilters(filtersIn) > 0 ||
@@ -174,47 +177,75 @@ export default function RepairsPage() {
   }, [repairsMatching]);
 
   const repairsInFiltered = useMemo(() => {
-    if (isFilterModeIn) return repairsInSorted ?? [];
-    if (activeTab !== "in" || !searchQuery.trim()) return repairsInSorted ?? [];
-    const q = searchQuery.trim().toLowerCase();
-    return (repairsInSorted ?? []).filter((r) => {
-      const dateStr = r.dateIn ? new Date(r.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
-      const defectStr = r.defectName?.length ? r.defectName.join(" ") : "";
-      const searchable = [
-        dateStr,
-        r.cisternNumber,
-        r.repairType?.name ?? "",
-        r.vU23 ?? "",
-        r.depotName ?? "",
-        r.stationName ?? "",
-        r.roadName ?? "",
-        defectStr,
-      ].join(" ").toLowerCase();
-      return searchable.includes(q);
-    });
-  }, [repairsInSorted, searchQuery, activeTab, isFilterModeIn]);
+    let list: RepairsIn[];
+    if (isFilterModeIn) {
+      list = repairsInSorted ?? [];
+    } else if (activeTab !== "in" || !searchQuery.trim()) {
+      list = repairsInSorted ?? [];
+    } else {
+      const q = searchQuery.trim().toLowerCase();
+      list = (repairsInSorted ?? []).filter((r) => {
+        const dateStr = r.dateIn
+          ? new Date(r.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
+          : "";
+        const defectStr = r.defectName?.length ? r.defectName.join(" ") : "";
+        const searchable = [
+          dateStr,
+          r.cisternNumber,
+          r.repairType?.name ?? "",
+          r.vU23 ?? "",
+          r.depotName ?? "",
+          r.stationName ?? "",
+          r.roadName ?? "",
+          defectStr,
+        ]
+          .join(" ")
+          .toLowerCase();
+        return searchable.includes(q);
+      });
+    }
+    if (onlyUnmatchedRepairs && !isFilterModeIn) {
+      list = list.filter((r) => !matchedInIds.has(r.id));
+    }
+    return list;
+  }, [repairsInSorted, searchQuery, activeTab, isFilterModeIn, onlyUnmatchedRepairs, matchedInIds]);
 
   const repairsOutFiltered = useMemo(() => {
-    if (isFilterModeOut) return repairsOutSorted ?? [];
-    if (activeTab !== "out" || !searchQuery.trim()) return repairsOutSorted ?? [];
-    const q = searchQuery.trim().toLowerCase();
-    return (repairsOutSorted ?? []).filter((r) => {
-      const dateInStr = r.dateIn ? new Date(r.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
-      const dateOutStr = r.dateOut ? new Date(r.dateOut).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
-      const modernStr = r.modernName?.length ? r.modernName.join(" ") : "";
-      const searchable = [
-        dateInStr,
-        dateOutStr,
-        r.cisternNumber,
-        r.repairType?.name ?? "",
-        r.vU36 ?? "",
-        r.depotName ?? "",
-        r.roadName ?? "",
-        modernStr,
-      ].join(" ").toLowerCase();
-      return searchable.includes(q);
-    });
-  }, [repairsOutSorted, searchQuery, activeTab, isFilterModeOut]);
+    let list: RepairsOut[];
+    if (isFilterModeOut) {
+      list = repairsOutSorted ?? [];
+    } else if (activeTab !== "out" || !searchQuery.trim()) {
+      list = repairsOutSorted ?? [];
+    } else {
+      const q = searchQuery.trim().toLowerCase();
+      list = (repairsOutSorted ?? []).filter((r) => {
+        const dateInStr = r.dateIn
+          ? new Date(r.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
+          : "";
+        const dateOutStr = r.dateOut
+          ? new Date(r.dateOut).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
+          : "";
+        const modernStr = r.modernName?.length ? r.modernName.join(" ") : "";
+        const searchable = [
+          dateInStr,
+          dateOutStr,
+          r.cisternNumber,
+          r.repairType?.name ?? "",
+          r.vU36 ?? "",
+          r.depotName ?? "",
+          r.roadName ?? "",
+          modernStr,
+        ]
+          .join(" ")
+          .toLowerCase();
+        return searchable.includes(q);
+      });
+    }
+    if (onlyUnmatchedRepairs && !isFilterModeOut) {
+      list = list.filter((r) => !matchedOutIds.has(r.id));
+    }
+    return list;
+  }, [repairsOutSorted, searchQuery, activeTab, isFilterModeOut, onlyUnmatchedRepairs, matchedOutIds]);
 
   const repairsMatchingFiltered = useMemo(() => {
     if (!searchQuery.trim()) return repairsMatchingSorted ?? [];
@@ -254,6 +285,17 @@ export default function RepairsPage() {
     setPageOut(1);
     setPageMatched(1);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setPageIn(1);
+    setPageOut(1);
+  }, [onlyUnmatchedRepairs]);
+
+  useEffect(() => {
+    if (isFilterModeIn || isFilterModeOut) {
+      setOnlyUnmatchedRepairs(false);
+    }
+  }, [isFilterModeIn, isFilterModeOut]);
 
   const repairsInPaginated = useMemo(() => {
     if (isFilterModeIn) return repairsInFiltered ?? [];
@@ -320,13 +362,24 @@ export default function RepairsPage() {
       filterTableType === "in"
         ? countRepairsInFilters(filtersIn)
         : countRepairsOutFilters(filtersOut);
-    return filterCount + sortFields.length;
-  }, [filterTableType, filtersIn, filtersOut, sortFields]);
+    const onlyUnmatchedActive =
+      onlyUnmatchedRepairs && !isFilterModeIn && !isFilterModeOut;
+    return filterCount + sortFields.length + (onlyUnmatchedActive ? 1 : 0);
+  }, [
+    filterTableType,
+    filtersIn,
+    filtersOut,
+    sortFields,
+    onlyUnmatchedRepairs,
+    isFilterModeIn,
+    isFilterModeOut,
+  ]);
 
   const handleClearFilters = useCallback(() => {
     setFiltersIn({});
     setFiltersOut({});
     setSortFields([]);
+    setOnlyUnmatchedRepairs(false);
     setPageIn(1);
     setPageOut(1);
   }, []);
@@ -623,15 +676,23 @@ export default function RepairsPage() {
 
   return (
     <div className="space-y-8 w-full">
-      {/* Header */}
-      <div className="flex gap-3 max-lg:flex-col">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-          <Wrench className="h-8 w-8" />
-          Сведения о ремонтах
-        </h1>
-       
-      </div>
+      <Tabs
+        value={mainSection}
+        onValueChange={(v) => setMainSection(v as "details" | "planning")}
+        className="w-full"
+      >
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1">
+          <TabsTrigger value="details" className="gap-3 py-4 text-[2rem] leading-tight">
+            <Wrench className="size-[1em] shrink-0" />
+            Сведения о ремонтах
+          </TabsTrigger>
+          <TabsTrigger value="planning" className="py-4 text-[2rem] leading-tight">
+            <CalendarCog className="size-[1em] shrink-0" />
+            Планирование ремонтов
+          </TabsTrigger>
+        </TabsList>
 
+        <TabsContent value="details" className="mt-6 space-y-8">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -699,6 +760,9 @@ export default function RepairsPage() {
             onSortFieldsChange={setSortFields}
             onClearFilters={handleClearFilters}
             activeFiltersCount={activeFiltersCount}
+            onlyUnmatchedRepairs={onlyUnmatchedRepairs}
+            onOnlyUnmatchedRepairsChange={setOnlyUnmatchedRepairs}
+            onlyUnmatchedRepairsDisabled={isFilterModeIn || isFilterModeOut}
           />
         </div>
       </div>
@@ -996,6 +1060,17 @@ export default function RepairsPage() {
                 </Card>
               </TabsContent>
             </Tabs>
+        </TabsContent>
+
+        <TabsContent value="planning" className="mt-6">
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+              <p className="text-lg">Планирование ремонтов</p>
+              <p className="mt-2 text-sm">Раздел пока пустой.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

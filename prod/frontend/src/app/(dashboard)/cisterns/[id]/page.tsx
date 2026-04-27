@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, Button, Tabs, TabsContent, TabsList, TabsTrigger, Skeleton } from '@/components/ui';
 import { ArrowLeft, Train, MapPin, History, FileText, Wrench } from 'lucide-react';
 import Link from 'next/link';
@@ -15,10 +15,26 @@ import {
   RepairsTab 
 } from '@/components/cistern';
 
+const CISTERN_TAB_VALUES = ['general', 'location', 'history', 'components', 'repairs'] as const;
+type CisternTab = (typeof CISTERN_TAB_VALUES)[number];
+
+function isCisternTab(value: string | null): value is CisternTab {
+  return value !== null && (CISTERN_TAB_VALUES as readonly string[]).includes(value);
+}
+
 export default function CisternPassportPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const cisternId = params.id as string;
-  const [activeTab, setActiveTab] = useState('general');
+  const tabFromQuery = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<CisternTab>(() =>
+    isCisternTab(tabFromQuery) ? tabFromQuery : 'general'
+  );
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (isCisternTab(t)) setActiveTab(t);
+  }, [searchParams]);
 
   const { data: cistern, isLoading, error } = useCistern(cisternId);
 
@@ -105,7 +121,7 @@ export default function CisternPassportPage() {
       />
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as CisternTab)} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Train className="h-4 w-4" />
