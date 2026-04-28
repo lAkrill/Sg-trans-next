@@ -194,6 +194,7 @@ public static class RailwayCisternEndpoints
                         PeriodPeriodicTest = rc.PeriodPeriodicTest,
                         PeriodIntermediateTest = rc.PeriodIntermediateTest,
                         PeriodDepotRepair = rc.PeriodDepotRepair,
+                        PeriodPPRRepair = rc.PeriodDepotRepair,
                         DangerClass = rc.DangerClass,
                         Substance = rc.Substance,
                         TareWeight2 = rc.TareWeight2,
@@ -214,6 +215,23 @@ public static class RailwayCisternEndpoints
                             : null
                     })
                     .ToListAsync();
+                var models = await context.WagonModels.ToListAsync();
+                foreach (var cistern in cisterns)
+                {
+                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, 4);
+                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.CommissioningDate, 4);
+                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.CommissioningDate, 4);
+
+                    if (cistern.Model == null)
+                        continue;
+                    var Model = models.Where(m => m.Id == cistern.Model.Id).First();
+                    var MajorRep = Model.MajorRep;
+                    var DepoRep = Model.DepoRep;
+
+                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.CommissioningDate, MajorRep);
+                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.CommissioningDate, DepoRep);
+                }
+
                 return Results.Ok(cisterns);
             })
             .WithName("GetDetailedRailwayCisterns")
@@ -314,6 +332,7 @@ public static class RailwayCisternEndpoints
                         PeriodPeriodicTest = rc.PeriodPeriodicTest,
                         PeriodIntermediateTest = rc.PeriodIntermediateTest,
                         PeriodDepotRepair = rc.PeriodDepotRepair,
+                        PeriodPPRRepair = rc.PeriodDepotRepair,
                         DangerClass = rc.DangerClass,
                         Substance = rc.Substance,
                         TareWeight2 = rc.TareWeight2,
@@ -334,6 +353,23 @@ public static class RailwayCisternEndpoints
                             : null
                     })
                     .ToListAsync();
+
+                var models = await context.WagonModels.ToListAsync();
+                foreach (var cistern in cisterns)
+                {
+                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, 4);
+                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.CommissioningDate, 4);
+                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.CommissioningDate, 4);
+
+                    if (cistern.Model == null)
+                        continue;
+                    var Model = models.Where(m => m.Id == cistern.Model.Id).First();
+                    var MajorRep = Model.MajorRep;
+                    var DepoRep = Model.DepoRep;
+
+                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.CommissioningDate, MajorRep);
+                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.CommissioningDate, DepoRep);
+                }
 
                 var response = new ResponseForPagination(cisterns, 
                     totalCount, 
@@ -436,6 +472,7 @@ public static class RailwayCisternEndpoints
                         PeriodPeriodicTest = rc.PeriodPeriodicTest,
                         PeriodIntermediateTest = rc.PeriodIntermediateTest,
                         PeriodDepotRepair = rc.PeriodDepotRepair,
+                        PeriodPPRRepair = rc.PeriodDepotRepair,
                         DangerClass = rc.DangerClass,
                         Substance = rc.Substance,
                         TareWeight2 = rc.TareWeight2,
@@ -456,6 +493,23 @@ public static class RailwayCisternEndpoints
                             : null
                     })
                     .ToListAsync();
+
+                var models = await context.WagonModels.ToListAsync();
+                foreach (var cistern in cisterns)
+                {
+                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, 4);
+                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.CommissioningDate, 4);
+                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.CommissioningDate, 4);
+
+                    if (cistern.Model == null)
+                        continue;
+                    var Model = models.Where(m => m.Id == cistern.Model.Id).First();
+                    var MajorRep = Model.MajorRep;
+                    var DepoRep = Model.DepoRep;
+
+                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.CommissioningDate, MajorRep);
+                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.CommissioningDate, DepoRep);
+                }
 
                 return Results.Ok(cisterns);
             })
@@ -588,6 +642,7 @@ public static class RailwayCisternEndpoints
                         PeriodPeriodicTest = rc.PeriodPeriodicTest,
                         PeriodIntermediateTest = rc.PeriodIntermediateTest,
                         PeriodDepotRepair = rc.PeriodDepotRepair,
+                        PeriodPPRRepair = rc.PeriodDepotRepair,
                         DangerClass = rc.DangerClass,
                         Substance = rc.Substance,
                         TareWeight2 = rc.TareWeight2,
@@ -608,6 +663,19 @@ public static class RailwayCisternEndpoints
                             : null
                     })
                     .FirstOrDefaultAsync();
+
+                if (cistern.Model != null)
+                {
+                    var Model = await context.WagonModels.Where(m => m.Id == cistern.Model.Id).FirstOrDefaultAsync();
+                    var MajorRep = Model.MajorRep;
+                    var DepoRep = Model.DepoRep;
+
+                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.CommissioningDate, MajorRep);
+                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.CommissioningDate, DepoRep);
+                }
+                cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, 4);
+                cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.CommissioningDate, 4);
+                cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.CommissioningDate, 4);
 
                 return cistern is null ? Results.NotFound() : Results.Ok(cistern);
             })
@@ -656,6 +724,7 @@ public static class RailwayCisternEndpoints
                         PeriodPeriodicTest = dto.PeriodPeriodicTest,
                         PeriodIntermediateTest = dto.PeriodIntermediateTest,
                         PeriodDepotRepair = dto.PeriodDepotRepair,
+                        PeriodPPRRepair = dto.PeriodDepotRepair,
                         DangerClass = dto.DangerClass,
                         Substance = dto.Substance,
                         TareWeight2 = dto.TareWeight2,
@@ -712,6 +781,7 @@ public static class RailwayCisternEndpoints
                     cistern.PeriodPeriodicTest = dto.PeriodPeriodicTest;
                     cistern.PeriodIntermediateTest = dto.PeriodIntermediateTest;
                     cistern.PeriodDepotRepair = dto.PeriodDepotRepair;
+                    cistern.PeriodPPRRepair = dto.PeriodDepotRepair;
                     cistern.DangerClass = dto.DangerClass;
                     cistern.Substance = dto.Substance;
                     cistern.TareWeight2 = dto.TareWeight2;
@@ -742,5 +812,13 @@ public static class RailwayCisternEndpoints
             .RequirePermissions(Permission.Delete);
 
         
+    }
+
+    public static DateOnly PlanDate(DateOnly? repairDate, DateOnly? CommissioningDate, int years = 4){
+        DateOnly date = CommissioningDate.Value;
+        if(repairDate.HasValue)
+            date = repairDate.Value;
+        return date.AddYears(years); 
+
     }
 }

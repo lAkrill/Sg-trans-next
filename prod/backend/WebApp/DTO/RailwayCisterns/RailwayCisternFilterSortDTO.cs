@@ -51,6 +51,7 @@ public class FilterCriteria
     public DateRange? PeriodPeriodicTest { get; set; }
     public DateRange? PeriodIntermediateTest { get; set; }
     public DateRange? PeriodDepotRepair { get; set; }
+    public DateRange? PeriodPPRRepair { get; set; }
     public List<int>? DangerClasses { get; set; }
     public List<string>? Substances { get; set; }
     public DecimalRange? TareWeight2 { get; set; }

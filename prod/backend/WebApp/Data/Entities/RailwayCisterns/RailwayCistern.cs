@@ -37,6 +37,7 @@ public class RailwayCistern
     public DateOnly? PeriodPeriodicTest { get; set; }
     public DateOnly? PeriodIntermediateTest { get; set; }
     public DateOnly? PeriodDepotRepair { get; set; }
+    public DateOnly? PeriodPPRRepair { get; set; }
     public int DangerClass { get; set; }
     public string Substance { get; set; } = null!;
     public decimal TareWeight2 { get; set; }

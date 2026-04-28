@@ -52,6 +52,7 @@ public partial class RailwayCisternConfiguration : IEntityTypeConfiguration<Rail
         entity.Property(e => e.PeriodIntermediateTest).HasColumnName("PeriodIntermediateTest")
             .HasColumnType("date");
         entity.Property(e => e.PeriodDepotRepair).HasColumnName("PeriodDepotRepair").HasColumnType("date");
+        entity.Property(e => e.PeriodPPRRepair).HasColumnName("PeriodPPRRepair").HasColumnType("date");
         entity.Property(e => e.DangerClass).HasColumnName("DangerClass").IsRequired().HasDefaultValue(0);
         entity.Property(e => e.Substance).HasColumnName("Substance").IsRequired().HasColumnType("text")
             .HasDefaultValue("СУГ");

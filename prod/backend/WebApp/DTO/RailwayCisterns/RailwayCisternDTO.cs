@@ -36,10 +36,19 @@ public class RailwayCisternDetailDTO
     public string? Rent { get; set; }
     public AffiliationDTO Affiliation { get; set; }
     public int ServiceLifeYears { get; set; }
+
     public DateOnly? PeriodMajorRepair { get; set; }
     public DateOnly? PeriodPeriodicTest { get; set; }
     public DateOnly? PeriodIntermediateTest { get; set; }
     public DateOnly? PeriodDepotRepair { get; set; }
+    public DateOnly? PeriodPPRRepair { get; set; }
+    //PLAN
+    public DateOnly? PlanPeriodMajorRepair { get; set; }
+    public DateOnly? PlanPeriodPeriodicTest { get; set; }
+    public DateOnly? PlanPeriodIntermediateTest { get; set; }
+    public DateOnly? PlanPeriodDepotRepair { get; set; }
+    public DateOnly? PlanPeriodPPRRepair { get; set; }
+
     public int DangerClass { get; set; }
     public string Substance { get; set; }
     public decimal TareWeight2 { get; set; }
@@ -96,6 +105,7 @@ public class CreateRailwayCisternDTO
     public DateOnly? PeriodPeriodicTest { get; set; }
     public DateOnly? PeriodIntermediateTest { get; set; }
     public DateOnly? PeriodDepotRepair { get; set; }
+    public DateOnly? PeriodPPRRepair { get; set; }
     public int DangerClass { get; set; }
     public string Substance { get; set; }
     public decimal TareWeight2 { get; set; }
@@ -135,6 +145,7 @@ public class UpdateRailwayCisternDTO
     public DateOnly? PeriodPeriodicTest { get; set; }
     public DateOnly? PeriodIntermediateTest { get; set; }
     public DateOnly? PeriodDepotRepair { get; set; }
+    public DateOnly? PeriodPPRRepair { get; set; }
     public int DangerClass { get; set; }
     public string Substance { get; set; }
     public decimal TareWeight2 { get; set; }
