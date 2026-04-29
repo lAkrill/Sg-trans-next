@@ -84,6 +84,12 @@ export const cisternsApi = {
     return response.data;
   },
 
+  // /api/railway-cisterns/detailed
+  getAllDetailed: async (): Promise<RailwayCisternDetailDTO[]> => {
+    const response = await api.get<RailwayCisternDetailDTO[]>(`${CISTERNS_ENDPOINT}/detailed`);
+    return response.data;
+  },
+
   // Advanced filter with pagination
   filterWithPagination: async (filterData: RailwayCisternFilterSortDTO): Promise<FilteredCisternsResponse> => {
     const response = await api.post<FilteredCisternsApiResponse>(`${CISTERNS_ENDPOINT}/filter`, filterData);

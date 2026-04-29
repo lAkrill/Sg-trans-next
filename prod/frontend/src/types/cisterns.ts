@@ -72,6 +72,11 @@ export interface RailwayCisternDetailDTO {
   periodIntermediateTest?: string;
   periodDepotRepair?: string;
   periodPPRRepair?: string;
+  planPeriodMajorRepair?: string;
+  planPeriodPeriodicTest?: string;
+  planPeriodIntermediateTest?: string;
+  planPeriodDepotRepair?: string;
+  planPeriodPPRRepair?: string;
   dangerClass: number;
   substance: string;
   tareWeight2: number;

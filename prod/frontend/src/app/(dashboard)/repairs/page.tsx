@@ -32,6 +32,8 @@ import {
 import Image from "next/image";
 import { api } from "@/lib/api";
 import { CisternRepairs } from "@/api/repairs";
+import type { RailwayCisternDetailDTO } from '@/types/cisterns';
+import { cisternsApi } from "@/api/cisterns";
 import type { RepairsIn, RepairsOut, RepairsMatching } from "@/api/repairs";
 import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
 import { useRepairsInFilter, useRepairsOutFilter } from "@/hooks";
@@ -75,12 +77,15 @@ export default function RepairsPage() {
   const [repairsIn, setRepairsIn] = useState<RepairsIn[] | null>(null);
   const [repairsOut, setRepairsOut] = useState<RepairsOut[] | null>(null);
   const [repairsMatching, setRepairsMatching] = useState<RepairsMatching[] | null>(null);
+  const [planningCisterns, setPlanningCisterns] = useState<RailwayCisternDetailDTO[] | null>(null);
   const [mainSection, setMainSection] = useState<"details" | "planning">("details");
   const [activeTab, setActiveTab] = useState<"in" | "out" | "matched">("in");
   const [searchQuery, setSearchQuery] = useState("");
+  const [planningSearchQuery, setPlanningSearchQuery] = useState("");
   const [pageIn, setPageIn] = useState(1);
   const [pageOut, setPageOut] = useState(1);
   const [pageMatched, setPageMatched] = useState(1);
+  const [pagePlanning, setPagePlanning] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
@@ -280,11 +285,44 @@ export default function RepairsPage() {
     });
   }, [repairsMatchingSorted, searchQuery, activeTab]);
 
+  const planningCisternsFiltered = useMemo(() => {
+    if (!planningSearchQuery.trim()) return planningCisterns ?? [];
+    const q = planningSearchQuery.trim().toLowerCase();
+    return (planningCisterns ?? []).filter((cistern) => {
+      const buildDate = cistern.buildDate
+        ? new Date(cistern.buildDate).toLocaleDateString("ru-RU")
+        : "";
+      const searchable = [
+        cistern.number,
+        buildDate,
+        cistern.model?.name ?? "",
+        String(cistern.serviceLifeYears ?? ""),
+        cistern.periodMajorRepair ?? "",
+        cistern.periodPeriodicTest ?? "",
+        cistern.periodIntermediateTest ?? "",
+        cistern.periodDepotRepair ?? "",
+        cistern.periodPPRRepair ?? "",
+        cistern.planPeriodMajorRepair ?? "",
+        cistern.planPeriodPeriodicTest ?? "",
+        cistern.planPeriodIntermediateTest ?? "",
+        cistern.planPeriodDepotRepair ?? "",
+        cistern.planPeriodPPRRepair ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return searchable.includes(q);
+    });
+  }, [planningCisterns, planningSearchQuery]);
+
   useEffect(() => {
     setPageIn(1);
     setPageOut(1);
     setPageMatched(1);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setPagePlanning(1);
+  }, [planningSearchQuery]);
 
   useEffect(() => {
     setPageIn(1);
@@ -317,6 +355,12 @@ export default function RepairsPage() {
     return list.slice(start, start + pageSize);
   }, [repairsMatchingFiltered, pageMatched, pageSize]);
 
+  const planningCisternsPaginated = useMemo(() => {
+    const list = planningCisternsFiltered ?? [];
+    const start = (pagePlanning - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [planningCisternsFiltered, pagePlanning, pageSize]);
+
   const totalCountIn = isFilterModeIn
     ? (filterDataIn?.totalCount ?? 0)
     : (repairsInFiltered ?? []).length;
@@ -324,6 +368,7 @@ export default function RepairsPage() {
     ? (filterDataOut?.totalCount ?? 0)
     : (repairsOutFiltered ?? []).length;
   const totalCountMatched = (repairsMatchingFiltered ?? []).length;
+  const totalCountPlanning = (planningCisternsFiltered ?? []).length;
   const totalPagesIn = Math.max(
     1,
     isFilterModeIn
@@ -337,6 +382,7 @@ export default function RepairsPage() {
       : Math.ceil(totalCountOut / pageSize)
   );
   const totalPagesMatched = Math.max(1, Math.ceil(totalCountMatched / pageSize));
+  const totalPagesPlanning = Math.max(1, Math.ceil(totalCountPlanning / pageSize));
 
   const handlePageChangeIn = useCallback((page: number) => {
     setPageIn(Math.max(1, Math.min(page, totalPagesIn)));
@@ -350,11 +396,16 @@ export default function RepairsPage() {
     setPageMatched(Math.max(1, Math.min(page, totalPagesMatched)));
   }, [totalPagesMatched]);
 
+  const handlePageChangePlanning = useCallback((page: number) => {
+    setPagePlanning(Math.max(1, Math.min(page, totalPagesPlanning)));
+  }, [totalPagesPlanning]);
+
   const handlePageSizeChange = useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
     setPageIn(1);
     setPageOut(1);
     setPageMatched(1);
+    setPagePlanning(1);
   }, []);
 
   const activeFiltersCount = useMemo(() => {
@@ -394,7 +445,42 @@ export default function RepairsPage() {
     let columns: ExportColumn[] = [];
     let data: Record<string, string>[] = [];
 
-    if (activeTab === "in") {
+    if (mainSection === "planning") {
+      columns = [
+        { key: "number", label: "Номер вагона", type: "string" },
+        { key: "buildDate", label: "Дата постройки", type: "string" },
+        { key: "model", label: "Модель", type: "string" },
+        { key: "serviceLifeYears", label: "Срок службы, лет", type: "string" },
+        { key: "periodMajorRepair", label: "КР (период)", type: "string" },
+        { key: "periodPeriodicTest", label: "ПО (период)", type: "string" },
+        { key: "periodIntermediateTest", label: "ПП (период)", type: "string" },
+        { key: "periodDepotRepair", label: "ДР (период)", type: "string" },
+        { key: "periodPPRRepair", label: "ППР (период)", type: "string" },
+        { key: "planPeriodMajorRepair", label: "План КР", type: "string" },
+        { key: "planPeriodPeriodicTest", label: "План ПО", type: "string" },
+        { key: "planPeriodIntermediateTest", label: "План ПП", type: "string" },
+        { key: "planPeriodDepotRepair", label: "План ДР", type: "string" },
+        { key: "planPeriodPPRRepair", label: "План ППР", type: "string" },
+      ];
+      data = (planningCisternsFiltered ?? []).map((cistern) => ({
+        number: cistern.number ?? "—",
+        buildDate: cistern.buildDate
+          ? new Date(cistern.buildDate).toLocaleDateString("ru-RU")
+          : "—",
+        model: cistern.model?.name ?? "—",
+        serviceLifeYears: String(cistern.serviceLifeYears ?? "—"),
+        periodMajorRepair: cistern.periodMajorRepair ?? "—",
+        periodPeriodicTest: cistern.periodPeriodicTest ?? "—",
+        periodIntermediateTest: cistern.periodIntermediateTest ?? "—",
+        periodDepotRepair: cistern.periodDepotRepair ?? "—",
+        periodPPRRepair: cistern.periodPPRRepair ?? "—",
+        planPeriodMajorRepair: cistern.planPeriodMajorRepair ?? "—",
+        planPeriodPeriodicTest: cistern.planPeriodPeriodicTest ?? "—",
+        planPeriodIntermediateTest: cistern.planPeriodIntermediateTest ?? "—",
+        planPeriodDepotRepair: cistern.planPeriodDepotRepair ?? "—",
+        planPeriodPPRRepair: cistern.planPeriodPPRRepair ?? "—",
+      }));
+    } else if (activeTab === "in") {
       columns = [
         { key: "dateIn", label: "Дата приёма", type: "string" },
         { key: "number", label: "Номер вагона", type: "string" },
@@ -557,17 +643,21 @@ export default function RepairsPage() {
     } finally {
       setExportingType(null);
     }
-  }, [activeTab, repairsInFiltered, repairsOutFiltered, repairsMatchingFiltered]);
+  }, [activeTab, mainSection, repairsInFiltered, repairsOutFiltered, repairsMatchingFiltered, planningCisternsFiltered]);
 
   const handleCisternSelect = useCallback(async () => {
     setIsInitialLoading(true);
     try {
-      const res1 = await CisternRepairs.getAllRepairsIn();
-      const res2 = await CisternRepairs.getAllRepairsOut();
-      const res3 = await CisternRepairs.getAllRepairsMatching();
+      const [res1, res2, res3, res4] = await Promise.all([
+        CisternRepairs.getAllRepairsIn(),
+        CisternRepairs.getAllRepairsOut(),
+        CisternRepairs.getAllRepairsMatching(),
+        cisternsApi.getAllDetailed(),
+      ]);
       setRepairsIn(res1);
       setRepairsOut(res2);
       setRepairsMatching(res3);
+      setPlanningCisterns(res4);
     } finally {
       setIsInitialLoading(false);
     }
@@ -1063,11 +1153,136 @@ export default function RepairsPage() {
         </TabsContent>
 
         <TabsContent value="planning" className="mt-6">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                type="search"
+                placeholder="Быстрый поиск по столбцам..."
+                value={planningSearchQuery}
+                onChange={(e) => setPlanningSearchQuery(e.target.value)}
+                className="max-w-md"
+              />
+            </div>
+            <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Экспорт DOC"
+                onClick={() => handleExport("doc")}
+                disabled={!!exportingType || isInitialLoading}
+              >
+                {exportingType === "doc" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Image src="/icon_word.svg" alt="Экспорт DOC" width={16} height={16} />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Экспорт PDF"
+                onClick={() => handleExport("pdf")}
+                disabled={!!exportingType || isInitialLoading}
+              >
+                {exportingType === "pdf" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Image src="/icon_pdf.png" alt="Экспорт PDF" width={16} height={16} />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Экспорт XLS"
+                onClick={() => handleExport("xls")}
+                disabled={!!exportingType || isInitialLoading}
+              >
+                {exportingType === "xls" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Image src="/icon_excel.svg" alt="Экспорт XLS" width={16} height={16} />
+                )}
+              </Button>
+            </div>
+          </div>
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-              <p className="text-lg">Планирование ремонтов</p>
-              <p className="mt-2 text-sm">Раздел пока пустой.</p>
+            <CardContent className="px-4 py-0 overflow-x-auto">
+              <Table className="w-full text-xs">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap w-0">№ Вагона</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">Дата постройки</TableHead>
+                    <TableHead className="whitespace-normal py-2 min-w-0">Модель</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">Срок службы, лет</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">КР (период)</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">ПО (период)</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">ПП (период)</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">ДР (период)</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">ППР (период)</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">План КР</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">План ПО</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">План ПП</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">План ДР</TableHead>
+                    <TableHead className="whitespace-nowrap w-0">План ППР</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isInitialLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
+                        <div className="inline-flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Загрузка данных...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : planningCisternsPaginated?.length ? (
+                    planningCisternsPaginated.map((cistern) => (
+                      <TableRow key={cistern.id} className="even:bg-muted/30">
+                        <TableCell className="whitespace-nowrap">{cistern.number}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {cistern.buildDate
+                            ? new Date(cistern.buildDate).toLocaleDateString("ru-RU")
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="whitespace-normal break-words min-w-0">
+                          {cistern.model?.name ?? "—"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.serviceLifeYears ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.periodMajorRepair ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.periodPeriodicTest ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.periodIntermediateTest ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.periodDepotRepair ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.periodPPRRepair ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.planPeriodMajorRepair ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.planPeriodPeriodicTest ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.planPeriodIntermediateTest ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.planPeriodDepotRepair ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.planPeriodPPRRepair ?? "—"}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
+                        Нет данных
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
+            <div className="mt-4 px-4 pb-2">
+              <RepairsPagination
+                currentPage={pagePlanning}
+                totalPages={totalPagesPlanning}
+                totalCount={totalCountPlanning}
+                onPageChange={handlePageChangePlanning}
+              />
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
