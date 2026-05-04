@@ -73,6 +73,25 @@ function countRepairsOutFilters(f: RepairsOutFilterCriteria): number {
   return n;
 }
 
+function formatPlanningServiceEndDate(
+  buildDate: string | undefined,
+  serviceLifeYears: number | undefined
+): string {
+  if (
+    buildDate == null ||
+    buildDate === "" ||
+    serviceLifeYears == null ||
+    Number.isNaN(serviceLifeYears)
+  ) {
+    return "—";
+  }
+  const start = new Date(buildDate);
+  if (Number.isNaN(start.getTime())) return "—";
+  const end = new Date(start);
+  end.setFullYear(end.getFullYear() + serviceLifeYears);
+  return end.toLocaleDateString("ru-RU");
+}
+
 export default function RepairsPage() {
   const [repairsIn, setRepairsIn] = useState<RepairsIn[] | null>(null);
   const [repairsOut, setRepairsOut] = useState<RepairsOut[] | null>(null);
@@ -292,9 +311,15 @@ export default function RepairsPage() {
       const buildDate = cistern.buildDate
         ? new Date(cistern.buildDate).toLocaleDateString("ru-RU")
         : "";
+      const serviceEndDate = formatPlanningServiceEndDate(
+        cistern.buildDate,
+        cistern.serviceLifeYears
+      );
       const searchable = [
         cistern.number,
+        cistern.registrationNumber ?? "",
         buildDate,
+        serviceEndDate,
         cistern.model?.name ?? "",
         String(cistern.serviceLifeYears ?? ""),
         cistern.periodMajorRepair ?? "",
@@ -447,38 +472,59 @@ export default function RepairsPage() {
 
     if (mainSection === "planning") {
       columns = [
-        { key: "number", label: "Номер вагона", type: "string" },
+        { key: "number", label: "Вагон", type: "string" },
+        { key: "registrationNumber", label: "Рег. №", type: "string" },
+        { key: "serviceLifeYears", label: "Срок эксплуатации, лет", type: "string" },
         { key: "buildDate", label: "Дата постройки", type: "string" },
         { key: "model", label: "Модель", type: "string" },
-        { key: "serviceLifeYears", label: "Срок службы, лет", type: "string" },
-        { key: "periodMajorRepair", label: "КР (период)", type: "string" },
-        { key: "periodPeriodicTest", label: "ПО (период)", type: "string" },
-        { key: "periodIntermediateTest", label: "ПП (период)", type: "string" },
-        { key: "periodDepotRepair", label: "ДР (период)", type: "string" },
-        { key: "periodPPRRepair", label: "ППР (период)", type: "string" },
-        { key: "planPeriodMajorRepair", label: "План КР", type: "string" },
-        { key: "planPeriodPeriodicTest", label: "План ПО", type: "string" },
-        { key: "planPeriodIntermediateTest", label: "План ПП", type: "string" },
-        { key: "planPeriodDepotRepair", label: "План ДР", type: "string" },
-        { key: "planPeriodPPRRepair", label: "План ППР", type: "string" },
+        { key: "periodMajorRepair", label: "Капитальный ремонт — последний", type: "string" },
+        { key: "planPeriodMajorRepair", label: "Капитальный ремонт — следующий", type: "string" },
+        { key: "periodDepotRepair", label: "Деповской ремонт — последний", type: "string" },
+        { key: "planPeriodDepotRepair", label: "Деповской ремонт — следующий", type: "string" },
+        { key: "periodPeriodicTest", label: "ГИ (периодическое испытание) — последний", type: "string" },
+        { key: "planPeriodPeriodicTest", label: "ГИ (периодическое испытание) — следующий", type: "string" },
+        { key: "periodIntermediateTest", label: "ИГ (промежуточное испытание) — последний", type: "string" },
+        { key: "planPeriodIntermediateTest", label: "ИГ (промежуточное испытание) — следующий", type: "string" },
+        { key: "periodPPRRepair", label: "Профремонт (ППР) — последний", type: "string" },
+        { key: "planPeriodPPRRepair", label: "Профремонт (ППР) — следующий", type: "string" },
+        { key: "mileage", label: "Пробег", type: "string" },
+        { key: "paintingLast", label: "Покраска — последняя", type: "string" },
+        {
+          key: "serviceEndDate",
+          label: "Дата окончания эксплуатации",
+          type: "string",
+        },
+        {
+          key: "currentUncouplingLast",
+          label: "Текущий отцепочный ремонт — последний",
+          type: "string",
+        },
       ];
       data = (planningCisternsFiltered ?? []).map((cistern) => ({
         number: cistern.number ?? "—",
+        registrationNumber: cistern.registrationNumber ?? "—",
+        serviceLifeYears: String(cistern.serviceLifeYears ?? "—"),
         buildDate: cistern.buildDate
           ? new Date(cistern.buildDate).toLocaleDateString("ru-RU")
           : "—",
         model: cistern.model?.name ?? "—",
-        serviceLifeYears: String(cistern.serviceLifeYears ?? "—"),
         periodMajorRepair: cistern.periodMajorRepair ?? "—",
-        periodPeriodicTest: cistern.periodPeriodicTest ?? "—",
-        periodIntermediateTest: cistern.periodIntermediateTest ?? "—",
-        periodDepotRepair: cistern.periodDepotRepair ?? "—",
-        periodPPRRepair: cistern.periodPPRRepair ?? "—",
         planPeriodMajorRepair: cistern.planPeriodMajorRepair ?? "—",
-        planPeriodPeriodicTest: cistern.planPeriodPeriodicTest ?? "—",
-        planPeriodIntermediateTest: cistern.planPeriodIntermediateTest ?? "—",
+        periodDepotRepair: cistern.periodDepotRepair ?? "—",
         planPeriodDepotRepair: cistern.planPeriodDepotRepair ?? "—",
+        periodPeriodicTest: cistern.periodPeriodicTest ?? "—",
+        planPeriodPeriodicTest: cistern.planPeriodPeriodicTest ?? "—",
+        periodIntermediateTest: cistern.periodIntermediateTest ?? "—",
+        planPeriodIntermediateTest: cistern.planPeriodIntermediateTest ?? "—",
+        periodPPRRepair: cistern.periodPPRRepair ?? "—",
         planPeriodPPRRepair: cistern.planPeriodPPRRepair ?? "—",
+        mileage: "-",
+        paintingLast: "-",
+        serviceEndDate: formatPlanningServiceEndDate(
+          cistern.buildDate,
+          cistern.serviceLifeYears
+        ),
+        currentUncouplingLast: "-",
       }));
     } else if (activeTab === "in") {
       columns = [
@@ -1214,26 +1260,114 @@ export default function RepairsPage() {
               <Table className="w-full text-xs">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="whitespace-nowrap w-0">№ Вагона</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">Дата постройки</TableHead>
-                    <TableHead className="whitespace-normal py-2 min-w-0">Модель</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">Срок службы, лет</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">КР (период)</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">ПО (период)</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">ПП (период)</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">ДР (период)</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">ППР (период)</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">План КР</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">План ПО</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">План ПП</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">План ДР</TableHead>
-                    <TableHead className="whitespace-nowrap w-0">План ППР</TableHead>
+                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
+                      Вагон
+                    </TableHead>
+                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
+                      Рег. №
+                    </TableHead>
+                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
+                      Срок <br />
+                      эксплуатации
+                    </TableHead>
+                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
+                      Дата постройки
+                    </TableHead>
+                    <TableHead rowSpan={2} className="whitespace-normal py-2 min-w-0 align-middle text-center">
+                      Модель
+                    </TableHead>
+                    <TableHead
+                      colSpan={2}
+                      className="whitespace-normal align-middle text-center"
+                    >
+                      Капитальный ремонт
+                    </TableHead>
+                    <TableHead
+                      colSpan={2}
+                      className="whitespace-normal align-middle text-center"
+                    >
+                      Деповской ремонт
+                    </TableHead>
+                    <TableHead
+                      colSpan={2}
+                      className="whitespace-normal align-middle text-center"
+                    >
+                      ГИ (периодическое<br />испытание)
+                    </TableHead>
+                    <TableHead
+                      colSpan={2}
+                      className="whitespace-normal align-middle text-center"
+                    >
+                      ИГ (промежуточное<br />испытание)
+                    </TableHead>
+                    <TableHead
+                      colSpan={2}
+                      className="whitespace-normal align-middle text-center"
+                    >
+                      Профремонт<br />(ППР)
+                    </TableHead>
+
+                    <TableHead className="whitespace-normal align-middle text-center">
+                      Пробег
+                    </TableHead>
+                    <TableHead className="whitespace-normal align-middle text-center">
+                      Покраска
+                    </TableHead>
+                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
+                      Дата окончания <br /> эксплуатации
+                    </TableHead>
+                    <TableHead className="whitespace-normal align-middle text-center">
+                      Текущий отцепочный
+                      <br />
+                      ремонт
+                    </TableHead>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      последний
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      следующий
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      последний
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      следующий
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      последний
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      следующий
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      последний
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      следующий
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      последний
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
+                      следующий
+                    </TableHead>
+                    <TableHead className="whitespace-normal align-middle text-center">
+                      остаточный
+                    </TableHead>
+                    <TableHead className="whitespace-normal align-middle text-center">
+                      последняя
+                    </TableHead>
+                    <TableHead className="whitespace-normal align-middle text-center">
+                      последний
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isInitialLoading ? (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={19} className="text-center text-muted-foreground py-8">
                         <div className="inline-flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span>Загрузка данных...</span>
@@ -1245,6 +1379,10 @@ export default function RepairsPage() {
                       <TableRow key={cistern.id} className="even:bg-muted/30">
                         <TableCell className="whitespace-nowrap">{cistern.number}</TableCell>
                         <TableCell className="whitespace-nowrap">
+                          {cistern.registrationNumber ?? "—"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.serviceLifeYears ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {cistern.buildDate
                             ? new Date(cistern.buildDate).toLocaleDateString("ru-RU")
                             : "—"}
@@ -1252,22 +1390,30 @@ export default function RepairsPage() {
                         <TableCell className="whitespace-normal break-words min-w-0">
                           {cistern.model?.name ?? "—"}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.serviceLifeYears ?? "—"}</TableCell>
                         <TableCell className="whitespace-nowrap">{cistern.periodMajorRepair ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.periodPeriodicTest ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.periodIntermediateTest ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.periodDepotRepair ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.periodPPRRepair ?? "—"}</TableCell>
                         <TableCell className="whitespace-nowrap">{cistern.planPeriodMajorRepair ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.planPeriodPeriodicTest ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.planPeriodIntermediateTest ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.periodDepotRepair ?? "—"}</TableCell>
                         <TableCell className="whitespace-nowrap">{cistern.planPeriodDepotRepair ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.periodPeriodicTest ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.planPeriodPeriodicTest ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.periodIntermediateTest ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.planPeriodIntermediateTest ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{cistern.periodPPRRepair ?? "—"}</TableCell>
                         <TableCell className="whitespace-nowrap">{cistern.planPeriodPPRRepair ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap text-center">-</TableCell>
+                        <TableCell className="whitespace-nowrap text-center">-</TableCell>
+                        <TableCell className="whitespace-nowrap text-center">
+                          {formatPlanningServiceEndDate(
+                            cistern.buildDate,
+                            cistern.serviceLifeYears
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-center">-</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={19} className="text-center text-muted-foreground py-8">
                         Нет данных
                       </TableCell>
                     </TableRow>
