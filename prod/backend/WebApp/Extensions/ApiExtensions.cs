@@ -62,6 +62,8 @@ public static class ApiExtensions
         app.MapRepairsInFilterEndpoints();
         app.MapRepairsOutFilterEndpoints();
         app.MapRepairsMatchingFilterEndpoints();
+
+        app.MapPersonalCisRepairPeriodEndpoints();
     }
 
     public static void AddApiAuthentication(

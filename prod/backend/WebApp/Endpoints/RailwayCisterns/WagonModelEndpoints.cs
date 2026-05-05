@@ -5,6 +5,7 @@ using WebApp.Data.Entities.RailwayCisterns;
 using WebApp.Data.Enums;
 using WebApp.DTO.RailwayCisterns;
 using WebApp.Extensions;
+using System.Security.Claims;
 
 namespace WebApp.Endpoints.RailwayCisterns;
 
@@ -18,12 +19,8 @@ public static class WagonModelEndpoints
 
         group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
         {
-            var models = await context.Set<WagonModel>()
-                .Select(m => new WagonModelDTO
-                {
-                    Id = m.Id,
-                    Name = m.Name
-                })
+            var models = await context.WagonModels
+                .Select(m => m.ToWagonModelDTO())
                 .ToListAsync();
             return Results.Ok(models);
         })
@@ -33,13 +30,9 @@ public static class WagonModelEndpoints
 
         group.MapGet("/{id}", async ([FromServices] ApplicationDbContext context, [FromRoute] Guid id) =>
         {
-            var model = await context.Set<WagonModel>()
+            var model = await context.WagonModels
                 .Where(m => m.Id == id)
-                .Select(m => new WagonModelDTO
-                {
-                    Id = m.Id,
-                    Name = m.Name
-                })
+                .Select(m => m.ToWagonModelDTO())
                 .FirstOrDefaultAsync();
             return model is null ? Results.NotFound() : Results.Ok(model);
         })
@@ -48,21 +41,15 @@ public static class WagonModelEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .RequirePermissions(Permission.Read);
 
-        group.MapPost("/", async ([FromServices] ApplicationDbContext context, [FromBody] CreateWagonModelDTO dto) =>
+        group.MapPost("/", async ([FromServices] ApplicationDbContext context, [FromBody] CreateWagonModelDTO dto, HttpContext httpContext) =>
         {
-            var model = new WagonModel
-            {
-                Name = dto.Name
-            };
+            Guid creator = Guid.Parse(httpContext.User.FindFirstValue("userId"));
+            var model = dto.ToWagonModel(creator);
 
             context.Add(model);
             await context.SaveChangesAsync();
 
-            return Results.Created($"/api/wagon-models/{model.Id}", new WagonModelDTO
-            {
-                Id = model.Id,
-                Name = model.Name
-            });
+            return Results.Created($"/api/wagon-models/{model.Id}", model.ToWagonModelDTO);
         })
         .WithName("CreateWagonModel")
         .Produces<WagonModelDTO>(StatusCodes.Status201Created)
@@ -71,11 +58,11 @@ public static class WagonModelEndpoints
 
         group.MapPut("/{id}", async ([FromServices] ApplicationDbContext context, [FromRoute] Guid id, [FromBody] UpdateWagonModelDTO dto) =>
         {
-            var model = await context.Set<WagonModel>().FindAsync(id);
+            var model = await context.WagonModels.FindAsync(id);
             if (model == null)
                 return Results.NotFound();
 
-            model.Name = dto.Name;
+            model.UpdateWagonModel(dto);
 
             await context.SaveChangesAsync();
             return Results.NoContent();
@@ -88,7 +75,7 @@ public static class WagonModelEndpoints
 
         group.MapDelete("/{id}", async ([FromServices] ApplicationDbContext context, [FromRoute] Guid id) =>
         {
-            var model = await context.Set<WagonModel>().FindAsync(id);
+            var model = await context.WagonModels.FindAsync(id);
             if (model == null)
                 return Results.NotFound();
 

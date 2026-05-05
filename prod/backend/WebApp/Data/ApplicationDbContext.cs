@@ -44,6 +44,7 @@ public class ApplicationDbContext(
     public DbSet<Document> Documents { get; set; }
     public DbSet<Dislocation> Dislocations { get; set; }
 
+    public DbSet<PersonalCisRepairPeriod> PersonalCisRepairPeriods { get; set; }
     
     public DbSet<AdminOwner> AdminOwners { get; set; }
     public DbSet<Defect> Defects { get; set; }
