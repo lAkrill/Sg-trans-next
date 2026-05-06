@@ -92,6 +92,13 @@ function formatPlanningServiceEndDate(
   return end.toLocaleDateString("ru-RU");
 }
 
+function formatRuDate(value: string | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("ru-RU");
+}
+
 export default function RepairsPage() {
   const [repairsIn, setRepairsIn] = useState<RepairsIn[] | null>(null);
   const [repairsOut, setRepairsOut] = useState<RepairsOut[] | null>(null);
@@ -1390,16 +1397,16 @@ export default function RepairsPage() {
                         <TableCell className="whitespace-normal break-words min-w-0">
                           {cistern.model?.name ?? "—"}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.periodMajorRepair ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.planPeriodMajorRepair ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.periodDepotRepair ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.planPeriodDepotRepair ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.periodPeriodicTest ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.planPeriodPeriodicTest ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.periodIntermediateTest ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.planPeriodIntermediateTest ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.periodPPRRepair ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.planPeriodPPRRepair ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodMajorRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodMajorRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodDepotRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodDepotRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodPeriodicTest)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodPeriodicTest)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodIntermediateTest)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodIntermediateTest)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodPPRRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodPPRRepair)}</TableCell>
                         <TableCell className="whitespace-nowrap text-center">-</TableCell>
                         <TableCell className="whitespace-nowrap text-center">-</TableCell>
                         <TableCell className="whitespace-nowrap text-center">

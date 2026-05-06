@@ -9,6 +9,7 @@ export { manufacturersConfig } from './manufacturers.config';
 export { ownersConfig } from './owners.config';
 export { wagonTypesConfig } from './wagon-types.config';
 export { wagonModelsConfig } from './wagon-models.config';
+export { personalWagonDateRepsConfig } from './personal-wagon-date-reps.config';
 export { locationsConfig } from './locations.config';
 export { partTypesConfig } from './part-types.config';
 export { partStatusesConfig } from './part-statuses.config';
@@ -25,6 +26,7 @@ import { manufacturersBaseConfig } from './manufacturers.config';
 import { ownersBaseConfig } from './owners.config';
 import { wagonTypesBaseConfig } from './wagon-types.config';
 import { wagonModelsBaseConfig } from './wagon-models.config';
+import { personalWagonDateRepsBaseConfig } from './personal-wagon-date-reps.config';
 import { locationsBaseConfig } from './locations.config';
 import { partTypesBaseConfig } from './part-types.config';
 import { partStatusesBaseConfig } from './part-statuses.config';
@@ -42,6 +44,7 @@ export const directoriesConfig: Record<string, DirectoryConfig> = {
   owners: ownersBaseConfig,
   wagonTypes: wagonTypesBaseConfig,
   wagonModels: wagonModelsBaseConfig,
+  personalWagonDateReps: personalWagonDateRepsBaseConfig,
   locations: locationsBaseConfig,
   partTypes: partTypesBaseConfig,
   partStatuses: partStatusesBaseConfig,

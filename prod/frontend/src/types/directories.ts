@@ -290,14 +290,63 @@ export interface UpdateRegistrarDTO {
 // WagonModel (Модель вагона)
 export interface WagonModelDTO extends BaseEntity {
   name: string;
+  majorRep: number;
+  depoRep: number;
+  intermediateTest: number;
+  periodicTest: number;
+  pprRep: number;
+  firstName: string;
+  lastName: string;
+
 }
 
 export interface CreateWagonModelDTO {
   name: string;
+  majorRep: number;
+  depoRep: number;
+  intermediateTest: number;
+  periodicTest: number;
+  pprRep: number;
 }
 
 export interface UpdateWagonModelDTO {
   name: string;
+  majorRep: number;
+  depoRep: number;
+  intermediateTest: number;
+  periodicTest: number;
+  pprRep: number;
+}
+
+// PersonalWagonDateRep (Персоналдьные периоды ремонта вагона)
+export interface PersonalWagonDateRepDTO extends BaseEntity {
+  cisternNum: string;
+  majorRep: number;
+  depoRep: number;
+  intermediateTest: number;
+  periodicTest: number;
+  pprRep: number;
+  firstName: string;
+  lastName: string;
+
+}
+
+export interface CreatePersonalWagonDateRepDTO {
+  cisternNum: string;
+  majorRep: number;
+  depoRep: number;
+  intermediateTest: number;
+  periodicTest: number;
+  pprRep: number;
+}
+
+export interface UpdatePersonalWagonDateRepDTO {
+  cisternNum: string;
+  majorRep: number;
+  depoRep: number;
+  intermediateTest: number;
+  periodicTest: number;
+  pprRep: number;
 }
 
 // StampNumber (Номер клейма)

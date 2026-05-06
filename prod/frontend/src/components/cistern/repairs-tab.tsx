@@ -121,9 +121,19 @@ export function RepairsTab({ CicternNumber, CisternId }: RepairsTabProps) {
                               {inRec.defectName?.length ? (
                                 <div className="flex gap-1">
                                   <dt className="text-muted-foreground shrink-0">Дефекты:</dt>
-                                  <dd>{inRec.defectName.join(', ')}</dd>
+                                  <dd>
+                                    {inRec.defectCode?.length ? `(${inRec.defectCode.join(', ')}) ` : ''}
+                                    {inRec.defectName.join(', ')}</dd>
                                 </div>
                               ) : null}
+                            <div className="flex gap-1">
+                              <dt className="text-muted-foreground shrink-0">Станция:</dt>
+                              <dd>
+                                {inRec.stationName
+                                  ? `${inRec.stationName}${inRec.stationCode ? ` (${inRec.stationCode})` : ''}`
+                                  : inRec.stationCode ?? '—'}
+                              </dd>
+                            </div>
                               <div className="flex gap-1">
                                 <dt className="text-muted-foreground shrink-0">Дорога:</dt>
                                 <dd>{inRec.roadName ?? '—'}</dd>
@@ -181,7 +191,10 @@ export function RepairsTab({ CicternNumber, CisternId }: RepairsTabProps) {
                               {r.modernName?.length ? (
                                 <div className="flex gap-1">
                                   <dt className="text-muted-foreground shrink-0">Модернизации:</dt>
-                                  <dd>{r.modernName.join(', ')}</dd>
+                                  <dd>
+                                    {r.modernCode?.length ? `(${r.modernCode.join(', ')}) ` : ''}
+                                    {r.modernName.join(', ')}
+                                  </dd>
                                 </div>
                               ) : null}
                               <div className="flex gap-1">
@@ -221,9 +234,20 @@ export function RepairsTab({ CicternNumber, CisternId }: RepairsTabProps) {
                             {inRec.defectName?.length ? (
                               <div className="flex gap-1">
                                 <dt className="text-muted-foreground shrink-0">Дефекты:</dt>
-                                <dd>{inRec.defectName.join(', ')}</dd>
+                                <dd>
+                                  {inRec.defectCode?.length ? `(${inRec.defectCode.join(', ')}) ` : ''}
+                                  {inRec.defectName.join(', ')}
+                                </dd>
                               </div>
                             ) : null}
+                            <div className="flex gap-1">
+                              <dt className="text-muted-foreground shrink-0">Станция:</dt>
+                              <dd>
+                                {inRec.stationName
+                                  ? `${inRec.stationName}${inRec.stationCode ? ` (${inRec.stationCode})` : ''}`
+                                  : inRec.stationCode ?? '—'}
+                              </dd>
+                            </div>
                             <div className="flex gap-1">
                               <dt className="text-muted-foreground shrink-0">Дорога:</dt>
                               <dd>{inRec.roadName ?? '—'}</dd>
@@ -264,7 +288,10 @@ export function RepairsTab({ CicternNumber, CisternId }: RepairsTabProps) {
                             {r.modernName?.length ? (
                               <div className="flex gap-1">
                                 <dt className="text-muted-foreground shrink-0">Модернизации:</dt>
-                                <dd>{r.modernName.join(', ')}</dd>
+                                <dd>
+                                  {r.modernCode?.length ? `(${r.modernCode.join(', ')}) ` : ''}
+                                  {r.modernName.join(', ')}
+                                  </dd>
                               </div>
                             ) : null}
                             <div className="flex gap-1">

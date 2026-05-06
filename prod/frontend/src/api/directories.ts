@@ -36,6 +36,9 @@ import type {
   WagonModelDTO,
   CreateWagonModelDTO,
   UpdateWagonModelDTO,
+  PersonalWagonDateRepDTO,
+  CreatePersonalWagonDateRepDTO,
+  UpdatePersonalWagonDateRepDTO,
   StampNumberDTO,
   CreateStampNumberDTO,
   UpdateStampNumberDTO,
@@ -182,6 +185,13 @@ export const wagonModelsApi = createDirectoryApi<
   CreateWagonModelDTO,
   UpdateWagonModelDTO
 >('wagon-models');
+
+// PersonalWagonDateReps API
+export const personalWagonDateRepsApi = createDirectoryApi<
+  PersonalWagonDateRepDTO,
+  CreatePersonalWagonDateRepDTO,
+  UpdatePersonalWagonDateRepDTO
+>('personal-cis-repair-periods');
 
 // StampNumbers API
 export const stampNumbersApi = createDirectoryApi<

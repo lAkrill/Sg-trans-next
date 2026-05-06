@@ -93,6 +93,11 @@ const directoryItems: SidebarItem[] = [
     icon: Car,
   },
   {
+    title: "Персон. периоды ремонта",
+    href: "/directories/personal-wagon-date-reps",
+    icon: Car,
+  },
+  {
     title: "Сосуды",
     href: "/directories/vessels",
     icon: Droplet,

@@ -327,6 +327,14 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
   // Reset pagination when search changes
   useEffect(() => {
     setCurrentPage(1);
+    // console.log("searchTerm", searchTerm);
+    // console.log("currentPage", currentPage);
+    // console.log("itemsPerPage", itemsPerPage);
+    // console.log("totalItems", totalItems);
+    // console.log("totalPages", totalPages);
+    // console.log("startIndex", startIndex);
+    // console.log("endIndex", endIndex);
+    // console.log("paginatedItems", paginatedItems);
   }, [searchTerm]);
 
   useEffect(() => {
@@ -417,7 +425,7 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
           <config.icon className="h-8 w-8" />
           {config.title}
         </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">{config.description}</p>
+        {/* <p className="mt-2 text-gray-600 dark:text-gray-400">{config.description}</p> */}
       </div>
 
       {/* Controls */}
@@ -464,7 +472,7 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                       value={
                         field.type === "date" || isDateField(field.key)
                           ? getDateInputValue((formData as Record<string, unknown>)[field.key])
-                          : String((formData as Record<string, unknown>)[field.key] || "")
+                          : String((formData as Record<string, unknown>)[field.key] ?? "")
                       }
                       onChange={(e) => {
                         const value =
@@ -493,7 +501,7 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
       <Card>
         <CardHeader>
           <div className="flex gap-2 items-center">
-            <CardTitle>Справочник {config.title.toLowerCase()}</CardTitle>
+            {/* <CardTitle>Справочник {config.title.toLowerCase()}</CardTitle> */}
             <CardDescription>Всего записей: {items.length}</CardDescription>
           </div>
         </CardHeader>
@@ -515,10 +523,12 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                 <TableHeader>
                   <TableRow>
                     {config.tableColumns.map((column) => (
-                      <TableHead key={String(column.key)}>{column.label}</TableHead>
+                      <TableHead key={String(column.key)} className="whitespace-normal break-words align-middle">
+                        {column.label}
+                      </TableHead>
                     ))}
-                    <TableHead>Дата создания</TableHead>
-                    <TableHead className="text-right">Действия</TableHead>
+                    <TableHead className="whitespace-normal break-words align-middle">Дата обновления</TableHead>
+                    <TableHead className="text-right whitespace-normal break-words align-middle">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -533,7 +543,7 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                         </TableCell>
                       ))}
                       <TableCell>
-                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString("ru-RU") : "-"}
+                        {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString("ru-RU") : "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -601,7 +611,7 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                     value={
                       field.type === "date" || isDateField(field.key)
                         ? getDateInputValue((formData as Record<string, unknown>)[field.key])
-                        : String((formData as Record<string, unknown>)[field.key] || "")
+                        : String((formData as Record<string, unknown>)[field.key] ?? "")
                     }
                     onChange={(e) => {
                       const value =

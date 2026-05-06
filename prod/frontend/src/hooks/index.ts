@@ -10,6 +10,7 @@ export * from './partStatuses.hook';
 export * from './repairTypes.hook';
 export * from './registrars.hook';
 export * from './wagonModels.hook';
+export * from './personalWagonDateReps.hook';
 export * from './stampNumbers.hook';
 export * from './parts.hook';
 export * from './partEquipment.hook';
