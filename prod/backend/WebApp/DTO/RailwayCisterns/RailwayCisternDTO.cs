@@ -1,3 +1,5 @@
+using WebApp.DTO.Common;
+
 namespace WebApp.DTO.RailwayCisterns;
 
 
@@ -150,4 +152,52 @@ public class UpdateRailwayCisternDTO
     public string Substance { get; set; }
     public decimal TareWeight2 { get; set; }
     public decimal TareWeight3 { get; set; }
+}
+
+public class FilterRepairsCisternsRequestDTO
+{
+    public string[]? Numbers {get; set;}
+    public string[]? WagonModelsNames {get; set;}
+    public DateRange? BuildDate { get; set; }
+    public DateRange? CommissioningDate {get;set;}
+    public DateRange? CommissioningEndDate {get;set; }
+
+    public DateRange? PeriodMajorRepair { get; set; }
+    public DateRange? PeriodPeriodicTest { get; set; }
+    public DateRange? PeriodIntermediateTest { get; set; }
+    public DateRange? PeriodDepotRepair { get; set; }
+    public DateRange? PeriodPPRRepair { get; set; }
+    //PLAN
+    public DateRange? PlanPeriodMajorRepair { get; set; }
+    public DateRange? PlanPeriodPeriodicTest { get; set; }
+    public DateRange? PlanPeriodIntermediateTest { get; set; }
+    public DateRange? PlanPeriodDepotRepair { get; set; }
+    public DateRange? PlanPeriodPPRRepair { get; set; }
+}
+
+public class FilterRepairsCisternsResponseDTO
+{
+    public Guid Id { get; set;}
+    public string Number {get;set;}
+    public string RegistrationNumber {get; set;}
+    public Guid? WagonModelId {get; set; }
+    public string? WagonModelName {get; set;}
+    public DateOnly BuildDate {get; set;}
+    public DateOnly? CommissioningDate {get; set;}
+    public int ServiceLifeYears {get; set;}
+    public DateOnly? PeriodMajorRepair { get; set; }
+    public DateOnly? PeriodPeriodicTest { get; set; }
+    public DateOnly? PeriodIntermediateTest { get; set; }
+    public DateOnly? PeriodDepotRepair { get; set; }
+    public DateOnly? PeriodPPRRepair { get; set; }
+    //PLAN
+    public DateOnly? PlanPeriodMajorRepair { get; set; }
+    public DateOnly? PlanPeriodPeriodicTest { get; set; }
+    public DateOnly? PlanPeriodIntermediateTest { get; set; }
+    public DateOnly? PlanPeriodDepotRepair { get; set; }
+    public DateOnly? PlanPeriodPPRRepair { get; set; }
+    public int Milage {get; set;}
+    public int MilageNorm {get; set;}
+    public int MilageRemain {get; set;}
+    public DateOnly? CommissioningEndDate {get; set;}
 }
