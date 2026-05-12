@@ -208,6 +208,9 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
   const [dateFrom, setDateFrom] = useState<string>(defaultRange.from);
   const [dateTo, setDateTo] = useState<string>(defaultRange.to);
   const [rangeLoading, setRangeLoading] = useState(false);
+  const [rangeLoadError, setRangeLoadError] = useState<string | null>(null);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [locationsLoadError, setLocationsLoadError] = useState<string | null>(null);
   const [milage, setMilage] = useState<CisternMilage | null>(null);
   const [remainMilage, setRemainMilage] = useState<number>(0);
   const mapRef = useRef<InstanceType<typeof LeafletMap> | null>(null);
@@ -218,27 +221,44 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
     const range = getDefaultDateRange();
     setDateFrom(range.from);
     setDateTo(range.to);
+    setLocationsLoadError(null);
+    setRangeLoadError(null);
+    setLocationsLoading(true);
 
-    const [res1, res2, res3, resRange] = await Promise.all([
-      CisternDislocation.getLastLocation(CicternNumber),
-      CisternDislocation.getAllLocation(CicternNumber),
-      CisternMilages.getLastMilage(CicternNumber),
-      CisternDislocation.getLocationsInRange(CicternNumber, range.from, range.to),
-    ]);
+    try {
+      const [res1, res2, res3, resRange] = await Promise.all([
+        CisternDislocation.getLastLocation(CicternNumber),
+        CisternDislocation.getAllLocation(CicternNumber),
+        CisternMilages.getLastMilage(CicternNumber),
+        CisternDislocation.getLocationsInRange(CicternNumber, range.from, range.to),
+      ]);
 
-    setLocation(res1);
-    setLocationAll(res2);
-    setLocationInRange(resRange);
-    setMilage(res3);
-    setRemainMilage(res3.milageNorm - res3.milage);
+      setLocation(res1);
+      setLocationAll(res2);
+      setLocationInRange(resRange);
+      setMilage(res3);
+      setRemainMilage(res3.milageNorm - res3.milage);
+    } catch {
+      setLocationsLoadError("Не удалось загрузить данные о местоположении и пробеге.");
+      setLocation(null);
+      setLocationAll(null);
+      setLocationInRange(null);
+      setMilage(null);
+      setRemainMilage(0);
+    } finally {
+      setLocationsLoading(false);
+    }
   }, [CicternNumber]);
 
   const handleLoadRange = useCallback(async () => {
     if (!dateFrom || !dateTo) return;
     setRangeLoading(true);
+    setRangeLoadError(null);
     try {
       const data = await CisternDislocation.getLocationsInRange(CicternNumber, dateFrom, dateTo);
       setLocationInRange(data);
+    } catch {
+      setRangeLoadError("Не удалось загрузить данные за выбранный период.");
     } finally {
       setRangeLoading(false);
     }
@@ -248,6 +268,7 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
     setDateFrom("");
     setDateTo("");
     setLocationInRange(null);
+    setRangeLoadError(null);
   }, []);
 
   const handleHistoryStationClick = useCallback(
@@ -449,6 +470,8 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
 
   // утилита для группировки подряд идущих станций
   function groupStations(locations: CisternAllLocation[]) {
+    if (!locations.length) return [];
+
     const result: {
       name: string;
       code: string;
@@ -513,18 +536,27 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
         numShipmen: route?.numShipmen ?? "",
       });
     }
-    
-    day1 = new Date(result[0].date).getTime();
-    day2 = new Date().getTime();
-    day3 = Math.trunc((((day2-day1)/1000) / 3600) / 24);
-            
-    
-    result[0].count = day3; 
+
+    if (result.length > 0) {
+      day1 = new Date(result[0].date).getTime();
+      day2 = new Date().getTime();
+      day3 = Math.trunc((((day2 - day1) / 1000) / 3600) / 24);
+      result[0].count = day3;
+    }
     return result;
   }
 
   return (
     <div className="space-y-6">
+      {locationsLoadError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {locationsLoadError}
+        </div>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -607,14 +639,33 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
                           </Button>
                         )}
                       </div>
+                      {rangeLoadError ? (
+                        <p className="text-xs text-destructive" role="alert">
+                          {rangeLoadError}
+                        </p>
+                      ) : null}
                     </div>             
                   </div>
 
                 </div>
                 <div className="overflow-y-auto">
                   <ul className="space-y-2 flex-1 min-h-0">
-                    {(locationInRange ?? locationAll) &&
-                      groupStations(locationInRange ?? locationAll ?? []).map((item, idx) => (
+                    {locationsLoading ? (
+                      <li className="text-sm text-muted-foreground">Загрузка…</li>
+                    ) : locationsLoadError ? (
+                      <li className="text-sm text-muted-foreground">
+                        История недоступна — см. сообщение выше.
+                      </li>
+                    ) : (() => {
+                      const locList = locationInRange ?? locationAll ?? [];
+                      if (locList.length === 0) {
+                        return (
+                          <li className="text-sm text-muted-foreground">
+                            Нет записей о перемещениях.
+                          </li>
+                        );
+                      }
+                      return groupStations(locList).map((item, idx) => (
                         <li key={idx} className="text-sm">
                           <button
                             type="button"
@@ -637,7 +688,8 @@ export function LocationTab({CicternNumber}:LocationTabProps) {
                             </p>
                           </button>
                         </li>
-                      ))}
+                      ));
+                    })()}
                   </ul>
                 </div>
               </CardContent>

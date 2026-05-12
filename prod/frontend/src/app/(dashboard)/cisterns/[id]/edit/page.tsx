@@ -900,6 +900,16 @@ export default function EditCisternPage() {
                     onChange={(e) => handleInputChange('periodPPRRepair', e.target.value)}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="periodPPRRepair">Дата последней покраски</Label>
+                  <Input
+                    id="periodPaintRepair"
+                    type="date"
+                    value={formData.periodPaintRepair || ''}
+                    onChange={(e) => handleInputChange('periodPaintRepair', e.target.value)}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

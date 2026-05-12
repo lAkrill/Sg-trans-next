@@ -67,7 +67,7 @@ interface MultiSelectProps {
   onClear: () => void;
 }
 
-interface DateRangeInputProps {
+export interface DateRangeInputProps {
   label: string;
   value: { from?: string; to?: string };
   onChange: (value: { from?: string; to?: string }) => void;
@@ -187,7 +187,7 @@ const days = Array.from({ length: 31 }, (_, i) =>
   String(i + 1).padStart(2, "0")
 );
 
-const DateRangeInput: React.FC<DateRangeInputProps> = ({
+export const DateRangeInput: React.FC<DateRangeInputProps> = ({
   label,
   value,
   onChange,

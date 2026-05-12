@@ -1,35 +1,53 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Wrench, Calendar } from 'lucide-react';
-import { CisternMilages } from "@/api/milages";
-import type { CisternMilage } from "@/api/milages";
+import type { RailwayCisternDetailDTO } from "@/types/cisterns";
 import { useState, useEffect, useCallback, useMemo } from "react";
 
 import { CisternRepairs } from "@/api/repairs";
 import type { RepairsIn, RepairsMatching, RepairsOut } from "@/api/repairs";
 
-type RepairsTabProps = {
-  CicternNumber: string;
-  CisternId: string;
-};
 
-export function RepairsTab({ CicternNumber, CisternId }: RepairsTabProps) {
-  const [milage, setMilage] = useState<CisternMilage | null>(null);
+interface RepairsTabProps {
+  cistern: RailwayCisternDetailDTO;
+}
+
+const MAINTENANCE_SCHEDULE_ROWS: {
+  label: string;
+  lastField: keyof RailwayCisternDetailDTO;
+  planField: keyof RailwayCisternDetailDTO;
+}[] = [
+  { label: "Капитальный ремонт", lastField: "periodMajorRepair", planField: "planPeriodMajorRepair" },
+  { label: "Периодическое испытание (ГИ)", lastField: "periodPeriodicTest", planField: "planPeriodPeriodicTest" },
+  { label: "Промежуточное испытание (ИГ)", lastField: "periodIntermediateTest", planField: "planPeriodIntermediateTest" },
+  { label: "Деповской ремонт", lastField: "periodDepotRepair", planField: "planPeriodDepotRepair" },
+  { label: "Профремонт (ППР)", lastField: "periodPPRRepair", planField: "planPeriodPPRRepair" },
+];
+
+function formatCisternScheduleDate(value?: string): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("ru-RU");
+}
+
+export function RepairsTab({ cistern }: RepairsTabProps) {
+
   const [repairsMatching, setRepairsMatching] = useState<RepairsMatching[] | null>(null);
   const [repairsIn, setRepairsIn] = useState<RepairsIn[] | null>(null);
   const [repairsOut, setRepairsOut] = useState<RepairsOut[] | null>(null);
 
   const loadData = useCallback(async () => {
-    const [resMilage, resMatching, resIn, resOut] = await Promise.all([
-      CisternMilages.getLastMilage(CicternNumber),
-      CisternRepairs.getRepairsMatchingById(CisternId),
-      CisternRepairs.getAllRepairsNumIn(CicternNumber),
-      CisternRepairs.getAllRepairsNumOut(CicternNumber),
+    const [resMatching, resIn, resOut] = await Promise.all([
+
+      CisternRepairs.getRepairsMatchingById(cistern.id),
+      CisternRepairs.getAllRepairsNumIn(cistern.number),
+      CisternRepairs.getAllRepairsNumOut(cistern.number),
     ]);
-    setMilage(resMilage);
+    
     setRepairsMatching(resMatching);
     setRepairsIn(resIn);
     setRepairsOut(resOut);
-  }, [CicternNumber, CisternId]);
+  }, [cistern.number, cistern.id]);
 
   useEffect(() => {
     loadData();
@@ -321,9 +339,57 @@ export function RepairsTab({ CicternNumber, CisternId }: RepairsTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            Дата планируемого ремонта: <b>{new Date(milage?.repairDate ?? "").toLocaleDateString()}</b>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="min-w-0">
+              <h4 className="mb-3 text-sm font-medium text-muted-foreground">
+                Последний (факт)
+              </h4>
+              <dl className="space-y-3 text-sm">
+                {MAINTENANCE_SCHEDULE_ROWS.map(({ label, lastField }) => (
+                  <div
+                    key={lastField}
+                    className="flex flex-col gap-0.5 border-b border-border/60 pb-3 last:border-b-0 last:pb-0"
+                  >
+                    <dt className="text-muted-foreground">{label}</dt>
+                    <dd className="font-medium tabular-nums">
+                      {formatCisternScheduleDate(cistern[lastField] as string | undefined)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <div className="min-w-0">
+              <h4 className="mb-3 text-sm font-medium text-muted-foreground">
+                Плановый срок
+              </h4>
+              <dl className="space-y-3 text-sm">
+                {MAINTENANCE_SCHEDULE_ROWS.map(({ label, planField }) => (
+                  <div
+                    key={planField}
+                    className="flex flex-col gap-0.5 border-b border-border/60 pb-3 last:border-b-0 last:pb-0"
+                  >
+                    <dt className="text-muted-foreground"> &nbsp;</dt>
+                    <dd className="font-medium tabular-nums">
+                      {formatCisternScheduleDate(cistern[planField] as string | undefined)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="min-w-0">
+          <dl className="space-y-3 text-sm">
+          <div className="flex flex-col gap-0.5 border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
+           <dt className="text-muted-foreground">Покраска</dt>
+                    <dd className="font-medium tabular-nums">
+                      {formatCisternScheduleDate(cistern.periodPaintRepair as string | undefined)}
+                    </dd>
+                    </div>
+            </dl>
+            </div>
+            </div>
+          
         </CardContent>
       </Card>
     </div>

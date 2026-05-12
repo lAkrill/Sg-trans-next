@@ -13,9 +13,59 @@ import type {
   UpdateSavedFilterDTO,
   FilteredCisternsApiResponse,
   RailwayCisternIdAndNumberDTO,
+  RailwayCisternRepairsFilterListDTO,
+  RailwayCisternRepairsFilterRequestDTO,
+  DateRange,
 } from '@/types/cisterns';
 
 const CISTERNS_ENDPOINT = '/api/railway-cisterns';
+
+const REPAIRS_FILTER_DATE_RANGE_KEYS = [
+  'buildDate',
+  'commissioningDate',
+  'commissioningEndDate',
+  'periodMajorRepair',
+  'periodPeriodicTest',
+  'periodIntermediateTest',
+  'periodDepotRepair',
+  'periodPPRRepair',
+  'periodPaintRepair',
+  'planPeriodMajorRepair',
+  'planPeriodPeriodicTest',
+  'planPeriodIntermediateTest',
+  'planPeriodDepotRepair',
+  'planPeriodPPRRepair',
+] as const satisfies readonly (keyof RailwayCisternRepairsFilterRequestDTO)[];
+
+function toYmdDateString(value?: string): string | undefined {
+  if (value == null || value === '') return undefined;
+  const head = value.includes('T') ? value.split('T')[0] : value.slice(0, 10);
+  return head || undefined;
+}
+
+function normalizeRepairsFilterDateRange(range?: DateRange): DateRange | undefined {
+  if (!range) return undefined;
+  const from = toYmdDateString(range.from);
+  const to = toYmdDateString(range.to);
+  if (!from && !to) return undefined;
+  const out: DateRange = {};
+  if (from) out.from = from;
+  if (to) out.to = to;
+  return out;
+}
+
+/** Тело POST repairs-filter: все даты в полях диапазонов только `YYYY-MM-DD`. */
+function serializeRepairsFilterRequest(
+  data: RailwayCisternRepairsFilterRequestDTO
+): RailwayCisternRepairsFilterRequestDTO {
+  const out: RailwayCisternRepairsFilterRequestDTO = { ...data };
+  for (const key of REPAIRS_FILTER_DATE_RANGE_KEYS) {
+    const normalized = normalizeRepairsFilterDateRange(data[key] as DateRange | undefined);
+    if (normalized) (out as Record<string, unknown>)[key] = normalized;
+    else delete (out as Record<string, unknown>)[key];
+  }
+  return out;
+}
 
 export const cisternsApi = {
   // Get paginated list of cisterns
@@ -84,6 +134,18 @@ export const cisternsApi = {
     return response.data;
   },
 
+  // POST /api/railway-cisterns/repairs-filter
+  getRepairsFilter: async (
+    data: RailwayCisternRepairsFilterRequestDTO = {}
+  ): Promise<RailwayCisternRepairsFilterListDTO[]> => {
+    const payload = serializeRepairsFilterRequest(data);
+    const response = await api.post<RailwayCisternRepairsFilterListDTO[]>(
+      `${CISTERNS_ENDPOINT}/repairs-filter`,
+      payload
+    );
+    return response.data;
+  },
+
   // /api/railway-cisterns/detailed
   getAllDetailed: async (): Promise<RailwayCisternDetailDTO[]> => {
     const response = await api.get<RailwayCisternDetailDTO[]>(`${CISTERNS_ENDPOINT}/detailed`);
@@ -95,7 +157,7 @@ export const cisternsApi = {
     const response = await api.post<FilteredCisternsApiResponse>(`${CISTERNS_ENDPOINT}/filter`, filterData);
     const apiData = response.data;
 
-    console.log('API Filter Response:', apiData);
+    //console.log('API Filter Response:', apiData);
     
     // Transform API response to match expected format
     return {

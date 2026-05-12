@@ -671,7 +671,7 @@ export default function CreateCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="periodMajorRepair">Дата планового капитального ремонта</Label>
+                  <Label htmlFor="periodMajorRepair">Дата последнего капитального ремонта</Label>
                   <Input
                     id="periodMajorRepair"
                     type="date"
@@ -681,7 +681,7 @@ export default function CreateCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="periodPeriodicTest">Дата плановой периодической проверки</Label>
+                  <Label htmlFor="periodPeriodicTest">Дата последней периодической проверки</Label>
                   <Input
                     id="periodPeriodicTest"
                     type="date"
@@ -691,7 +691,7 @@ export default function CreateCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="periodIntermediateTest">Дата промежуточной проверки</Label>
+                  <Label htmlFor="periodIntermediateTest">Дата последней промежуточной проверки</Label>
                   <Input
                     id="periodIntermediateTest"
                     type="date"
@@ -701,7 +701,7 @@ export default function CreateCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="periodDepotRepair">Дата планового деповского ремонта</Label>
+                  <Label htmlFor="periodDepotRepair">Дата последнего деповского ремонта</Label>
                   <Input
                     id="periodDepotRepair"
                     type="date"
@@ -710,16 +710,24 @@ export default function CreateCisternPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="periodPPRRepair">Дата планового предупредительного ремонта</Label>
-                  <Input
-                    id="periodPPRRepair"
-                    type="date"
-                    value={formData.periodPPRRepair || ''}
-                    onChange={(e) => handleInputChange('periodPPRRepair', e.target.value)}
-                  />
-                </div>
-                
+                  <div className="space-y-2">
+                    <Label htmlFor="periodPPRRepair">Дата последнего предупредительного ремонта</Label>
+                    <Input
+                      id="periodPPRRepair"
+                      type="date"
+                      value={formData.periodPPRRepair || ''}
+                      onChange={(e) => handleInputChange('periodPPRRepair', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="periodPaintRepair">Дата последней покраски</Label>
+                    <Input
+                      id="periodPaintRepair"
+                      type="date"
+                      value={formData.periodPaintRepair || ''}
+                      onChange={(e) => handleInputChange('periodPaintRepair', e.target.value)}
+                    />
+                  </div>
               </div>
             </CardContent>
           </Card>

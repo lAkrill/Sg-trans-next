@@ -20,6 +20,16 @@ export interface RailwayCisternListDTO {
   affiliationValue: string;
 }
 
+export interface lastMilageDTO {
+  id: string;
+  cisternId: string;
+  cisternNumber: string;
+  milage: number;
+  milageNorm: number;
+  repairTypeId: string;
+  repairDate: string;
+}
+
 export interface RailwayCisternDetailDTO {
   id: string;
   number: string;
@@ -72,6 +82,7 @@ export interface RailwayCisternDetailDTO {
   periodIntermediateTest?: string;
   periodDepotRepair?: string;
   periodPPRRepair?: string;
+  periodPaintRepair?: string;
   planPeriodMajorRepair?: string;
   planPeriodPeriodicTest?: string;
   planPeriodIntermediateTest?: string;
@@ -84,6 +95,38 @@ export interface RailwayCisternDetailDTO {
   createdAt: string;
   updatedAt: string;
   vessels: VesselListDTO[]
+  lastMilage: lastMilageDTO;
+}
+
+export interface RailwayCisternRepairsFilterListDTO {
+    id: string;
+    number: string;
+    registrationNumber?: string;
+    wagonModelId?: string;
+    wagonModelName?: string;
+    buildDate?: string;
+    commissioningDate?: string;
+    serviceLifeYears?:  number;
+    periodMajorRepair?: string;
+    periodPeriodicTest?: string;
+    periodIntermediateTest?: string;
+    periodDepotRepair?: string;
+    periodPPRRepair?: string;
+    periodPaintRepair?: string;
+    planPeriodMajorRepair?: string;
+    planPeriodMajorRepairStatus?: string;
+    planPeriodPeriodicTest?: string;
+    planPeriodPeriodicTestStatus?: string;
+    planPeriodIntermediateTest?: string;
+    planPeriodIntermediateTestStatus?: string;
+    planPeriodDepotRepair?: string;
+    planPeriodDepotRepairStatus?: string;
+    planPeriodPPRRepair?: string;
+    planPeriodPPRRepairStatus?: string;
+    milage?:  number;
+    milageNorm?:  number;
+    milageRemain?:  number;
+    commissioningEndDate?: string;
 }
 
 export interface RailwayCisternListDTO {
@@ -133,6 +176,7 @@ export interface CreateRailwayCisternDTO {
   periodIntermediateTest?: string;
   periodDepotRepair?: string;
   periodPPRRepair?: string;
+  periodPaintRepair?: string;
   dangerClass: number;
   substance: string;
   tareWeight2: number;
@@ -152,6 +196,27 @@ export interface CisternsFilter {
   affiliationId?: string;
   page?: number;
   pageSize?: number;
+}
+
+/** POST /api/railway-cisterns/repairs-filter request body. Во всех `DateRange` поля `from`/`to` — дата `YYYY-MM-DD`. */
+export interface RailwayCisternRepairsFilterRequestDTO {
+  numbers?: string[];
+  wagonModelsNames?: string[];
+  buildDate?: DateRange;
+  commissioningDate?: DateRange;
+  commissioningEndDate?: DateRange;
+  periodMajorRepair?: DateRange;
+  periodPeriodicTest?: DateRange;
+  periodIntermediateTest?: DateRange;
+  periodDepotRepair?: DateRange;
+  periodPPRRepair?: DateRange;
+  /** Все границы диапазонов — строки `YYYY-MM-DD` (как в теле repairs-filter). */
+  periodPaintRepair?: DateRange;
+  planPeriodMajorRepair?: DateRange;
+  planPeriodPeriodicTest?: DateRange;
+  planPeriodIntermediateTest?: DateRange;
+  planPeriodDepotRepair?: DateRange;
+  planPeriodPPRRepair?: DateRange;
 }
 
 export interface PaginatedCisternsResponse {

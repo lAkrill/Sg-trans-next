@@ -32,10 +32,14 @@ import {
 import Image from "next/image";
 import { api } from "@/lib/api";
 import { CisternRepairs } from "@/api/repairs";
-import type { RailwayCisternDetailDTO } from '@/types/cisterns';
+import type {
+  RailwayCisternRepairsFilterListDTO,
+  RailwayCisternRepairsFilterRequestDTO,
+} from "@/types/cisterns";
 import { cisternsApi } from "@/api/cisterns";
 import type { RepairsIn, RepairsOut, RepairsMatching } from "@/api/repairs";
 import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
+import { PlanningRepairsFilters, countPlanningRepairsFilters } from "@/components/repairs/planning-repairs-filters";
 import { useRepairsInFilter, useRepairsOutFilter } from "@/hooks";
 import type {
   RepairsInFilterCriteria,
@@ -103,8 +107,13 @@ export default function RepairsPage() {
   const [repairsIn, setRepairsIn] = useState<RepairsIn[] | null>(null);
   const [repairsOut, setRepairsOut] = useState<RepairsOut[] | null>(null);
   const [repairsMatching, setRepairsMatching] = useState<RepairsMatching[] | null>(null);
-  const [planningCisterns, setPlanningCisterns] = useState<RailwayCisternDetailDTO[] | null>(null);
-  const [mainSection, setMainSection] = useState<"details" | "planning">("details");
+  const [planningRows, setPlanningRows] = useState<RailwayCisternRepairsFilterListDTO[] | null>(
+    null
+  );
+  const [planningFiltersApplied, setPlanningFiltersApplied] =
+    useState<RailwayCisternRepairsFilterRequestDTO>({});
+  const [isPlanningFilterLoading, setIsPlanningFilterLoading] = useState(false);
+  const [mainSection, setMainSection] = useState<"details" | "planning">("planning");
   const [activeTab, setActiveTab] = useState<"in" | "out" | "matched">("in");
   const [searchQuery, setSearchQuery] = useState("");
   const [planningSearchQuery, setPlanningSearchQuery] = useState("");
@@ -162,6 +171,25 @@ export default function RepairsPage() {
   const { data: filterDataOut, isLoading: isFilterLoadingOut } = useRepairsOutFilter(
     filterRequestOut,
     isFilterModeOut
+  );
+
+  const handlePlanningFiltersApply = useCallback(
+    async (filters: RailwayCisternRepairsFilterRequestDTO) => {
+      setPlanningFiltersApplied(filters);
+      setIsPlanningFilterLoading(true);
+      try {
+        const data = await cisternsApi.getRepairsFilter(filters);
+        setPlanningRows(data);
+      } finally {
+        setIsPlanningFilterLoading(false);
+      }
+    },
+    []
+  );
+
+  const activePlanningFiltersCount = useMemo(
+    () => countPlanningRepairsFilters(planningFiltersApplied),
+    [planningFiltersApplied]
   );
 
   const repairsInSource = useMemo(() => {
@@ -311,40 +339,49 @@ export default function RepairsPage() {
     });
   }, [repairsMatchingSorted, searchQuery, activeTab]);
 
-  const planningCisternsFiltered = useMemo(() => {
-    if (!planningSearchQuery.trim()) return planningCisterns ?? [];
+  const planningRowsFiltered = useMemo(() => {
+    if (!planningSearchQuery.trim()) return planningRows ?? [];
     const q = planningSearchQuery.trim().toLowerCase();
-    return (planningCisterns ?? []).filter((cistern) => {
-      const buildDate = cistern.buildDate
-        ? new Date(cistern.buildDate).toLocaleDateString("ru-RU")
+    return (planningRows ?? []).filter((row) => {
+      const buildDate = row.buildDate
+        ? new Date(row.buildDate).toLocaleDateString("ru-RU")
         : "";
       const serviceEndDate = formatPlanningServiceEndDate(
-        cistern.buildDate,
-        cistern.serviceLifeYears
+        row.buildDate,
+        row.serviceLifeYears
       );
       const searchable = [
-        cistern.number,
-        cistern.registrationNumber ?? "",
+        row.number,
+        row.registrationNumber ?? "",
         buildDate,
         serviceEndDate,
-        cistern.model?.name ?? "",
-        String(cistern.serviceLifeYears ?? ""),
-        cistern.periodMajorRepair ?? "",
-        cistern.periodPeriodicTest ?? "",
-        cistern.periodIntermediateTest ?? "",
-        cistern.periodDepotRepair ?? "",
-        cistern.periodPPRRepair ?? "",
-        cistern.planPeriodMajorRepair ?? "",
-        cistern.planPeriodPeriodicTest ?? "",
-        cistern.planPeriodIntermediateTest ?? "",
-        cistern.planPeriodDepotRepair ?? "",
-        cistern.planPeriodPPRRepair ?? "",
+        row.wagonModelName ?? "",
+        String(row.serviceLifeYears ?? ""),
+        row.commissioningDate ?? "",
+        row.commissioningEndDate ?? "",
+        row.periodMajorRepair ?? "",
+        row.periodPeriodicTest ?? "",
+        row.periodIntermediateTest ?? "",
+        row.periodDepotRepair ?? "",
+        row.periodPPRRepair ?? "",
+        row.periodPaintRepair ?? "",
+        row.planPeriodMajorRepair ?? "",
+        row.planPeriodPeriodicTest ?? "",
+        row.planPeriodIntermediateTest ?? "",
+        row.planPeriodDepotRepair ?? "",
+        row.planPeriodPPRRepair ?? "",
+        row.planPeriodMajorRepairStatus ?? "",
+        row.planPeriodPeriodicTestStatus ?? "",
+        row.planPeriodIntermediateTestStatus ?? "",
+        row.planPeriodDepotRepairStatus ?? "",
+        row.planPeriodPPRRepairStatus ?? "",
+        String(row.milage ?? ""),
       ]
         .join(" ")
         .toLowerCase();
       return searchable.includes(q);
     });
-  }, [planningCisterns, planningSearchQuery]);
+  }, [planningRows, planningSearchQuery]);
 
   useEffect(() => {
     setPageIn(1);
@@ -387,11 +424,11 @@ export default function RepairsPage() {
     return list.slice(start, start + pageSize);
   }, [repairsMatchingFiltered, pageMatched, pageSize]);
 
-  const planningCisternsPaginated = useMemo(() => {
-    const list = planningCisternsFiltered ?? [];
+  const planningRowsPaginated = useMemo(() => {
+    const list = planningRowsFiltered ?? [];
     const start = (pagePlanning - 1) * pageSize;
     return list.slice(start, start + pageSize);
-  }, [planningCisternsFiltered, pagePlanning, pageSize]);
+  }, [planningRowsFiltered, pagePlanning, pageSize]);
 
   const totalCountIn = isFilterModeIn
     ? (filterDataIn?.totalCount ?? 0)
@@ -400,7 +437,7 @@ export default function RepairsPage() {
     ? (filterDataOut?.totalCount ?? 0)
     : (repairsOutFiltered ?? []).length;
   const totalCountMatched = (repairsMatchingFiltered ?? []).length;
-  const totalCountPlanning = (planningCisternsFiltered ?? []).length;
+  const totalCountPlanning = (planningRowsFiltered ?? []).length;
   const totalPagesIn = Math.max(
     1,
     isFilterModeIn
@@ -507,31 +544,28 @@ export default function RepairsPage() {
           type: "string",
         },
       ];
-      data = (planningCisternsFiltered ?? []).map((cistern) => ({
-        number: cistern.number ?? "—",
-        registrationNumber: cistern.registrationNumber ?? "—",
-        serviceLifeYears: String(cistern.serviceLifeYears ?? "—"),
-        buildDate: cistern.buildDate
-          ? new Date(cistern.buildDate).toLocaleDateString("ru-RU")
+      data = (planningRowsFiltered ?? []).map((row) => ({
+        number: row.number ?? "—",
+        registrationNumber: row.registrationNumber ?? "—",
+        serviceLifeYears: String(row.serviceLifeYears ?? "—"),
+        buildDate: row.buildDate
+          ? new Date(row.buildDate).toLocaleDateString("ru-RU")
           : "—",
-        model: cistern.model?.name ?? "—",
-        periodMajorRepair: cistern.periodMajorRepair ?? "—",
-        planPeriodMajorRepair: cistern.planPeriodMajorRepair ?? "—",
-        periodDepotRepair: cistern.periodDepotRepair ?? "—",
-        planPeriodDepotRepair: cistern.planPeriodDepotRepair ?? "—",
-        periodPeriodicTest: cistern.periodPeriodicTest ?? "—",
-        planPeriodPeriodicTest: cistern.planPeriodPeriodicTest ?? "—",
-        periodIntermediateTest: cistern.periodIntermediateTest ?? "—",
-        planPeriodIntermediateTest: cistern.planPeriodIntermediateTest ?? "—",
-        periodPPRRepair: cistern.periodPPRRepair ?? "—",
-        planPeriodPPRRepair: cistern.planPeriodPPRRepair ?? "—",
-        mileage: "-",
-        paintingLast: "-",
-        serviceEndDate: formatPlanningServiceEndDate(
-          cistern.buildDate,
-          cistern.serviceLifeYears
-        ),
-        currentUncouplingLast: "-",
+        model: row.wagonModelName ?? "—",
+        periodMajorRepair: formatRuDate(row.periodMajorRepair),
+        planPeriodMajorRepair: formatRuDate(row.planPeriodMajorRepair),
+        periodDepotRepair: formatRuDate(row.periodDepotRepair),
+        planPeriodDepotRepair: formatRuDate(row.planPeriodDepotRepair),
+        periodPeriodicTest: formatRuDate(row.periodPeriodicTest),
+        planPeriodPeriodicTest: formatRuDate(row.planPeriodPeriodicTest),
+        periodIntermediateTest: formatRuDate(row.periodIntermediateTest),
+        planPeriodIntermediateTest: formatRuDate(row.planPeriodIntermediateTest),
+        periodPPRRepair: formatRuDate(row.periodPPRRepair),
+        planPeriodPPRRepair: formatRuDate(row.planPeriodPPRRepair),
+        mileage: row.milage != null ? String(row.milage) : "—",
+        paintingLast: formatRuDate(row.periodPaintRepair),
+        serviceEndDate: formatPlanningServiceEndDate(row.buildDate, row.serviceLifeYears),
+        currentUncouplingLast: "—",
       }));
     } else if (activeTab === "in") {
       columns = [
@@ -696,7 +730,14 @@ export default function RepairsPage() {
     } finally {
       setExportingType(null);
     }
-  }, [activeTab, mainSection, repairsInFiltered, repairsOutFiltered, repairsMatchingFiltered, planningCisternsFiltered]);
+  }, [
+    activeTab,
+    mainSection,
+    repairsInFiltered,
+    repairsOutFiltered,
+    repairsMatchingFiltered,
+    planningRowsFiltered,
+  ]);
 
   const handleCisternSelect = useCallback(async () => {
     setIsInitialLoading(true);
@@ -705,12 +746,12 @@ export default function RepairsPage() {
         CisternRepairs.getAllRepairsIn(),
         CisternRepairs.getAllRepairsOut(),
         CisternRepairs.getAllRepairsMatching(),
-        cisternsApi.getAllDetailed(),
+        cisternsApi.getRepairsFilter({}),
       ]);
       setRepairsIn(res1);
       setRepairsOut(res2);
       setRepairsMatching(res3);
-      setPlanningCisterns(res4);
+      setPlanningRows(res4);
     } finally {
       setIsInitialLoading(false);
     }
@@ -719,6 +760,10 @@ export default function RepairsPage() {
   useEffect(() => {
     handleCisternSelect();
   }, [handleCisternSelect]);
+
+  useEffect(() => {
+    setPagePlanning(1);
+  }, [planningFiltersApplied]);
 
   const getVisiblePages = (currentPage: number, totalPages: number) => {
     const delta = 1;
@@ -825,13 +870,13 @@ export default function RepairsPage() {
         className="w-full"
       >
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1">
-          <TabsTrigger value="details" className="gap-3 py-4 text-[2rem] leading-tight">
-            <Wrench className="size-[1em] shrink-0" />
-            Сведения о ремонтах
-          </TabsTrigger>
           <TabsTrigger value="planning" className="py-4 text-[2rem] leading-tight">
             <CalendarCog className="size-[1em] shrink-0" />
             Планирование ремонтов
+          </TabsTrigger>
+          <TabsTrigger value="details" className="gap-3 py-4 text-[2rem] leading-tight">
+            <Wrench className="size-[1em] shrink-0" />
+            Сведения о ремонтах
           </TabsTrigger>
         </TabsList>
 
@@ -1217,14 +1262,15 @@ export default function RepairsPage() {
                 className="max-w-md"
               />
             </div>
-            <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 rounded-md border bg-background p-1">
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0"
                 title="Экспорт DOC"
                 onClick={() => handleExport("doc")}
-                disabled={!!exportingType || isInitialLoading}
+                disabled={!!exportingType || isInitialLoading || isPlanningFilterLoading}
               >
                 {exportingType === "doc" ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1238,7 +1284,7 @@ export default function RepairsPage() {
                 className="h-8 w-8 p-0"
                 title="Экспорт PDF"
                 onClick={() => handleExport("pdf")}
-                disabled={!!exportingType || isInitialLoading}
+                disabled={!!exportingType || isInitialLoading || isPlanningFilterLoading}
               >
                 {exportingType === "pdf" ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1252,7 +1298,7 @@ export default function RepairsPage() {
                 className="h-8 w-8 p-0"
                 title="Экспорт XLS"
                 onClick={() => handleExport("xls")}
-                disabled={!!exportingType || isInitialLoading}
+                disabled={!!exportingType || isInitialLoading || isPlanningFilterLoading}
               >
                 {exportingType === "xls" ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1260,6 +1306,12 @@ export default function RepairsPage() {
                   <Image src="/icon_excel.svg" alt="Экспорт XLS" width={16} height={16} />
                 )}
               </Button>
+            </div>
+            <PlanningRepairsFilters
+              appliedFilters={planningFiltersApplied}
+              onApply={handlePlanningFiltersApply}
+              activeFiltersCount={activePlanningFiltersCount}
+            />
             </div>
           </div>
           <Card>
@@ -1372,7 +1424,7 @@ export default function RepairsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isInitialLoading ? (
+                  {isInitialLoading || isPlanningFilterLoading ? (
                     <TableRow>
                       <TableCell colSpan={19} className="text-center text-muted-foreground py-8">
                         <div className="inline-flex items-center gap-2">
@@ -1381,41 +1433,42 @@ export default function RepairsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : planningCisternsPaginated?.length ? (
-                    planningCisternsPaginated.map((cistern) => (
-                      <TableRow key={cistern.id} className="even:bg-muted/30">
-                        <TableCell className="whitespace-nowrap">{cistern.number}</TableCell>
+                  ) : planningRowsPaginated?.length ? (
+                    planningRowsPaginated.map((row) => (
+                      <TableRow key={row.id} className="even:bg-muted/30">
+                        <TableCell className="whitespace-nowrap">{row.number}</TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {cistern.registrationNumber ?? "—"}
+                          {row.registrationNumber ?? "—"}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">{cistern.serviceLifeYears ?? "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{row.serviceLifeYears ?? "—"}</TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {cistern.buildDate
-                            ? new Date(cistern.buildDate).toLocaleDateString("ru-RU")
+                          {row.buildDate
+                            ? new Date(row.buildDate).toLocaleDateString("ru-RU")
                             : "—"}
                         </TableCell>
                         <TableCell className="whitespace-normal break-words min-w-0">
-                          {cistern.model?.name ?? "—"}
+                          {row.wagonModelName ?? "—"}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodMajorRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodMajorRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodDepotRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodDepotRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodPeriodicTest)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodPeriodicTest)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodIntermediateTest)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodIntermediateTest)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.periodPPRRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(cistern.planPeriodPPRRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap text-center">-</TableCell>
-                        <TableCell className="whitespace-nowrap text-center">-</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodMajorRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodMajorRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodDepotRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodDepotRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodPeriodicTest)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodPeriodicTest)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodIntermediateTest)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodIntermediateTest)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodPPRRepair)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodPPRRepair)}</TableCell>
                         <TableCell className="whitespace-nowrap text-center">
-                          {formatPlanningServiceEndDate(
-                            cistern.buildDate,
-                            cistern.serviceLifeYears
-                          )}
+                          {row.milage != null ? row.milage : "—"}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-center">-</TableCell>
+                        <TableCell className="whitespace-nowrap text-center">
+                          {formatRuDate(row.periodPaintRepair)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-center">
+                          {formatPlanningServiceEndDate(row.buildDate, row.serviceLifeYears)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-center">—</TableCell>
                       </TableRow>
                     ))
                   ) : (
