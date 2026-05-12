@@ -195,6 +195,7 @@ public static class RailwayCisternEndpoints
                         PeriodIntermediateTest = rc.PeriodIntermediateTest,
                         PeriodDepotRepair = rc.PeriodDepotRepair,
                         PeriodPPRRepair = rc.PeriodPPRRepair,
+                        PeriodPaintRepair = rc.PeriodPaintRepair,
                         DangerClass = rc.DangerClass,
                         Substance = rc.Substance,
                         TareWeight2 = rc.TareWeight2,
@@ -224,6 +225,22 @@ public static class RailwayCisternEndpoints
 
                     WagonModel Model = null;
                     var milage = milageCisterns.Where(m => m.CisternId == cistern.Id).OrderByDescending(m => m.InputDate).FirstOrDefault();
+                    
+                    var LastMilage = milage == null? null : new MilageCisternDTO
+                    {
+                        Id = milage.Id,
+                        CisternId = milage.CisternId,
+                        CisternNumber = milage.CisternNumber,
+                        Milage = milage.Milage,
+                        MilageNorm = milage.MilageNorm,
+                        RepairTypeId = milage.RepairTypeId,
+                        RepairDate = milage.RepairDate,
+                        InputModeCode = milage.InputModeCode,
+                        InputDate = milage.InputDate
+                    };
+                    
+
+                    cistern.LastMilage=LastMilage;
                     if (cistern.Model != null)
                         Model = models.FirstOrDefault(m => m.Id == cistern.Model.Id);
                     var pers = personalCisRepairPeriods.FirstOrDefault(p => p.CisternId == cistern.Id);
@@ -760,6 +777,7 @@ public static class RailwayCisternEndpoints
                         PeriodIntermediateTest = rc.PeriodIntermediateTest,
                         PeriodDepotRepair = rc.PeriodDepotRepair,
                         PeriodPPRRepair = rc.PeriodPPRRepair,
+                        PeriodPaintRepair = rc.PeriodPaintRepair,
                         DangerClass = rc.DangerClass,
                         Substance = rc.Substance,
                         TareWeight2 = rc.TareWeight2,
@@ -787,6 +805,20 @@ public static class RailwayCisternEndpoints
 
                 WagonModel Model = null;
                 var milage = context.MilageCisterns.Where(m => m.CisternId == cistern.Id).OrderByDescending(m => m.InputDate).FirstOrDefault();
+                var LastMilage = milage == null? null : new MilageCisternDTO
+                    {
+                        Id = milage.Id,
+                        CisternId = milage.CisternId,
+                        CisternNumber = milage.CisternNumber,
+                        Milage = milage.Milage,
+                        MilageNorm = milage.MilageNorm,
+                        RepairTypeId = milage.RepairTypeId,
+                        RepairDate = milage.RepairDate,
+                        InputModeCode = milage.InputModeCode,
+                        InputDate = milage.InputDate
+                    };
+                cistern.LastMilage=LastMilage;
+
                 if (cistern.Model != null)
                     Model = context.WagonModels.FirstOrDefault(m => m.Id == cistern.Model.Id);
                 var pers = context.PersonalCisRepairPeriods.FirstOrDefault(p => p.CisternId == cistern.Id);
@@ -1118,30 +1150,61 @@ public static class RailwayCisternEndpoints
                     var pers = personalCisRepairPeriods.FirstOrDefault(p => p.CisternId == cistern.Id);
 
                     var periodictest = 8;
+                    cistern.PlanPeriodPeriodicTestStatus = "По умолчанию 8";
                     var IntermediateTest = 4;
+                    cistern.PlanPeriodIntermediateTestStatus = "По умолчанию 4";
                     var PPRRepair = 3;
+                    cistern.PlanPeriodPPRRepairStatus = "По умолчанию 3";
                     var MajorRep = 10;
+                    cistern.PlanPeriodMajorRepairStatus = "По умолчанию 10";
                     var DepoRep = 3;
+                    cistern.PlanPeriodDepotRepairStatus = "По умолчанию 3";
                     if (Model != null)
                     {
-                        periodictest = Model.PeriodicTest.HasValue ? Model.PeriodicTest.Value : 8;
-                        IntermediateTest = Model.IntermediateTest.HasValue ? Model.IntermediateTest.Value : 4;
-                        PPRRepair = Model.PPRRep.HasValue ? Model.PPRRep.Value : 3;
+                        if(Model.PeriodicTest.HasValue){
+                            periodictest = Model.PeriodicTest.Value;
+                            cistern.PlanPeriodPeriodicTestStatus = "Из модели вагона " + Model.PeriodicTest.Value.ToString();
+                        }
+                        if(Model.IntermediateTest.HasValue){
+                            IntermediateTest = Model.IntermediateTest.Value;
+                            cistern.PlanPeriodIntermediateTestStatus = "Из модели вагона " + Model.IntermediateTest.Value.ToString();
+                        }
+                        if(Model.PPRRep.HasValue ){
+                            PPRRepair = Model.PPRRep.Value;
+                            cistern.PlanPeriodPPRRepairStatus = "Из модели вагона " + Model.PPRRep.Value.ToString();
+                        }
                         MajorRep = Model.MajorRep;
+                        cistern.PlanPeriodMajorRepairStatus = "Из модели вагона " + Model.MajorRep.ToString();
                         DepoRep = Model.DepoRep;
+                        cistern.PlanPeriodDepotRepairStatus = "Из модели вагона " + Model.DepoRep.ToString();
                     }
                     if (pers != null)
                     {
                         if (pers.PeriodicTest.HasValue)
+                        {
                             periodictest = pers.PeriodicTest.Value;
+                            cistern.PlanPeriodPeriodicTestStatus = "Из ремонтов для конкретного вагона " + pers.PeriodicTest.Value.ToString();
+                        }
                         if (pers.IntermediateTest.HasValue)
+                        {
                             IntermediateTest = pers.IntermediateTest.Value;
+                            cistern.PlanPeriodIntermediateTestStatus = "Из ремонтов для конкретного вагона " + pers.IntermediateTest.Value.ToString();
+                        }
                         if (pers.PPRRep.HasValue)
+                        {
                             PPRRepair = pers.PPRRep.Value;
+                            cistern.PlanPeriodPPRRepairStatus = "Из ремонтов для конкретного вагона " + pers.PPRRep.Value.ToString();
+                        }
                         if (pers.MajorRep.HasValue)
+                        {
                             MajorRep = pers.MajorRep.Value;
+                            cistern.PlanPeriodMajorRepairStatus = "Из ремонтов для конкретного вагона " + pers.MajorRep.ToString();
+                        }
                         if (pers.DepoRep.HasValue)
+                        {
                             DepoRep = pers.DepoRep.Value;
+                            cistern.PlanPeriodDepotRepairStatus = "Из ремонтов для конкретного вагона " + pers.DepoRep.ToString();
+                        }
                     }
 
                     cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, cistern.ServiceLifeYears, periodictest);
@@ -1153,9 +1216,11 @@ public static class RailwayCisternEndpoints
                     if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
                     {
                         cistern.PlanPeriodDepotRepair = milage.RepairDate;
+                        cistern.PlanPeriodDepotRepairStatus = "Из пробега " + milage.RepairDate.ToString("dd.MM.yyyy");
                         if (milage.RepairTypeId == DepoRepairType)
                         {
                             cistern.PlanPeriodMajorRepair = milage.RepairDate;
+                            cistern.PlanPeriodMajorRepairStatus = "Из пробега " + milage.RepairDate.ToString("dd.MM.yyyy");
                         }
                     }
                 }
@@ -1230,6 +1295,18 @@ public static class RailwayCisternEndpoints
                         if (req.PlanPeriodPPRRepair.To.HasValue)
                         {
                             cisterns = cisterns.Where(rc => rc.PlanPeriodPPRRepair <= req.PlanPeriodPPRRepair.To.Value).ToList();
+                        }
+                    }
+
+                    if (req.PeriodPaintRepair != null)
+                    {
+                        if (req.PeriodPaintRepair.From.HasValue)
+                        {
+                            cisterns = cisterns.Where(rc => rc.PeriodPaintRepair >= req.PeriodPaintRepair.From.Value).ToList();
+                        }
+                        if (req.PeriodPaintRepair.To.HasValue)
+                        {
+                            cisterns = cisterns.Where(rc => rc.PeriodPaintRepair <= req.PeriodPaintRepair.To.Value).ToList();
                         }
                     }
                 }

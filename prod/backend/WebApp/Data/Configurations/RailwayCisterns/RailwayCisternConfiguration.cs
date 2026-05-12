@@ -60,7 +60,7 @@ public partial class RailwayCisternConfiguration : IEntityTypeConfiguration<Rail
             .HasDefaultValue(0);
         entity.Property(e => e.TareWeight3).HasColumnName("TareWeight3").IsRequired().HasColumnType("numeric")
             .HasDefaultValue(0);
-
+        entity.Property(e => e.PeriodPaintRepair).HasColumnName("PeriodPaintRepair").HasColumnType("timestamp without time zone");
 
         entity.HasOne(d => d.Affiliation)
             .WithMany(p => p.RailwayCisterns)

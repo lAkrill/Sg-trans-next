@@ -44,6 +44,7 @@ public class RailwayCisternDetailDTO
     public DateOnly? PeriodIntermediateTest { get; set; }
     public DateOnly? PeriodDepotRepair { get; set; }
     public DateOnly? PeriodPPRRepair { get; set; }
+    public DateTime? PeriodPaintRepair {get; set; }
     //PLAN
     public DateOnly? PlanPeriodMajorRepair { get; set; }
     public DateOnly? PlanPeriodPeriodicTest { get; set; }
@@ -58,6 +59,7 @@ public class RailwayCisternDetailDTO
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public List<VesselListDTO>? Vessels { get; set; }
+    public MilageCisternDTO? LastMilage {get; set;}
 }
 
 public class RailwayCisternListDTO
@@ -167,6 +169,7 @@ public class FilterRepairsCisternsRequestDTO
     public DateRange? PeriodIntermediateTest { get; set; }
     public DateRange? PeriodDepotRepair { get; set; }
     public DateRange? PeriodPPRRepair { get; set; }
+    public DateTimeWithoutOffsetRange? PeriodPaintRepair {get; set; }
     //PLAN
     public DateRange? PlanPeriodMajorRepair { get; set; }
     public DateRange? PlanPeriodPeriodicTest { get; set; }
@@ -190,12 +193,18 @@ public class FilterRepairsCisternsResponseDTO
     public DateOnly? PeriodIntermediateTest { get; set; }
     public DateOnly? PeriodDepotRepair { get; set; }
     public DateOnly? PeriodPPRRepair { get; set; }
+    public DateTime? PeriodPaintRepair {get; set; }
     //PLAN
     public DateOnly? PlanPeriodMajorRepair { get; set; }
+    public string? PlanPeriodMajorRepairStatus { get; set; }
     public DateOnly? PlanPeriodPeriodicTest { get; set; }
+    public string? PlanPeriodPeriodicTestStatus { get; set; }
     public DateOnly? PlanPeriodIntermediateTest { get; set; }
+    public string? PlanPeriodIntermediateTestStatus { get; set; }
     public DateOnly? PlanPeriodDepotRepair { get; set; }
+    public string? PlanPeriodDepotRepairStatus { get; set; }
     public DateOnly? PlanPeriodPPRRepair { get; set; }
+    public string? PlanPeriodPPRRepairStatus { get; set; }
     public int Milage {get; set;}
     public int MilageNorm {get; set;}
     public int MilageRemain {get; set;}

@@ -42,6 +42,7 @@ public class RailwayCistern
     public string Substance { get; set; } = null!;
     public decimal TareWeight2 { get; set; }
     public decimal TareWeight3 { get; set; }
+    public DateTime? PeriodPaintRepair {get; set; }
 
     public Affiliation Affiliation { get; set; } = null!;
     public Manufacturer Manufacturer { get; set; } = null!;

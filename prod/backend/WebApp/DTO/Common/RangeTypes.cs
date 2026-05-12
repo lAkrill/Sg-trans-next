@@ -12,6 +12,12 @@ public class DateTimeRange
     public DateTimeOffset? To { get; set; }
 }
 
+public class DateTimeWithoutOffsetRange
+{
+    public DateTime? From { get; set; }
+    public DateTime? To { get; set; }
+}
+
 public class DecimalRange
 {
     public decimal? From { get; set; }
