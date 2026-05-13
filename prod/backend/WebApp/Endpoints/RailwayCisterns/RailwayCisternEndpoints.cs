@@ -971,6 +971,7 @@ public static class RailwayCisternEndpoints
                     cistern.PeriodIntermediateTest = dto.PeriodIntermediateTest;
                     cistern.PeriodDepotRepair = dto.PeriodDepotRepair;
                     cistern.PeriodPPRRepair = dto.PeriodDepotRepair;
+                    cistern.PeriodPaintRepair = dto.PeriodPaintRepair;
                     cistern.DangerClass = dto.DangerClass;
                     cistern.Substance = dto.Substance;
                     cistern.TareWeight2 = dto.TareWeight2;
