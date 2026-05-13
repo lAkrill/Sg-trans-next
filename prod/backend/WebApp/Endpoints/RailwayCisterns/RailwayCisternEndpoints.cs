@@ -914,6 +914,7 @@ public static class RailwayCisternEndpoints
                         PeriodIntermediateTest = dto.PeriodIntermediateTest,
                         PeriodDepotRepair = dto.PeriodDepotRepair,
                         PeriodPPRRepair = dto.PeriodDepotRepair,
+                        PeriodPaintRepair = dto.PeriodPaintRepair,
                         DangerClass = dto.DangerClass,
                         Substance = dto.Substance,
                         TareWeight2 = dto.TareWeight2,

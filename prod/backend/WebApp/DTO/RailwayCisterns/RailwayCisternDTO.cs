@@ -110,6 +110,7 @@ public class CreateRailwayCisternDTO
     public DateOnly? PeriodIntermediateTest { get; set; }
     public DateOnly? PeriodDepotRepair { get; set; }
     public DateOnly? PeriodPPRRepair { get; set; }
+    public DateTime? PeriodPaintRepair {get; set; }
     public int DangerClass { get; set; }
     public string Substance { get; set; }
     public decimal TareWeight2 { get; set; }
