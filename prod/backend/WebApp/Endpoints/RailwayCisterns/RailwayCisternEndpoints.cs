@@ -1106,6 +1106,18 @@ public static class RailwayCisternEndpoints
                             query = query.Where(rc => rc.PeriodPPRRepair <= req.PeriodPPRRepair.To.Value);
                         }
                     }
+
+                    if(req.PeriodPaintRepair != null)
+                    {
+                        if (req.PeriodPaintRepair.From.HasValue)
+                        {
+                            query = query.Where(rc=>rc.PeriodPaintRepair >= req.PeriodPaintRepair.From.Value);
+                        }
+                        if (req.PeriodPaintRepair.To.HasValue)
+                        {
+                            query = query.Where(rc => rc.PeriodPaintRepair <= req.PeriodPaintRepair.To.Value);
+                        }
+                    }
                 }
 
                 var cisterns = await query.Select(rc => new FilterRepairsCisternsResponseDTO
@@ -1127,6 +1139,7 @@ public static class RailwayCisternEndpoints
                         PeriodIntermediateTest = rc.PeriodIntermediateTest,
                         PeriodDepotRepair = rc.PeriodDepotRepair,
                         PeriodPPRRepair = rc.PeriodPPRRepair,
+                        PeriodPaintRepair = rc.PeriodPaintRepair,
                         CommissioningEndDate = rc.CommissioningDate != null
                             ? rc.CommissioningDate.Value.AddYears(rc.ServiceLifeYears)
                             : null,
