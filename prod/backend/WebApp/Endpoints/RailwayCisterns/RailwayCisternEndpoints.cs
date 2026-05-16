@@ -122,6 +122,8 @@ public static class RailwayCisternEndpoints
                     .Include(rc => rc.Registrar)
                     .Include(rc => rc.Affiliation)
                     .Include(rc => rc.MilageCisterns)
+                    .Include(rc => rc.RailwayCisternStatus)
+                        .ThenInclude(st => st.Creator)
                     .Select(rc => new RailwayCisternDetailDTO
                     {
                         Id = rc.Id,
@@ -213,7 +215,8 @@ public static class RailwayCisternEndpoints
                                 Pressure = v.Pressure,
                                 Capacity = v.Capacity
                             }).ToList()
-                            : null
+                            : null,
+                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO()
                     })
                     .ToListAsync();
                 var models = await context.WagonModels.ToListAsync();
@@ -699,6 +702,8 @@ public static class RailwayCisternEndpoints
                     .Include(rc => rc.Owner)
                     .Include(rc => rc.Registrar)
                     .Include(rc => rc.Affiliation)
+                    .Include(rc => rc.RailwayCisternStatus)
+                        .ThenInclude(st => st.Creator)
                     .Where(rc => rc.Id == id)
                     .Select(rc => new RailwayCisternDetailDTO
                     {
@@ -795,7 +800,8 @@ public static class RailwayCisternEndpoints
                                 Pressure = v.Pressure,
                                 Capacity = v.Capacity
                             }).ToList()
-                            : null
+                            : null,
+                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO()
                     })
                     .FirstOrDefaultAsync();
                 if (cistern == null)
@@ -918,7 +924,8 @@ public static class RailwayCisternEndpoints
                         DangerClass = dto.DangerClass,
                         Substance = dto.Substance,
                         TareWeight2 = dto.TareWeight2,
-                        TareWeight3 = dto.TareWeight3
+                        TareWeight3 = dto.TareWeight3,
+                        CisternStatusId = dto.RailwayCisternStatusId
                     };
 
                     context.Add(cistern);
@@ -977,6 +984,7 @@ public static class RailwayCisternEndpoints
                     cistern.Substance = dto.Substance;
                     cistern.TareWeight2 = dto.TareWeight2;
                     cistern.TareWeight3 = dto.TareWeight3;
+                    cistern.CisternStatusId = dto.RailwayCisternStatusId;
 
                     await context.SaveChangesAsync();
                     return Results.NoContent();
@@ -1012,6 +1020,8 @@ public static class RailwayCisternEndpoints
                 var query = context.Set<RailwayCistern>()
                     .Include(rc => rc.Model)
                     .Include(rc => rc.MilageCisterns)
+                    .Include(rc => rc.RailwayCisternStatus)
+                    .Where(rc => rc.CisternStatusId == Guid.Parse("6c7f6085-7509-46fd-8ffb-36da4aafd7ee"))
                     .AsQueryable();
 
                 if(req != null)

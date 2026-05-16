@@ -61,6 +61,8 @@ public partial class RailwayCisternConfiguration : IEntityTypeConfiguration<Rail
         entity.Property(e => e.TareWeight3).HasColumnName("TareWeight3").IsRequired().HasColumnType("numeric")
             .HasDefaultValue(0);
         entity.Property(e => e.PeriodPaintRepair).HasColumnName("PeriodPaintRepair").HasColumnType("timestamp without time zone");
+        entity.Property(e => e.CisternStatusId).HasColumnName("CisternStatusId")
+            .IsRequired();
 
         entity.HasOne(d => d.Affiliation)
             .WithMany(p => p.RailwayCisterns)
@@ -102,5 +104,10 @@ public partial class RailwayCisternConfiguration : IEntityTypeConfiguration<Rail
             .WithOne(p => p.Wagon)
             .HasForeignKey(p => p.WagonId)
             .IsRequired(false);
+
+        entity.HasOne(r => r.RailwayCisternStatus)
+            .WithMany()
+            .HasForeignKey(r => r.CisternStatusId)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }
