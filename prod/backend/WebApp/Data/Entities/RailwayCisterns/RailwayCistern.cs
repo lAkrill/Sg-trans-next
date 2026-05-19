@@ -43,6 +43,7 @@ public class RailwayCistern
     public decimal TareWeight2 { get; set; }
     public decimal TareWeight3 { get; set; }
     public DateTime? PeriodPaintRepair {get; set; }
+    public Guid CisternStatusId {get; set;}
 
     public Affiliation Affiliation { get; set; } = null!;
     public Manufacturer Manufacturer { get; set; } = null!;
@@ -54,5 +55,6 @@ public class RailwayCistern
     public ICollection<MilageCistern> MilageCisterns { get; set; } = new List<MilageCistern>();
     public ICollection<PartInstallation> PartInstallations { get; set; } = new List<PartInstallation>();
     public PersonalCisRepairPeriod? personalCisRepairPeriod {get; set;}
+    public RailwayCisternStatus RailwayCisternStatus {get; set; } = null!;
 }
 
