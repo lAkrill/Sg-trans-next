@@ -453,6 +453,7 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
     { value: "registrar.name", label: "Регистратор" },
     { value: "notes", label: "Примечания" },
     { value: "owner.name", label: "Собственник" },
+    { value: "railwaycisternstatus.name", label: "Статус" },
     { value: "techconditions", label: "Техническое состояние" },
     { value: "pripiska", label: "Приписка" },
     { value: "reregistrationdate", label: "Дата перерегистрации" },

@@ -30,6 +30,14 @@ export interface lastMilageDTO {
   repairDate: string;
 }
 
+export interface RailwayCisternStatusDTO {
+  id: string;
+  name: string;
+  updatedAt: string;
+  firstName: string;
+  lastName: string;
+}
+
 export interface RailwayCisternDetailDTO {
   id: string;
   number: string;
@@ -96,6 +104,7 @@ export interface RailwayCisternDetailDTO {
   updatedAt: string;
   vessels: VesselListDTO[]
   lastMilage: lastMilageDTO;
+  railwayCisternStatus: RailwayCisternStatusDTO;
 }
 
 export interface RailwayCisternRepairsFilterListDTO {

@@ -18,6 +18,7 @@ export { registrarsConfig } from './registrars.config';
 export { stampNumbersConfig } from './stamp-numbers.config';
 export { partsBaseConfig } from './parts.config';
 export { vesselsConfig } from './vessels.config';
+export { cisternStatusConfig } from './railwayCistern-status';
 
 // Объект со всеми базовыми конфигурациями
 import { affiliationsBaseConfig } from './affiliations.config';
@@ -35,6 +36,7 @@ import { registrarsBaseConfig } from './registrars.config';
 import { stampNumbersBaseConfig } from './stamp-numbers.config';
 import { partsBaseConfig } from './parts.config';
 import { vesselsBaseConfig } from './vessels.config';
+import { cisternStatusBaseConfig } from './railwayCistern-status';
 import { DirectoryConfig } from './types';
 
 export const directoriesConfig: Record<string, DirectoryConfig> = {
@@ -53,6 +55,7 @@ export const directoriesConfig: Record<string, DirectoryConfig> = {
   stampNumbers: stampNumbersBaseConfig,
   parts: partsBaseConfig,
   vessels: vesselsBaseConfig,
+  cisternStatuses: cisternStatusBaseConfig,
 };
 
 // Утилиты для работы с базовыми конфигурациями

@@ -182,6 +182,19 @@ export interface UpdateWagonTypeDTO {
   type: string;
 }
 
+// CisternStatus (Статус цистерны)
+export interface CisternStatusDTO extends BaseEntity {
+  name: string;
+}
+
+export interface CreateCisternStatusDTO {
+  name: string;
+}
+
+export interface UpdateCisternStatusDTO {
+  name: string;
+}
+
 // Location (Местоположение)
 export interface LocationDTO extends BaseEntity {
   name: string;

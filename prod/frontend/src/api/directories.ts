@@ -68,6 +68,9 @@ import type {
   CreateStationDTO,
   UpdateStationDTO,
   PaginatedStationsResponse,
+  UpdateCisternStatusDTO,
+  CisternStatusDTO,
+  CreateCisternStatusDTO,
 } from '@/types/directories';
 import { CreateVesselDTO, PaginatedVesselsResponse, UpdateVesselDto, VesselDTO } from '@/types/vessels';
 
@@ -136,6 +139,13 @@ export const wagonTypesApi = createDirectoryApi<
   CreateWagonTypeDTO,
   UpdateWagonTypeDTO
 >('wagon-types');
+
+// CisternStatuses API
+export const cisternStatusesApi = createDirectoryApi<
+  CisternStatusDTO,
+  CreateCisternStatusDTO,
+  UpdateCisternStatusDTO
+>('railway-cistern-status');
 
 // Locations API
 export const locationsApi = createDirectoryApi<
@@ -211,6 +221,9 @@ export const convertToSelectOptions = {
   wagonModels: (models: WagonModelDTO[]) =>
     models.map(m => ({ value: m.id, label: m.name })),
 
+  cisternStatuses: (cisternStatuses: CisternStatusDTO[]) =>
+    cisternStatuses.map(cs => ({ value: cs.id, label: cs.name })),
+  
   affiliations: (affiliations: AffiliationDTO[]) =>
     affiliations.map(a => ({ value: a.id, label: a.value })),
 

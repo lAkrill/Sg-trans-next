@@ -92,6 +92,8 @@ const getDisplayValue = (cistern: DisplayCistern, field: string): string => {
       return detailCistern.model?.name || "";
     case "owner.name":
       return detailCistern.owner?.name || "";
+    case "railwaycisternstatus.name":
+      return detailCistern.railwayCisternStatus?.name || "";
     case "affiliation.value":
       return detailCistern.affiliation?.value || "";
     case "axlecount":
@@ -154,6 +156,7 @@ export default function CisternsPage() {
     "model.name",
     "owner.name",
     "registrationnumber",
+    "railwaycisternstatus.name",
   ]);
 
   // Debounce search term for API calls
@@ -357,6 +360,7 @@ export default function CisternsPage() {
       "model.name",
       "owner.name",
       "registrationnumber",
+      "railwaycisternstatus.name",
     ]);
     setFilter((prev) => ({ ...prev, page: 1 }));
   }, []);
@@ -646,6 +650,8 @@ export default function CisternsPage() {
                           ? "Модель"
                           : column === "owner.name"
                           ? "Собственник"
+                          : column === "railwaycisternstatus.name"
+                          ? "Статус"
                           : column === "affiliation.value"
                           ? "Принадлежность"
                           : column === "axlecount"

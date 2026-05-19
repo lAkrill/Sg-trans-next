@@ -13,8 +13,21 @@ import {
   SheetTitle,
   SheetTrigger,
   Badge,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Checkbox,
 } from "@/components/ui";
 import type { RailwayCisternRepairsFilterRequestDTO } from "@/types/cisterns";
+import {
+  DEFAULT_PLANNING_VISIBLE_COLUMNS,
+  PLANNING_COLUMN_OPTIONS,
+} from "@/lib/repairs/planning-columns";
 import { cn } from "@/lib/utils";
 
 const parseCommaList = (s: string): string[] =>
@@ -161,12 +174,16 @@ interface PlanningRepairsFiltersProps {
   appliedFilters: RailwayCisternRepairsFilterRequestDTO;
   onApply: (filters: RailwayCisternRepairsFilterRequestDTO) => void;
   activeFiltersCount: number;
+  visibleColumns: string[];
+  onVisibleColumnsChange: (columns: string[]) => void;
 }
 
 export function PlanningRepairsFilters({
   appliedFilters,
   onApply,
   activeFiltersCount,
+  visibleColumns,
+  onVisibleColumnsChange,
 }: PlanningRepairsFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState<RailwayCisternRepairsFilterRequestDTO>({});
@@ -199,8 +216,9 @@ export function PlanningRepairsFilters({
     setNumbersText("");
     setWagonModelsText("");
     onApply({});
+    onVisibleColumnsChange([...DEFAULT_PLANNING_VISIBLE_COLUMNS]);
     setIsOpen(false);
-  }, [onApply]);
+  }, [onApply, onVisibleColumnsChange]);
 
   const handleApply = useCallback(() => {
     const listNums = parseWagonNumbersList(numbersText);
@@ -237,7 +255,16 @@ export function PlanningRepairsFilters({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto pt-4 gap-4 pr-1">
+        <Tabs defaultValue="filters" className="flex flex-col flex-1 min-h-0 pt-4">
+          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+            <TabsTrigger value="filters">Фильтры</TabsTrigger>
+            <TabsTrigger value="columns">Столбцы</TabsTrigger>
+          </TabsList>
+
+          <TabsContent
+            value="filters"
+            className="flex flex-col flex-1 min-h-0 overflow-y-auto mt-4 gap-4 pr-1 data-[state=inactive]:hidden"
+          >
           <div className="flex flex-col gap-2">
             <Label>Номера вагонов (с новой строки или через запятую)</Label>
             <Textarea
@@ -352,7 +379,38 @@ export function PlanningRepairsFilters({
           <Button className="w-full shrink-0 mt-2" onClick={handleApply}>
             Применить
           </Button>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="columns" className="flex-1 overflow-y-auto mt-4 pr-1 data-[state=inactive]:hidden">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Видимые столбцы</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-2">
+                {PLANNING_COLUMN_OPTIONS.map((option) => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`planning-column-${option.value}`}
+                      checked={visibleColumns.includes(option.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          onVisibleColumnsChange([...visibleColumns, option.value]);
+                        } else if (visibleColumns.length > 1) {
+                          onVisibleColumnsChange(
+                            visibleColumns.filter((col) => col !== option.value)
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`planning-column-${option.value}`} className="text-sm font-normal">
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

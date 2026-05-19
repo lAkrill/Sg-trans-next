@@ -40,6 +40,11 @@ import { cisternsApi } from "@/api/cisterns";
 import type { RepairsIn, RepairsOut, RepairsMatching } from "@/api/repairs";
 import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
 import { PlanningRepairsFilters, countPlanningRepairsFilters } from "@/components/repairs/planning-repairs-filters";
+import { PlanningRepairsTable } from "@/components/repairs/planning-repairs-table";
+import {
+  DEFAULT_PLANNING_VISIBLE_COLUMNS,
+  getPlanningExportColumnKeys,
+} from "@/lib/repairs/planning-columns";
 import { useRepairsInFilter, useRepairsOutFilter } from "@/hooks";
 import type {
   RepairsInFilterCriteria,
@@ -113,6 +118,9 @@ export default function RepairsPage() {
   const [planningFiltersApplied, setPlanningFiltersApplied] =
     useState<RailwayCisternRepairsFilterRequestDTO>({});
   const [isPlanningFilterLoading, setIsPlanningFilterLoading] = useState(false);
+  const [planningVisibleColumns, setPlanningVisibleColumns] = useState<string[]>([
+    ...DEFAULT_PLANNING_VISIBLE_COLUMNS,
+  ]);
   const [mainSection, setMainSection] = useState<"details" | "planning">("planning");
   const [activeTab, setActiveTab] = useState<"in" | "out" | "matched">("in");
   const [searchQuery, setSearchQuery] = useState("");
@@ -515,7 +523,8 @@ export default function RepairsPage() {
     let data: Record<string, string>[] = [];
 
     if (mainSection === "planning") {
-      columns = [
+      const visibleExportKeys = getPlanningExportColumnKeys(planningVisibleColumns);
+      const allPlanningColumns = [
         { key: "number", label: "Вагон", type: "string" },
         { key: "registrationNumber", label: "Рег. №", type: "string" },
         { key: "serviceLifeYears", label: "Срок эксплуатации, лет", type: "string" },
@@ -543,8 +552,9 @@ export default function RepairsPage() {
           label: "Текущий отцепочный ремонт — последний",
           type: "string",
         },
-      ];
-      data = (planningRowsFiltered ?? []).map((row) => ({
+      ] satisfies ExportColumn[];
+      columns = allPlanningColumns.filter((col) => visibleExportKeys.has(col.key));
+      const allRows: Record<string, string>[] = (planningRowsFiltered ?? []).map((row) => ({
         number: row.number ?? "—",
         registrationNumber: row.registrationNumber ?? "—",
         serviceLifeYears: String(row.serviceLifeYears ?? "—"),
@@ -567,6 +577,13 @@ export default function RepairsPage() {
         serviceEndDate: formatPlanningServiceEndDate(row.buildDate, row.serviceLifeYears),
         currentUncouplingLast: "—",
       }));
+      data = allRows.map((row) => {
+        const filtered: Record<string, string> = {};
+        for (const col of columns) {
+          filtered[col.key] = row[col.key] ?? "—";
+        }
+        return filtered;
+      });
     } else if (activeTab === "in") {
       columns = [
         { key: "dateIn", label: "Дата приёма", type: "string" },
@@ -737,6 +754,7 @@ export default function RepairsPage() {
     repairsOutFiltered,
     repairsMatchingFiltered,
     planningRowsFiltered,
+    planningVisibleColumns,
   ]);
 
   const handleCisternSelect = useCallback(async () => {
@@ -1311,175 +1329,18 @@ export default function RepairsPage() {
               appliedFilters={planningFiltersApplied}
               onApply={handlePlanningFiltersApply}
               activeFiltersCount={activePlanningFiltersCount}
+              visibleColumns={planningVisibleColumns}
+              onVisibleColumnsChange={setPlanningVisibleColumns}
             />
             </div>
           </div>
           <Card>
             <CardContent className="px-4 py-0 overflow-x-auto">
-              <Table className="w-full text-xs">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
-                      Вагон
-                    </TableHead>
-                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
-                      Рег. №
-                    </TableHead>
-                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
-                      Срок <br />
-                      эксплуатации
-                    </TableHead>
-                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
-                      Дата постройки
-                    </TableHead>
-                    <TableHead rowSpan={2} className="whitespace-normal py-2 min-w-0 align-middle text-center">
-                      Модель
-                    </TableHead>
-                    <TableHead
-                      colSpan={2}
-                      className="whitespace-normal align-middle text-center"
-                    >
-                      Капитальный ремонт
-                    </TableHead>
-                    <TableHead
-                      colSpan={2}
-                      className="whitespace-normal align-middle text-center"
-                    >
-                      Деповской ремонт
-                    </TableHead>
-                    <TableHead
-                      colSpan={2}
-                      className="whitespace-normal align-middle text-center"
-                    >
-                      ГИ (периодическое<br />испытание)
-                    </TableHead>
-                    <TableHead
-                      colSpan={2}
-                      className="whitespace-normal align-middle text-center"
-                    >
-                      ИГ (промежуточное<br />испытание)
-                    </TableHead>
-                    <TableHead
-                      colSpan={2}
-                      className="whitespace-normal align-middle text-center"
-                    >
-                      Профремонт<br />(ППР)
-                    </TableHead>
-
-                    <TableHead className="whitespace-normal align-middle text-center">
-                      Пробег
-                    </TableHead>
-                    <TableHead className="whitespace-normal align-middle text-center">
-                      Покраска
-                    </TableHead>
-                    <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
-                      Дата окончания <br /> эксплуатации
-                    </TableHead>
-                    <TableHead className="whitespace-normal align-middle text-center">
-                      Текущий отцепочный
-                      <br />
-                      ремонт
-                    </TableHead>
-                  </TableRow>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      последний
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      следующий
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      последний
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      следующий
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      последний
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      следующий
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      последний
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      следующий
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      последний
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap w-0 align-middle text-center">
-                      следующий
-                    </TableHead>
-                    <TableHead className="whitespace-normal align-middle text-center">
-                      остаточный
-                    </TableHead>
-                    <TableHead className="whitespace-normal align-middle text-center">
-                      последняя
-                    </TableHead>
-                    <TableHead className="whitespace-normal align-middle text-center">
-                      последний
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isInitialLoading || isPlanningFilterLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={19} className="text-center text-muted-foreground py-8">
-                        <div className="inline-flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Загрузка данных...</span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : planningRowsPaginated?.length ? (
-                    planningRowsPaginated.map((row) => (
-                      <TableRow key={row.id} className="even:bg-muted/30">
-                        <TableCell className="whitespace-nowrap">{row.number}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {row.registrationNumber ?? "—"}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">{row.serviceLifeYears ?? "—"}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {row.buildDate
-                            ? new Date(row.buildDate).toLocaleDateString("ru-RU")
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="whitespace-normal break-words min-w-0">
-                          {row.wagonModelName ?? "—"}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodMajorRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodMajorRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodDepotRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodDepotRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodPeriodicTest)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodPeriodicTest)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodIntermediateTest)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodIntermediateTest)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.periodPPRRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodPPRRepair)}</TableCell>
-                        <TableCell className="whitespace-nowrap text-center">
-                          {row.milage != null ? row.milage : "—"}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-center">
-                          {formatRuDate(row.periodPaintRepair)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-center">
-                          {formatPlanningServiceEndDate(row.buildDate, row.serviceLifeYears)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-center">—</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={19} className="text-center text-muted-foreground py-8">
-                        Нет данных
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <PlanningRepairsTable
+                rows={planningRowsPaginated ?? []}
+                visibleColumns={planningVisibleColumns}
+                isLoading={isInitialLoading || isPlanningFilterLoading}
+              />
             </CardContent>
             <div className="mt-4 px-4 pb-2">
               <RepairsPagination

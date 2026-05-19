@@ -24,6 +24,7 @@ import {
   Cog,
   Droplet,
   Import,
+  Tags,
 } from "lucide-react";
 import { useCurrentUser, useVersion } from "@/hooks";
 import { Role } from "@/types/auth";
@@ -61,6 +62,11 @@ const directoryItems: SidebarItem[] = [
     title: "Типы вагонов",
     href: "/directories/wagon-types",
     icon: Train,
+  },
+  {
+    title: "Статусы вагон-цистерн",
+    href: "/directories/cistern-status",
+    icon: Tags,
   },
   {
     title: "Местоположения",
