@@ -517,7 +517,8 @@ public static class RailwayCisternEndpoints
                     .Include(rc => rc.Registrar)
                     .Include(rc => rc.Affiliation)
                     .Include(rc => rc.MilageCisterns)
-                    .Where(rc => rc.Number.StartsWith(prefix))
+                    .Include(rc => rc.RailwayCisternStatus)
+                        .ThenInclude(st => st.Creator)
                     .Select(rc => new RailwayCisternDetailDTO
                     {
                         Id = rc.Id,
@@ -591,6 +592,7 @@ public static class RailwayCisternEndpoints
                         PeriodIntermediateTest = rc.PeriodIntermediateTest,
                         PeriodDepotRepair = rc.PeriodDepotRepair,
                         PeriodPPRRepair = rc.PeriodPPRRepair,
+                        PeriodPaintRepair = rc.PeriodPaintRepair,
                         DangerClass = rc.DangerClass,
                         Substance = rc.Substance,
                         TareWeight2 = rc.TareWeight2,
@@ -608,10 +610,10 @@ public static class RailwayCisternEndpoints
                                 Pressure = v.Pressure,
                                 Capacity = v.Capacity
                             }).ToList()
-                            : null
+                            : null,
+                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO()
                     })
                     .ToListAsync();
-
                 var models = await context.WagonModels.ToListAsync();
                 var personalCisRepairPeriods = await context.PersonalCisRepairPeriods.ToListAsync();
                 var milageCisterns = await context.MilageCisterns.ToListAsync();
@@ -621,6 +623,22 @@ public static class RailwayCisternEndpoints
 
                     WagonModel Model = null;
                     var milage = milageCisterns.Where(m => m.CisternId == cistern.Id).OrderByDescending(m => m.InputDate).FirstOrDefault();
+                    
+                    var LastMilage = milage == null? null : new MilageCisternDTO
+                    {
+                        Id = milage.Id,
+                        CisternId = milage.CisternId,
+                        CisternNumber = milage.CisternNumber,
+                        Milage = milage.Milage,
+                        MilageNorm = milage.MilageNorm,
+                        RepairTypeId = milage.RepairTypeId,
+                        RepairDate = milage.RepairDate,
+                        InputModeCode = milage.InputModeCode,
+                        InputDate = milage.InputDate
+                    };
+                    
+
+                    cistern.LastMilage=LastMilage;
                     if (cistern.Model != null)
                         Model = models.FirstOrDefault(m => m.Id == cistern.Model.Id);
                     var pers = personalCisRepairPeriods.FirstOrDefault(p => p.CisternId == cistern.Id);

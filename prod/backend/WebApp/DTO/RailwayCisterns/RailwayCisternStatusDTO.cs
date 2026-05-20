@@ -10,15 +10,12 @@ public class RailwayCisternStatusDTO
 
 public class CreateRailwayCisternStatusDTO
 {
-    public Guid Id { get; set; }
     public string Name { get; set; } = null!;
-    public Guid CreatorId { get; set; }
 }
 
 public class UpdateRailwayCisternStatusDTO
 {
     public string Name { get; set; } = null!;
-    public Guid CreatorId { get; set; }
 }
 
 public static class RailwayCisternStatusDTOMapper
@@ -39,7 +36,7 @@ public static class RailwayCisternStatusDTOMapper
     {
         return new RailwayCisternStatus()
         {
-            Id = dto.Id,
+            Id = Guid.NewGuid(),
             Name = dto.Name,
             UpdatedAt = DateTime.Now,
             CreatorId = creatorId
