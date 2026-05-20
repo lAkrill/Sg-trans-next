@@ -5,6 +5,7 @@ using WebApp.Data.Enums;
 using WebApp.DTO.RailwayCisterns;
 using WebApp.Extensions;
 using System.Security.Claims;
+using DocumentFormat.OpenXml.Office2010.Excel;
 
 namespace WebApp.Endpoints.RailwayCisterns;
 
@@ -50,7 +51,13 @@ public static class RailwayCisternStatusEndpoints
             context.Add(status);
             await context.SaveChangesAsync();
 
-            return Results.Created($"/api/railway-cistern-status/{status.Id}", status.ToRailwayCisternStatusDTO);
+            var result = await context.RailwayCisternStatuses
+                .Where(m => m.Id == status.Id)
+                .Include(s => s.Creator)
+                .Select(s => s.ToRailwayCisternStatusDTO())
+                .FirstOrDefaultAsync();
+
+            return Results.Created($"/api/railway-cistern-status/{status.Id}", result);
         })
         .WithName("CreateRailwayCisternStatus")
         .Produces<RailwayCisternStatusDTO>(StatusCodes.Status201Created)
