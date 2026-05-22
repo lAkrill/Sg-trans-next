@@ -519,6 +519,7 @@ public static class RailwayCisternEndpoints
                     .Include(rc => rc.MilageCisterns)
                     .Include(rc => rc.RailwayCisternStatus)
                         .ThenInclude(st => st.Creator)
+                    .Where(rc => rc.Number.StartsWith(prefix))
                     .Select(rc => new RailwayCisternDetailDTO
                     {
                         Id = rc.Id,
