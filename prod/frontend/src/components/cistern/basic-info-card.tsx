@@ -6,9 +6,10 @@ interface BasicInfoCardProps {
   serialNumber: string;
   buildDate: string;
   commissioningDate?: string;
+  railwayCisternStatusName?: string;
 }
 
-export function BasicInfoCard({ number, serialNumber, buildDate, commissioningDate }: BasicInfoCardProps) {
+export function BasicInfoCard({ number, serialNumber, buildDate, commissioningDate, railwayCisternStatusName }: BasicInfoCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -40,7 +41,12 @@ export function BasicInfoCard({ number, serialNumber, buildDate, commissioningDa
               }
             </div>
           </div>
+
         </div>
+        <div>
+            <div className="text-sm font-medium text-gray-500">Статус вагон-цистерны</div>
+            <div className="text-lg">{railwayCisternStatusName || 'Не указан'}</div>
+         </div>
       </CardContent>
     </Card>
   );

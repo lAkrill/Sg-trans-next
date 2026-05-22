@@ -10,7 +10,7 @@ interface SafetyInfoCardProps {
 
 export function SafetyInfoCard({ dangerClass, substance, pressure, testPressure }: SafetyInfoCardProps) {
   return (
-    <Card className="md:col-span-2">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TriangleAlert className="h-5 w-5" />
