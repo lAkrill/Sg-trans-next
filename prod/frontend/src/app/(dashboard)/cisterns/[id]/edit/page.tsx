@@ -30,6 +30,7 @@ import {
   useRegistrarOptions,
   useCistern,
   useUpdateCistern,
+  useCisternStatusOptions,
 } from "@/hooks";
 import type { UpdateRailwayCisternDTO } from "@/types/cisterns";
 
@@ -49,6 +50,7 @@ export default function EditCisternPage() {
   const { data: ownerOptions = [], isLoading: loadingOwners } = useOwnerOptions();
   const { data: registrarOptions = [], isLoading: loadingRegistrars } = useRegistrarOptions();
 
+  const { data: cisternStatusOptions = [], isLoading: loadingCisternStatuses } = useCisternStatusOptions();
   const [formData, setFormData] = useState<Partial<UpdateRailwayCisternDTO>>({});
 
   // Separate states for select values to handle loading properly
@@ -59,6 +61,7 @@ export default function EditCisternPage() {
     ownerId: "",
     registrarId: "",
     affiliationId: "",
+    railwayCisternStatusId: "",
   });
 
   // Reset state when cisternId changes (switching between different cisterns)
@@ -71,6 +74,7 @@ export default function EditCisternPage() {
       ownerId: "",
       registrarId: "",
       affiliationId: "",
+      railwayCisternStatusId: "",
     });
     // Force refetch data for the new cistern
     if (refetch) {
@@ -120,6 +124,7 @@ export default function EditCisternPage() {
         periodIntermediateTest: cistern.periodIntermediateTest,
         periodDepotRepair: cistern.periodDepotRepair,
         periodPPRRepair: cistern.periodPPRRepair,
+        railwayCisternStatusId: cistern.railwayCisternStatus?.id || "",
       });
     }
   }, [cistern]);
@@ -133,7 +138,8 @@ export default function EditCisternPage() {
       !loadingAffiliations && 
       !loadingWagonModels && 
       !loadingOwners && 
-      !loadingRegistrars
+      !loadingRegistrars &&
+      !loadingCisternStatuses
     ) {
       const newSelectValues = {
         manufacturerId: cistern.manufacturer?.id || "",
@@ -142,6 +148,7 @@ export default function EditCisternPage() {
         ownerId: cistern.owner?.id || "",
         registrarId: cistern.registrar?.id || "",
         affiliationId: cistern.affiliation?.id || "",
+        railwayCisternStatusId: cistern.railwayCisternStatus?.id || "",
       };
       setSelectValues(newSelectValues);
     }
@@ -154,6 +161,7 @@ export default function EditCisternPage() {
     loadingWagonModels,
     loadingOwners,
     loadingRegistrars,
+    loadingCisternStatuses,
   ]);
 
   const handleInputChange = (field: keyof UpdateRailwayCisternDTO, value: string | number) => {
@@ -163,7 +171,17 @@ export default function EditCisternPage() {
     }));
 
     // Also update select values if it's a select field
-    if (["manufacturerId", "typeId", "modelId", "ownerId", "registrarId", "affiliationId"].includes(field)) {
+    if (
+      [
+        "manufacturerId",
+        "typeId",
+        "modelId",
+        "ownerId",
+        "registrarId",
+        "affiliationId",
+        "railwayCisternStatusId",
+      ].includes(field)
+    ) {
       setSelectValues((prev) => ({
         ...prev,
         [field]: value,
@@ -188,7 +206,8 @@ export default function EditCisternPage() {
       'periodPeriodicTest',
       'periodIntermediateTest',
       'periodDepotRepair',
-      'notes'
+      'notes',
+      'railwayCisternStatusId',
     ] as const;
 
     const cleaned = { ...data };
@@ -392,6 +411,42 @@ export default function EditCisternPage() {
                   value={formData.commissioningDate || ""}
                   onChange={(e) => handleInputChange("commissioningDate", e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="railwayCisternStatusId">Статус вагон-цистерны</Label>
+                <Select
+                  key={`status-${selectValues.railwayCisternStatusId}`}
+                  value={selectValues.railwayCisternStatusId || "none"}
+                  onValueChange={(value) => {
+                    const actualValue = value === "none" ? "" : value;
+                    handleInputChange("railwayCisternStatusId", actualValue);
+                    setSelectValues((prev) => ({
+                      ...prev,
+                      railwayCisternStatusId: actualValue,
+                    }));
+                  }}
+                  disabled={loadingCisternStatuses}
+                >
+                  <SelectTrigger id="railwayCisternStatusId">
+                    <SelectValue placeholder="Выберите статус" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Не выбрано</SelectItem>
+                    {cistern?.railwayCisternStatus?.id &&
+                      !cisternStatusOptions.some(
+                        (o) => o.value === cistern.railwayCisternStatus?.id
+                      ) && (
+                        <SelectItem value={cistern.railwayCisternStatus.id}>
+                          {cistern.railwayCisternStatus.name}
+                        </SelectItem>
+                      )}
+                    {cisternStatusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

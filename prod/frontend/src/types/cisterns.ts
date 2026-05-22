@@ -190,6 +190,7 @@ export interface CreateRailwayCisternDTO {
   substance: string;
   tareWeight2: number;
   tareWeight3: number;
+  railwayCisternStatusId?: string;
 }
 
 export interface UpdateRailwayCisternDTO extends CreateRailwayCisternDTO {

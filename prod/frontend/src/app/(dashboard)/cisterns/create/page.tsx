@@ -28,6 +28,7 @@ import {
   useOwnerOptions,
   useRegistrarOptions,
   useCreateCistern,
+  useCisternStatusOptions,
 } from '@/hooks';
 import type { CreateRailwayCisternDTO } from '@/types/cisterns';
 
@@ -42,6 +43,7 @@ export default function CreateCisternPage() {
   const { data: affiliationOptions = [], isLoading: loadingAffiliations } = useAffiliationOptions();
   const { data: ownerOptions = [], isLoading: loadingOwners } = useOwnerOptions();
   const { data: registrarOptions = [], isLoading: loadingRegistrars } = useRegistrarOptions();
+  const { data: cisternStatusOptions = [], isLoading: loadingCisternStatuses } = useCisternStatusOptions(); 
 
   const [formData, setFormData] = useState<CreateRailwayCisternDTO>({
     number: '',
@@ -79,7 +81,10 @@ export default function CreateCisternPage() {
     substance: '',
     tareWeight2: 0,
     tareWeight3: 0,
-  });  const handleInputChange = (field: keyof CreateRailwayCisternDTO, value: string | number) => {
+    railwayCisternStatusId: '',
+  });  
+  
+  const handleInputChange = (field: keyof CreateRailwayCisternDTO, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -103,7 +108,8 @@ export default function CreateCisternPage() {
       'periodPeriodicTest',
       'periodIntermediateTest',
       'periodDepotRepair',
-      'notes'
+      'notes',
+      'railwayCisternStatusId',
     ] as const;
 
     const cleaned = { ...data };
@@ -230,6 +236,29 @@ export default function CreateCisternPage() {
                   value={formData.commissioningDate || ''}
                   onChange={(e) => handleInputChange('commissioningDate', e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="railwayCisternStatusId">Статус вагон-цистерны</Label>
+                <Select
+                  value={formData.railwayCisternStatusId || 'none'}
+                  onValueChange={(value) =>
+                    handleInputChange('railwayCisternStatusId', value === 'none' ? '' : value)
+                  }
+                  disabled={loadingCisternStatuses}
+                >
+                  <SelectTrigger id="railwayCisternStatusId">
+                    <SelectValue placeholder="Выберите статус" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Не выбрано</SelectItem>
+                    {cisternStatusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

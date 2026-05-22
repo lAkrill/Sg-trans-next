@@ -7,6 +7,7 @@ import { SafetyInfoCard } from './safety-info-card';
 import { VesselCard } from './vessel-card';
 
 import { RailwayCisternDetailDTO } from '@/types/cisterns';
+import { AdditionalInfoCard } from './additional-info-card';
 
 interface GeneralInfoTabProps {
   cistern: RailwayCisternDetailDTO;
@@ -20,6 +21,7 @@ export function GeneralInfoTab({ cistern }: GeneralInfoTabProps) {
         serialNumber={cistern.serialNumber}
         buildDate={cistern.buildDate}
         commissioningDate={cistern.commissioningDate}
+        railwayCisternStatusName={cistern.railwayCisternStatus?.name}
       />
 
       <TechnicalSpecsCard
@@ -49,6 +51,13 @@ export function GeneralInfoTab({ cistern }: GeneralInfoTabProps) {
         registrarName={cistern.registrar?.name}
       />
 
+      <AdditionalInfoCard
+        pripiska={cistern.pripiska}
+        rent={cistern.rent}
+        notes={cistern.notes}
+        updatedAt={cistern.updatedAt}
+      />
+      
       <SafetyInfoCard
         dangerClass={cistern.dangerClass}
         substance={cistern.substance}
@@ -56,18 +65,6 @@ export function GeneralInfoTab({ cistern }: GeneralInfoTabProps) {
         testPressure={cistern.testPressure}
       />
 
-      
-
-      {cistern.notes && (
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Дополнительная информация</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 dark:text-gray-300">{cistern.notes}</p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
