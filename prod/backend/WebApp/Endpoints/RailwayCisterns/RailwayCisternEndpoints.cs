@@ -216,7 +216,10 @@ public static class RailwayCisternEndpoints
                                 Capacity = v.Capacity
                             }).ToList()
                             : null,
-                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO()
+                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO(),
+                        ReRegistrationNextDate = rc.ReRegistrationNextDate,
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate
+                        
                     })
                     .ToListAsync();
                 var models = await context.WagonModels.ToListAsync();
@@ -413,7 +416,9 @@ public static class RailwayCisternEndpoints
                                 Capacity = v.Capacity
                             }).ToList()
                             : null,
-                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO()
+                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO(),
+                           ReRegistrationNextDate = rc.ReRegistrationNextDate,
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate
                     })
                     .ToListAsync();
 
@@ -612,7 +617,9 @@ public static class RailwayCisternEndpoints
                                 Capacity = v.Capacity
                             }).ToList()
                             : null,
-                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO()
+                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO(),
+                           ReRegistrationNextDate = rc.ReRegistrationNextDate,
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate
                     })
                     .ToListAsync();
                 var models = await context.WagonModels.ToListAsync();
@@ -840,7 +847,9 @@ public static class RailwayCisternEndpoints
                                 Capacity = v.Capacity
                             }).ToList()
                             : null,
-                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO()
+                        RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO(),
+                           ReRegistrationNextDate = rc.ReRegistrationNextDate,
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate
                     })
                     .FirstOrDefaultAsync();
                 if (cistern == null)
@@ -964,7 +973,9 @@ public static class RailwayCisternEndpoints
                         Substance = dto.Substance,
                         TareWeight2 = dto.TareWeight2,
                         TareWeight3 = dto.TareWeight3,
-                        CisternStatusId = dto.RailwayCisternStatusId
+                        CisternStatusId = dto.RailwayCisternStatusId,
+                        ReRegistrationNextDate = dto.ReRegistrationNextDate,
+                        ExtensionServiceLifeDate = dto.ExtensionServiceLifeDate
                     };
 
                     context.Add(cistern);
@@ -1024,6 +1035,8 @@ public static class RailwayCisternEndpoints
                     cistern.TareWeight2 = dto.TareWeight2;
                     cistern.TareWeight3 = dto.TareWeight3;
                     cistern.CisternStatusId = dto.RailwayCisternStatusId;
+                    cistern.ReRegistrationNextDate = dto.ReRegistrationNextDate;
+                    cistern.ExtensionServiceLifeDate = dto.ExtensionServiceLifeDate;
 
                     await context.SaveChangesAsync();
                     return Results.NoContent();

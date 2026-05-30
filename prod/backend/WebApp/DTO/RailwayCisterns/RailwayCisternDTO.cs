@@ -61,6 +61,8 @@ public class RailwayCisternDetailDTO
     public List<VesselListDTO>? Vessels { get; set; }
     public MilageCisternDTO? LastMilage {get; set;}
     public RailwayCisternStatusDTO RailwayCisternStatus { get; set; } = null!;
+    public DateOnly? ReRegistrationNextDate { get; set; }
+    public DateOnly? ExtensionServiceLifeDate { get; set; }
 }
 
 public class RailwayCisternListDTO
@@ -117,6 +119,8 @@ public class CreateRailwayCisternDTO
     public decimal TareWeight2 { get; set; }
     public decimal TareWeight3 { get; set; }
     public Guid RailwayCisternStatusId {get; set; }
+    public DateOnly? ReRegistrationNextDate { get; set; }
+    public DateOnly? ExtensionServiceLifeDate { get; set; }
 }
 
 public class UpdateRailwayCisternDTO
@@ -159,6 +163,8 @@ public class UpdateRailwayCisternDTO
     public decimal TareWeight2 { get; set; }
     public decimal TareWeight3 { get; set; }
     public Guid RailwayCisternStatusId {get; set; }
+    public DateOnly? ReRegistrationNextDate { get; set; }
+    public DateOnly? ExtensionServiceLifeDate { get; set; }
 }
 
 public class FilterRepairsCisternsRequestDTO

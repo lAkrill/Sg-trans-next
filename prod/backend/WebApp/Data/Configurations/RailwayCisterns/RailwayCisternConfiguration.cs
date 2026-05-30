@@ -63,6 +63,9 @@ public partial class RailwayCisternConfiguration : IEntityTypeConfiguration<Rail
         entity.Property(e => e.PeriodPaintRepair).HasColumnName("PeriodPaintRepair").HasColumnType("timestamp without time zone");
         entity.Property(e => e.CisternStatusId).HasColumnName("CisternStatusId")
             .IsRequired();
+        entity.Property(e=> e.ReRegistrationNextDate).HasColumnName("ReRegistrationNextDate").HasColumnType("date");
+        entity.Property(e=> e.ExtensionServiceLifeDate).HasColumnName("ExtensionServiceLifeDate").HasColumnType("date");
+
 
         entity.HasOne(d => d.Affiliation)
             .WithMany(p => p.RailwayCisterns)

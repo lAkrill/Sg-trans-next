@@ -44,6 +44,8 @@ public class RailwayCistern
     public decimal TareWeight3 { get; set; }
     public DateTime? PeriodPaintRepair {get; set; }
     public Guid CisternStatusId {get; set;}
+    public DateOnly? ReRegistrationNextDate { get; set; }
+    public DateOnly? ExtensionServiceLifeDate { get; set; }
 
     public Affiliation Affiliation { get; set; } = null!;
     public Manufacturer Manufacturer { get; set; } = null!;
