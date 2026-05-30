@@ -54,6 +54,23 @@ import type {
   CreateShockAbsorberDTO,
 } from "@/types/directories";
 
+type PartFormRecord = Record<string, unknown>;
+
+function withManufactureYearDate(data: PartFormRecord): PartFormRecord {
+  const { manufactureYear } = data;
+  if (manufactureYear == null || manufactureYear === "") return data;
+  if (typeof manufactureYear === "number") {
+    return { ...data, manufactureYear: `${manufactureYear}-01-01` };
+  }
+  return { ...data, manufactureYear: `${manufactureYear}-01-01` };
+}
+
+function cleanFormData(data: PartFormRecord): PartFormRecord {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [key, value === "" ? undefined : value])
+  );
+}
+
 export default function CreatePartPage() {
   const router = useRouter();
 
@@ -126,35 +143,23 @@ export default function CreatePartPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onSubmit = async (data: any) => {
     try {
-      // Clean empty strings
-      let cleanData = Object.fromEntries(
-        Object.entries(data).map(([key, value]) => [key, value === "" ? undefined : value])
-      ) as unknown;
-
-      // Convert manufacture year to full date (January 1st of that year)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      cleanData = (cleanData as any).manufactureYear
-        ? {
-            ...(cleanData as any),
-            manufactureYear: `${(cleanData as any).manufactureYear}-01-01`,
-          }
-        : cleanData;
+      const cleanData = withManufactureYearDate(cleanFormData(data as PartFormRecord));
 
       switch (partTypeCode) {
         case 1:
-          await createWheelPairMutation.mutateAsync(cleanData as CreateWheelPairDTO);
+          await createWheelPairMutation.mutateAsync(cleanData as unknown as CreateWheelPairDTO);
           break;
         case 2:
-          await createBolsterMutation.mutateAsync(cleanData as CreateBolsterDTO);
+          await createBolsterMutation.mutateAsync(cleanData as unknown as CreateBolsterDTO);
           break;
         case 3:
-          await createSideFrameMutation.mutateAsync(cleanData as CreateSideFrameDTO);
+          await createSideFrameMutation.mutateAsync(cleanData as unknown as CreateSideFrameDTO);
           break;
         case 4:
-          await createCouplerMutation.mutateAsync(cleanData as CreateCouplerDTO);
+          await createCouplerMutation.mutateAsync(cleanData as unknown as CreateCouplerDTO);
           break;
         case 10:
-          await createShockAbsorberMutation.mutateAsync(cleanData as CreateShockAbsorberDTO);
+          await createShockAbsorberMutation.mutateAsync(cleanData as unknown as CreateShockAbsorberDTO);
           break;
         default:
           alert("Выберите тип детали");

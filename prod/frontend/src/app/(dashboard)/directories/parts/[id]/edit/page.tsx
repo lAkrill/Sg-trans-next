@@ -56,6 +56,34 @@ import type {
   UpdateShockAbsorberDTO,
 } from "@/types/directories";
 
+type PartFormRecord = Record<string, unknown>;
+type DateOnlyValue = string | { year: number; month: number; day: number } | null | undefined;
+
+function convertDateOnlyToString(value: DateOnlyValue): string {
+  if (!value) return "";
+  if (typeof value === "string" && value) return value;
+  if (typeof value === "object" && "year" in value) {
+    const { year, month, day } = value;
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  return "";
+}
+
+function withManufactureYearDate(data: PartFormRecord): PartFormRecord {
+  const { manufactureYear } = data;
+  if (manufactureYear == null || manufactureYear === "") return data;
+  if (typeof manufactureYear === "number") {
+    return { ...data, manufactureYear: `${manufactureYear}-01-01` };
+  }
+  return data;
+}
+
+function cleanFormData(data: PartFormRecord): PartFormRecord {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [key, value === "" ? undefined : value])
+  );
+}
+
 export default function EditPartPage() {
   const params = useParams();
   const router = useRouter();
@@ -135,16 +163,6 @@ export default function EditPartPage() {
       }
 
       // Helper function to convert DateOnly to string YYYY-MM-DD
-      const convertDateOnlyToString = (value: any): string => {
-        if (!value) return "";
-        if (typeof value === 'string' && value) return value;
-        if (typeof value === 'object' && 'year' in value) {
-          const { year, month, day } = value;
-          return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        }
-        return "";
-      };
-
       const resetData = {
         stampNumberId: part.stampNumber.id,
         statusId: part.status.id,
@@ -174,35 +192,23 @@ export default function EditPartPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onSubmit = async (data: any) => {
     try {
-      // Clean empty strings
-      let cleanData = Object.fromEntries(
-        Object.entries(data).map(([key, value]) => [key, value === "" ? undefined : value])
-      ) as unknown;
-
-      // Convert manufacture year to full date if it's a number (year)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      cleanData = (cleanData as any).manufactureYear && typeof (cleanData as any).manufactureYear === 'number'
-        ? {
-            ...(cleanData as any),
-            manufactureYear: `${(cleanData as any).manufactureYear}-01-01`,
-          }
-        : cleanData;
+      const cleanData = withManufactureYearDate(cleanFormData(data as PartFormRecord));
 
       switch (partTypeCode) {
         case 1:
-          await updateWheelPairMutation.mutateAsync({ id: partId, data: cleanData as UpdateWheelPairDTO });
+          await updateWheelPairMutation.mutateAsync({ id: partId, data: cleanData as unknown as UpdateWheelPairDTO });
           break;
         case 2:
-          await updateBolsterMutation.mutateAsync({ id: partId, data: cleanData as UpdateBolsterDTO });
+          await updateBolsterMutation.mutateAsync({ id: partId, data: cleanData as unknown as UpdateBolsterDTO });
           break;
         case 3:
-          await updateSideFrameMutation.mutateAsync({ id: partId, data: cleanData as UpdateSideFrameDTO });
+          await updateSideFrameMutation.mutateAsync({ id: partId, data: cleanData as unknown as UpdateSideFrameDTO });
           break;
         case 4:
-          await updateCouplerMutation.mutateAsync({ id: partId, data: cleanData as UpdateCouplerDTO });
+          await updateCouplerMutation.mutateAsync({ id: partId, data: cleanData as unknown as UpdateCouplerDTO });
           break;
         case 10:
-          await updateShockAbsorberMutation.mutateAsync({ id: partId, data: cleanData as UpdateShockAbsorberDTO });
+          await updateShockAbsorberMutation.mutateAsync({ id: partId, data: cleanData as unknown as UpdateShockAbsorberDTO });
           break;
         default:
           alert("Неизвестный тип детали");

@@ -112,14 +112,15 @@ export default function CreateCisternPage() {
       'railwayCisternStatusId',
     ] as const;
 
+    type OptionalField = (typeof optionalFields)[number];
     const cleaned = { ...data };
     
-    optionalFields.forEach(field => {
+    optionalFields.forEach((field) => {
       const value = cleaned[field];
       
       // Преобразуем пустые строки и нулевые значения в null для необязательных полей
-      if (value === '' || (field !== 'serviceLifeYears' && field !== 'dangerClass' && value === 0)) {
-        (cleaned as any)[field] = null;
+      if (value === '' || value === 0) {
+        (cleaned as Partial<Record<OptionalField, string | number | null>>)[field] = null;
       }
     });
 

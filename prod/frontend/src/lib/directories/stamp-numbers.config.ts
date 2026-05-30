@@ -19,7 +19,7 @@ export const stampNumbersBaseConfig: BaseDirectoryConfig = {
   endpoint: '/api/stamp-numbers',
   fields: [
     {
-      key: 'number',
+      key: 'value',
       label: 'Номер клейма',
       type: 'text',
       required: true,
@@ -53,14 +53,14 @@ export const stampNumbersConfig: DirectoryConfig<StampNumberDTO, CreateStampNumb
     useUpdate: useUpdateStampNumber,
     useDelete: useDeleteStampNumber,
   },
-  searchFields: ["number", "description"] as (keyof StampNumberDTO)[],
+  searchFields: ["value", "description"] as (keyof StampNumberDTO)[],
   tableColumns: [
-    { key: "number", label: "Номер клейма" },
+    { key: "value", label: "Номер клейма" },
     { key: "description", label: "Описание" },
   ],
-  createInitialData: () => ({ number: "", description: "" }),
+  createInitialData: () => ({ value: "", description: "" }),
   mapToFormData: (item: StampNumberDTO) => ({
-    number: item.number,
+    value: item.value,
     description: item.description || "",
   }),
 };

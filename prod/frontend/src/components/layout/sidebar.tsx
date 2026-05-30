@@ -207,7 +207,14 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           {isExpanded && item.children && (
-            <div className="mt-1 space-y-1">{item.children.map((child) => renderSidebarItem(child, level + 1))}</div>
+            <div
+              className={cn(
+                "mt-1 space-y-1",
+                item.title === "Справочники" && "max-h-[calc(100vh-28rem)] overflow-y-auto pr-1"
+              )}
+            >
+              {item.children.map((child) => renderSidebarItem(child, level + 1))}
+            </div>
           )}
         </div>
       );
@@ -244,12 +251,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed left-0 top-0 z-50 h-full w-full lg:w-64 transform bg-white shadow-lg transition-transform duration-300 ease-in-out dark:bg-gray-900 lg:static lg:translate-x-0",
+          "fixed left-0 top-0 z-50 flex h-full w-full flex-col lg:w-64 transform bg-white shadow-lg transition-transform duration-300 ease-in-out dark:bg-gray-900 lg:static lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b px-4">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b px-4">
           <Link href="/dashboard" className="text-lg font-semibold text-gray-900 dark:text-white">
             СГ-ТРАНС
           </Link>
@@ -259,11 +266,13 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-2 p-4">{sidebarItems.map((item) => renderSidebarItem(item))}</nav>
+        <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4 lg:overflow-hidden">
+          {sidebarItems.map((item) => renderSidebarItem(item))}
+        </nav>
 
         {/* User info */}
         {user && (
-          <div className="border-t p-4">
+          <div className="shrink-0 border-t p-4">
             <div className="flex items-center">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
                 <User className="h-4 w-4" />

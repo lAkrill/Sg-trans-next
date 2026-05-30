@@ -1,0 +1,107 @@
+﻿
+> frontend@0.5.5 build
+> next build
+
+   тЦ▓ Next.js 15.5.9
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ тЬУ Compiled successfully in 8.9s
+   Linting and checking validity of types ...
+
+./src/app/(dashboard)/locations/page.tsx
+12:3  Warning: 'CardDescription' is defined but never used.  @typescript-eslint/no-unused-vars
+28:3  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+29:3  Warning: 'Skeleton' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(dashboard)/repairs/page.tsx
+393:6  Warning: React Hook useMemo has an unnecessary dependency: 'activeTab'. Either exclude it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/cistern/general-info-tab.tsx
+1:10  Warning: 'Card' is defined but never used.  @typescript-eslint/no-unused-vars
+1:16  Warning: 'CardContent' is defined but never used.  @typescript-eslint/no-unused-vars
+1:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+1:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/cistern/repairs-tab.tsx
+57:9  Warning: The 'matchingList' logical expression could make the dependencies of useMemo Hook (at line 60) change on every render. To fix this, wrap the initialization of 'matchingList' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+57:9  Warning: The 'matchingList' logical expression could make the dependencies of useMemo Hook (at line 64) change on every render. To fix this, wrap the initialization of 'matchingList' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+57:9  Warning: The 'matchingList' logical expression could make the dependencies of useMemo Hook (at line 89) change on every render. To fix this, wrap the initialization of 'matchingList' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/components/cistern-select.tsx
+13:6  Warning: 'CisternSelectType' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/directory-manager.tsx
+9:3  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/layout/sidebar.tsx
+165:17  Warning: 'version' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/part-equipment-list.tsx
+73:9  Warning: 'formatDate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+160:9  Warning: 'formatDate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/hooks/vessels.hook.ts
+3:49  Warning: 'VesselDTO' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/directories/vessels.config.ts
+11:3  Warning: 'VesselDTO' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/formatDate.ts
+7:12  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/31) ...
+   Generating static pages (7/31) 
+   Generating static pages (15/31) 
+   Generating static pages (23/31) 
+ тЬУ Generating static pages (31/31)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                   Size  First Load JS
+тФМ тЧЛ /                                        880 B         103 kB
+тФЬ тЧЛ /_not-found                              133 B         102 kB
+тФЬ тЧЛ /admin                                 3.68 kB         336 kB
+тФЬ ╞Т /api/map-tiles/[z]/[x]/[y]               133 B         102 kB
+тФЬ тЧЛ /cisterns                              9.41 kB         331 kB
+тФЬ ╞Т /cisterns/[id]                         14.5 kB         377 kB
+тФЬ ╞Т /cisterns/[id]/edit                    5.26 kB         327 kB
+тФЬ тЧЛ /cisterns/create                       4.43 kB         326 kB
+тФЬ тЧЛ /dashboard                             2.31 kB         328 kB
+тФЬ тЧЛ /directories/affiliations                271 B         327 kB
+тФЬ тЧЛ /directories/cistern-status            2.98 kB         319 kB
+тФЬ тЧЛ /directories/depots                      640 B         328 kB
+тФЬ тЧЛ /directories/locations                   643 B         328 kB
+тФЬ тЧЛ /directories/manufacturers               642 B         328 kB
+тФЬ тЧЛ /directories/owners                      639 B         328 kB
+тФЬ тЧЛ /directories/part-statuses               640 B         328 kB
+тФЬ тЧЛ /directories/part-types                  642 B         328 kB
+тФЬ тЧЛ /directories/parts                     5.41 kB         327 kB
+тФЬ ╞Т /directories/parts/[id]/edit           5.01 kB         340 kB
+тФЬ ╞Т /directories/parts/[id]/history        6.68 kB         328 kB
+тФЬ тЧЛ /directories/parts/create               4.1 kB         340 kB
+тФЬ тЧЛ /directories/personal-wagon-date-reps  1.19 kB         323 kB
+тФЬ тЧЛ /directories/registrars                  640 B         328 kB
+тФЬ тЧЛ /directories/repair-types                638 B         328 kB
+тФЬ тЧЛ /directories/stamp-numbers               886 B         323 kB
+тФЬ тЧЛ /directories/vessels                     642 B         328 kB
+тФЬ тЧЛ /directories/wagon-models              1.26 kB         323 kB
+тФЬ тЧЛ /directories/wagon-types                 946 B         323 kB
+тФЬ тЧЛ /import                                2.05 kB         305 kB
+тФЬ тЧЛ /locations                             6.53 kB         359 kB
+тФЬ тЧЛ /login                                 1.29 kB         333 kB
+тФЬ тЧЛ /repairs                                 15 kB         339 kB
+тФФ тЧЛ /settings                              2.57 kB         321 kB
++ First Load JS shared by all               102 kB
+  тФЬ chunks/1255-8befde0980f5cba9.js        45.6 kB
+  тФЬ chunks/4bd1b696-100b9d70ed4e49c1.js    54.2 kB
+  тФФ other shared chunks (total)            2.08 kB
+
+
+╞Т Middleware                               34.2 kB
+
+тЧЛ  (Static)   prerendered as static content
+╞Т  (Dynamic)  server-rendered on demand
+

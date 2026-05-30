@@ -52,6 +52,7 @@ import L, {
   LatLngBounds,
   Marker,
 } from "@/lib/leaflet/dist/leaflet-src.js";
+import { addStandardMapLayers } from "@/lib/leaflet/map-base-layers";
 
 const tankFullIcon = new Icon({
   iconUrl: "/tank_full.png",
@@ -480,23 +481,7 @@ export default function LocationsPage() {
     const markersLayer = new LayerGroup().addTo(map);
     markersLayerRef.current = markersLayer;
 
-    const osm = new TileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 15,
-      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      opacity: 0.7,
-    });
-
-    osm.on("tileload", function (e: { tile: { style: CSSStyleDeclaration } }) {
-      e.tile.style.filter = "grayscale(100%) brightness(0.95)";
-    });
-
-    osm.addTo(map);
-
-    new TileLayer("https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a>',
-      maxZoom: 15,
-      opacity: 1,
-    }).addTo(map);
+    addStandardMapLayers(map, TileLayer);
   }, []);
 
   useEffect(() => {

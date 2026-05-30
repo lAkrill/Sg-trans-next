@@ -4,6 +4,9 @@ import { useEffect, useCallback, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   Tabs,
   TabsContent,
   TabsList,
@@ -106,6 +109,48 @@ function formatRuDate(value: string | undefined): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("ru-RU");
+}
+
+function getRecordsCountDisplay(params: {
+  count: number;
+  isSearch: boolean;
+  isFilter: boolean;
+  searchQuery?: string;
+}): { title: string | null; description: string } {
+  const { count, isSearch, isFilter, searchQuery } = params;
+  if (isSearch && searchQuery?.trim()) {
+    return {
+      title: `Результаты поиска: «${searchQuery.trim()}»`,
+      description: `Найдено: ${count}`,
+    };
+  }
+  if (isFilter) {
+    return {
+      title: "Результаты фильтрации",
+      description: `Отфильтровано: ${count}`,
+    };
+  }
+  return {
+    title: null,
+    description: `Всего записей: ${count}`,
+  };
+}
+
+function TableRecordsHeader({
+  title,
+  description,
+}: {
+  title: string | null;
+  description: string;
+}) {
+  return (
+    <CardHeader className="pb-3">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {title ? <CardTitle className="text-base">{title}</CardTitle> : null}
+        <CardDescription>{description}</CardDescription>
+      </div>
+    </CardHeader>
+  );
 }
 
 export default function RepairsPage() {
@@ -982,6 +1027,17 @@ export default function RepairsPage() {
               </TabsList>
               <TabsContent value="in" className="mt-4">
                 <Card>
+                  <TableRecordsHeader
+                    {...getRecordsCountDisplay({
+                      count: totalCountIn,
+                      isSearch:
+                        activeTab === "in" &&
+                        !isFilterModeIn &&
+                        !!searchQuery.trim(),
+                      isFilter: isFilterModeIn || (onlyUnmatchedRepairs && !isFilterModeIn),
+                      searchQuery,
+                    })}
+                  />
                   <CardContent className="px-4 py-0 overflow-x-auto">
                     <Table className="w-full text-xs">
                       <TableHeader>
@@ -1064,6 +1120,17 @@ export default function RepairsPage() {
               </TabsContent>
               <TabsContent value="out" className="mt-4">
                 <Card>
+                  <TableRecordsHeader
+                    {...getRecordsCountDisplay({
+                      count: totalCountOut,
+                      isSearch:
+                        activeTab === "out" &&
+                        !isFilterModeOut &&
+                        !!searchQuery.trim(),
+                      isFilter: isFilterModeOut || (onlyUnmatchedRepairs && !isFilterModeOut),
+                      searchQuery,
+                    })}
+                  />
                   <CardContent className="px-4 py-0 overflow-x-auto">
                     <Table className="w-full text-xs">
                       <TableHeader>
@@ -1153,6 +1220,14 @@ export default function RepairsPage() {
               </TabsContent>
               <TabsContent value="matched" className="mt-4">
                 <Card>
+                  <TableRecordsHeader
+                    {...getRecordsCountDisplay({
+                      count: totalCountMatched,
+                      isSearch: activeTab === "matched" && !!searchQuery.trim(),
+                      isFilter: false,
+                      searchQuery,
+                    })}
+                  />
                   <CardContent className="px-4 py-0 overflow-x-auto">
                     <Table className="w-full text-xs">
                       <TableHeader>
@@ -1335,6 +1410,14 @@ export default function RepairsPage() {
             </div>
           </div>
           <Card>
+            <TableRecordsHeader
+              {...getRecordsCountDisplay({
+                count: totalCountPlanning,
+                isSearch: !!planningSearchQuery.trim(),
+                isFilter: activePlanningFiltersCount > 0,
+                searchQuery: planningSearchQuery,
+              })}
+            />
             <CardContent className="px-4 py-0 overflow-x-auto">
               <PlanningRepairsTable
                 rows={planningRowsPaginated ?? []}

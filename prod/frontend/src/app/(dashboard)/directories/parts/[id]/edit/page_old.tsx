@@ -89,7 +89,13 @@ export default function EditPartPage() {
       setDepotId(part.depot?.id || "");
       setStampNumberId(part.stampNumber.id);
       setSerialNumber(part.serialNumber || "");
-      setManufactureYear(part.manufactureYear || "");
+      setManufactureYear(
+        typeof part.manufactureYear === "string"
+          ? part.manufactureYear
+          : part.manufactureYear?.year != null
+            ? String(part.manufactureYear.year)
+            : ""
+      );
       setCurrentLocation(part.currentLocation || "");
       setStatusId(part.status.id);
       setNotes(part.notes || "");

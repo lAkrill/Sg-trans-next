@@ -104,8 +104,8 @@ export default function PartHistoryPage() {
 
   // Сортируем по дате документа (новые сверху)
   const sortedEquipments = [...equipments].sort((a, b) => {
-    const dateA = a.documetnDate ? new Date(a.documetnDate) : new Date(0);
-    const dateB = b.documetnDate ? new Date(b.documetnDate) : new Date(0);
+    const dateA = a.documentDate ? new Date(a.documentDate) : new Date(0);
+    const dateB = b.documentDate ? new Date(b.documentDate) : new Date(0);
     return dateB.getTime() - dateA.getTime();
   });
 
@@ -217,7 +217,7 @@ export default function PartHistoryPage() {
                             </Badge>
                           </div>
                           <p className="text-xs text-gray-500">
-                            {formatDate(equipment.documetnDate)}
+                            {formatDate(equipment.documentDate)}
                             {equipment.jobDate && ` • Работа: ${equipment.jobDate}`}
                           </p>
                         </div>

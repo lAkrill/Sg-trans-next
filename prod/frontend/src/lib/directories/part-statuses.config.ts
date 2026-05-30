@@ -26,6 +26,13 @@ export const partStatusesBaseConfig: BaseDirectoryConfig = {
       placeholder: "Введите название статуса",
     },
     {
+      key: "code",
+      label: "Код",
+      type: "number",
+      required: true,
+      placeholder: "Введите код",
+    },
+    {
       key: "color",
       label: "Цвет",
       type: "text",
@@ -56,11 +63,13 @@ export const partStatusesConfig: DirectoryConfig<PartStatusDTO, CreatePartStatus
   searchFields: ["name"] as (keyof PartStatusDTO)[],
   tableColumns: [
     { key: "name", label: "Название" },
+    { key: "code", label: "Код" },
     { key: "color", label: "Цвет" },
   ],
-  createInitialData: () => ({ name: "", color: "" }),
+  createInitialData: () => ({ name: "", code: 0, color: "" }),
   mapToFormData: (item: PartStatusDTO) => ({
     name: item.name,
+    code: item.code,
     color: item.color,
   }),
 };

@@ -312,7 +312,7 @@ const CouplerEquipmentTable = ({ equipments }: { equipments: LastEquipmentDTO[] 
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.part?.manufactureYear || "—"}</TableCell>
                   <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
-                  <TableCell>{formatDate(equipment.lastEquipment.documetnDate)}</TableCell>
+                  <TableCell>{formatDate(equipment.lastEquipment.documentDate)}</TableCell>
                   <TableCell>{equipment.lastEquipment.repairType?.code || "—"}</TableCell>
                   <TableCell className="max-w-xs truncate">{equipment.lastEquipment.notes || "—"}</TableCell>
                 </TableRow>
@@ -489,8 +489,8 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                   <TableBody>
                     {filteredAllEquipments
                       .sort((a, b) => {
-                        const dateA = new Date(a.documetnDate || 0);
-                        const dateB = new Date(b.documetnDate || 0);
+                        const dateA = new Date(a.documentDate || 0);
+                        const dateB = new Date(b.documentDate || 0);
                         return dateB.getTime() - dateA.getTime();
                       })
                       .map((equipment) => {

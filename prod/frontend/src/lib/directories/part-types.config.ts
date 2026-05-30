@@ -26,6 +26,13 @@ export const partTypesBaseConfig: BaseDirectoryConfig = {
       placeholder: "Введите название типа детали",
     },
     {
+      key: "code",
+      label: "Код",
+      type: "number",
+      required: true,
+      placeholder: "Введите код",
+    },
+    {
       key: "description",
       label: "Описание",
       type: "textarea",
@@ -56,11 +63,13 @@ export const partTypesConfig: DirectoryConfig<PartTypeDTO, CreatePartTypeDTO, Up
   searchFields: ["name", "description"] as (keyof PartTypeDTO)[],
   tableColumns: [
     { key: "name", label: "Название" },
+    { key: "code", label: "Код" },
     { key: "description", label: "Описание" },
   ],
-  createInitialData: () => ({ name: "", description: "" }),
+  createInitialData: () => ({ name: "", code: 0, description: "" }),
   mapToFormData: (item: PartTypeDTO) => ({
     name: item.name,
+    code: item.code,
     description: item.description,
   }),
 };

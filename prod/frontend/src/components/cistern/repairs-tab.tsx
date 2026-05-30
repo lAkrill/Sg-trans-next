@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
 import { Wrench, Calendar } from 'lucide-react';
 import type { RailwayCisternDetailDTO } from "@/types/cisterns";
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -11,16 +11,17 @@ interface RepairsTabProps {
   cistern: RailwayCisternDetailDTO;
 }
 
-const MAINTENANCE_SCHEDULE_ROWS: {
+const MAINTENANCE_SCHEDULE_COLUMNS: {
   label: string;
   lastField: keyof RailwayCisternDetailDTO;
-  planField: keyof RailwayCisternDetailDTO;
+  planField?: keyof RailwayCisternDetailDTO;
 }[] = [
   { label: "Капитальный ремонт", lastField: "periodMajorRepair", planField: "planPeriodMajorRepair" },
+  { label: "Деповской ремонт", lastField: "periodDepotRepair", planField: "planPeriodDepotRepair" },
   { label: "Периодическое испытание (ГИ)", lastField: "periodPeriodicTest", planField: "planPeriodPeriodicTest" },
   { label: "Промежуточное испытание (ИГ)", lastField: "periodIntermediateTest", planField: "planPeriodIntermediateTest" },
-  { label: "Деповской ремонт", lastField: "periodDepotRepair", planField: "planPeriodDepotRepair" },
   { label: "Профремонт (ППР)", lastField: "periodPPRRepair", planField: "planPeriodPPRRepair" },
+  { label: "Покраска", lastField: "periodPaintRepair" },
 ];
 
 function formatCisternScheduleDate(value?: string): string {
@@ -339,57 +340,51 @@ export function RepairsTab({ cistern }: RepairsTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="min-w-0">
-              <h4 className="mb-3 text-sm font-medium text-muted-foreground">
-                Последний (факт)
-              </h4>
-              <dl className="space-y-3 text-sm">
-                {MAINTENANCE_SCHEDULE_ROWS.map(({ label, lastField }) => (
-                  <div
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[8.5rem] whitespace-normal align-bottom" />
+                {MAINTENANCE_SCHEDULE_COLUMNS.map(({ label, lastField }) => (
+                  <TableHead
                     key={lastField}
-                    className="flex flex-col gap-0.5 border-b border-border/60 pb-3 last:border-b-0 last:pb-0"
+                    className="min-w-[7rem] whitespace-normal text-center align-bottom font-medium"
                   >
-                    <dt className="text-muted-foreground">{label}</dt>
-                    <dd className="font-medium tabular-nums">
-                      {formatCisternScheduleDate(cistern[lastField] as string | undefined)}
-                    </dd>
-                  </div>
+                    {label}
+                  </TableHead>
                 ))}
-              </dl>
-            </div>
-            <div className="min-w-0">
-              <h4 className="mb-3 text-sm font-medium text-muted-foreground">
-                Плановый срок
-              </h4>
-              <dl className="space-y-3 text-sm">
-                {MAINTENANCE_SCHEDULE_ROWS.map(({ label, planField }) => (
-                  <div
-                    key={planField}
-                    className="flex flex-col gap-0.5 border-b border-border/60 pb-3 last:border-b-0 last:pb-0"
-                  >
-                    <dt className="text-muted-foreground"> &nbsp;</dt>
-                    <dd className="font-medium tabular-nums">
-                      {formatCisternScheduleDate(cistern[planField] as string | undefined)}
-                    </dd>
-                  </div>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableHead
+                  scope="row"
+                  className="whitespace-nowrap text-muted-foreground align-middle font-medium"
+                >
+                  Последний (факт)
+                </TableHead>
+                {MAINTENANCE_SCHEDULE_COLUMNS.map(({ lastField }) => (
+                  <TableCell key={lastField} className="text-center font-medium tabular-nums">
+                    {formatCisternScheduleDate(cistern[lastField] as string | undefined)}
+                  </TableCell>
                 ))}
-              </dl>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="min-w-0">
-          <dl className="space-y-3 text-sm">
-          <div className="flex flex-col gap-0.5 border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
-           <dt className="text-muted-foreground">Покраска</dt>
-                    <dd className="font-medium tabular-nums">
-                      {formatCisternScheduleDate(cistern.periodPaintRepair as string | undefined)}
-                    </dd>
-                    </div>
-            </dl>
-            </div>
-            </div>
-          
+              </TableRow>
+              <TableRow>
+                <TableHead
+                  scope="row"
+                  className="whitespace-nowrap text-muted-foreground align-middle font-medium"
+                >
+                  Плановый срок
+                </TableHead>
+                {MAINTENANCE_SCHEDULE_COLUMNS.map(({ lastField, planField }) => (
+                  <TableCell key={lastField} className="text-center font-medium tabular-nums">
+                    {planField
+                      ? formatCisternScheduleDate(cistern[planField] as string | undefined)
+                      : "—"}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
