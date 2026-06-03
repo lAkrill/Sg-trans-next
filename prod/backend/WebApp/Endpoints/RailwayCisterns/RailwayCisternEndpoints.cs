@@ -1274,7 +1274,8 @@ public static class RailwayCisternEndpoints
                         PeriodDepotRepair = rc.PeriodDepotRepair,
                         PeriodPPRRepair = rc.PeriodPPRRepair,
                         PeriodPaintRepair = rc.PeriodPaintRepair,
-                        CommissioningEndDate = rc.BuildDate.AddYears(rc.ServiceLifeYears)
+                        CommissioningEndDate = rc.BuildDate.AddYears(rc.ServiceLifeYears),
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate,
                     }).ToListAsync();
 
                 var models = await context.WagonModels.ToListAsync();

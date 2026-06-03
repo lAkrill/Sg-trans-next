@@ -220,4 +220,5 @@ public class FilterRepairsCisternsResponseDTO
     public int MilageNorm {get; set;}
     public int MilageRemain {get; set;}
     public DateOnly? CommissioningEndDate {get; set;}
+    public DateOnly? ExtensionServiceLifeDate { get; set; }
 }
