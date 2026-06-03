@@ -11,7 +11,6 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  Input,
   Button,
 } from "@/components/ui";
 import {
@@ -24,7 +23,6 @@ import {
 } from "@/components/ui/table";
 import {
   Wrench,
-  Search,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -154,8 +152,6 @@ function TableRecordsHeader({
 }
 
 export default function RepairsPage() {
-  const [repairsIn, setRepairsIn] = useState<RepairsIn[] | null>(null);
-  const [repairsOut, setRepairsOut] = useState<RepairsOut[] | null>(null);
   const [repairsMatching, setRepairsMatching] = useState<RepairsMatching[] | null>(null);
   const [planningRows, setPlanningRows] = useState<RailwayCisternRepairsFilterListDTO[] | null>(
     null
@@ -168,8 +164,6 @@ export default function RepairsPage() {
   ]);
   const [mainSection, setMainSection] = useState<"details" | "planning">("planning");
   const [activeTab, setActiveTab] = useState<"in" | "out" | "matched">("in");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [planningSearchQuery, setPlanningSearchQuery] = useState("");
   const [pageIn, setPageIn] = useState(1);
   const [pageOut, setPageOut] = useState(1);
   const [pageMatched, setPageMatched] = useState(1);
@@ -199,7 +193,9 @@ export default function RepairsPage() {
   const filterRequestIn = useMemo(
     () => ({
       filters: hasFiltersIn ? filtersIn : undefined,
-      sortFields: sortFields.length ? sortFields : undefined,
+      sortFields: sortFields.length
+        ? sortFields
+        : [{ fieldName: "dateIn", descending: true }],
       page: pageIn,
       pageSize,
     }),
@@ -209,22 +205,20 @@ export default function RepairsPage() {
   const filterRequestOut = useMemo(
     () => ({
       filters: hasFiltersOut ? filtersOut : undefined,
-      sortFields: sortFields.length ? sortFields : undefined,
+      sortFields: sortFields.length
+        ? sortFields
+        : [{ fieldName: "dateOut", descending: true }],
       page: pageOut,
       pageSize,
     }),
     [filtersOut, hasFiltersOut, sortFields, pageOut, pageSize]
   );
 
-  const { data: filterDataIn, isLoading: isFilterLoadingIn } = useRepairsInFilter(
-    filterRequestIn,
-    isFilterModeIn
-  );
+  const { data: filterDataIn, isLoading: isFilterLoadingIn, isFetching: isFetchingIn } =
+    useRepairsInFilter(filterRequestIn);
 
-  const { data: filterDataOut, isLoading: isFilterLoadingOut } = useRepairsOutFilter(
-    filterRequestOut,
-    isFilterModeOut
-  );
+  const { data: filterDataOut, isLoading: isFilterLoadingOut, isFetching: isFetchingOut } =
+    useRepairsOutFilter(filterRequestOut);
 
   const handlePlanningFiltersApply = useCallback(
     async (filters: RailwayCisternRepairsFilterRequestDTO) => {
@@ -246,30 +240,16 @@ export default function RepairsPage() {
   );
 
   const repairsInSource = useMemo(() => {
-    if (isFilterModeIn && filterDataIn?.items) return filterDataIn.items;
-    return repairsIn ?? [];
-  }, [isFilterModeIn, filterDataIn?.items, repairsIn]);
+    return filterDataIn?.items ?? [];
+  }, [filterDataIn?.items]);
 
   const repairsOutSource = useMemo(() => {
-    if (isFilterModeOut && filterDataOut?.items) return filterDataOut.items;
-    return repairsOut ?? [];
-  }, [isFilterModeOut, filterDataOut?.items, repairsOut]);
+    return filterDataOut?.items ?? [];
+  }, [filterDataOut?.items]);
 
-  const repairsInSorted = useMemo(() => {
-    if (!repairsInSource?.length) return repairsInSource ?? [];
-    if (isFilterModeIn) return repairsInSource;
-    return [...repairsInSource].sort(
-      (a, b) => new Date(b.dateIn).getTime() - new Date(a.dateIn).getTime()
-    );
-  }, [repairsInSource, isFilterModeIn]);
+  const repairsInSorted = useMemo(() => repairsInSource, [repairsInSource]);
 
-  const repairsOutSorted = useMemo(() => {
-    if (!repairsOutSource?.length) return repairsOutSource ?? [];
-    if (isFilterModeOut) return repairsOutSource;
-    return [...repairsOutSource].sort(
-      (a, b) => new Date(b.dateOut).getTime() - new Date(a.dateOut).getTime()
-    );
-  }, [repairsOutSource, isFilterModeOut]);
+  const repairsOutSorted = useMemo(() => repairsOutSource, [repairsOutSource]);
 
   const repairsMatchingSorted = useMemo(() => {
     if (!repairsMatching?.length) return repairsMatching ?? [];
@@ -289,162 +269,35 @@ export default function RepairsPage() {
   }, [repairsMatching]);
 
   const repairsInFiltered = useMemo(() => {
-    let list: RepairsIn[];
-    if (isFilterModeIn) {
-      list = repairsInSorted ?? [];
-    } else if (activeTab !== "in" || !searchQuery.trim()) {
-      list = repairsInSorted ?? [];
-    } else {
-      const q = searchQuery.trim().toLowerCase();
-      list = (repairsInSorted ?? []).filter((r) => {
-        const dateStr = r.dateIn
-          ? new Date(r.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
-          : "";
-        const defectStr = r.defectName?.length ? r.defectName.join(" ") : "";
-        const searchable = [
-          dateStr,
-          r.cisternNumber,
-          r.repairType?.name ?? "",
-          r.vU23 ?? "",
-          r.depotName ?? "",
-          r.stationName ?? "",
-          r.roadName ?? "",
-          defectStr,
-        ]
-          .join(" ")
-          .toLowerCase();
-        return searchable.includes(q);
-      });
-    }
+    let list = repairsInSorted ?? [];
     if (onlyUnmatchedRepairs && !isFilterModeIn) {
       list = list.filter((r) => !matchedInIds.has(r.id));
     }
     return list;
-  }, [repairsInSorted, searchQuery, activeTab, isFilterModeIn, onlyUnmatchedRepairs, matchedInIds]);
+  }, [repairsInSorted, isFilterModeIn, onlyUnmatchedRepairs, matchedInIds]);
 
   const repairsOutFiltered = useMemo(() => {
-    let list: RepairsOut[];
-    if (isFilterModeOut) {
-      list = repairsOutSorted ?? [];
-    } else if (activeTab !== "out" || !searchQuery.trim()) {
-      list = repairsOutSorted ?? [];
-    } else {
-      const q = searchQuery.trim().toLowerCase();
-      list = (repairsOutSorted ?? []).filter((r) => {
-        const dateInStr = r.dateIn
-          ? new Date(r.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
-          : "";
-        const dateOutStr = r.dateOut
-          ? new Date(r.dateOut).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
-          : "";
-        const modernStr = r.modernName?.length ? r.modernName.join(" ") : "";
-        const searchable = [
-          dateInStr,
-          dateOutStr,
-          r.cisternNumber,
-          r.repairType?.name ?? "",
-          r.vU36 ?? "",
-          r.depotName ?? "",
-          r.roadName ?? "",
-          modernStr,
-        ]
-          .join(" ")
-          .toLowerCase();
-        return searchable.includes(q);
-      });
-    }
+    let list = repairsOutSorted ?? [];
     if (onlyUnmatchedRepairs && !isFilterModeOut) {
       list = list.filter((r) => !matchedOutIds.has(r.id));
     }
     return list;
-  }, [repairsOutSorted, searchQuery, activeTab, isFilterModeOut, onlyUnmatchedRepairs, matchedOutIds]);
+  }, [repairsOutSorted, isFilterModeOut, onlyUnmatchedRepairs, matchedOutIds]);
 
-  const repairsMatchingFiltered = useMemo(() => {
-    if (!searchQuery.trim()) return repairsMatchingSorted ?? [];
-    const q = searchQuery.trim().toLowerCase();
-    return (repairsMatchingSorted ?? []).filter((m) => {
-      const dateTimeStr = m.dateTime ? new Date(m.dateTime).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
-      const dateInStr = m.repairIn?.dateIn ? new Date(m.repairIn.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
-      const dateOutInStr = m.repairOut?.dateIn ? new Date(m.repairOut.dateIn).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
-      const dateOutStr = m.repairOut?.dateOut ? new Date(m.repairOut.dateOut).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
-      const cisternNum = m.repairIn?.cisternNumber ?? m.repairOut?.cisternNumber ?? m.cistern?.number ?? "";
-      const repairType = m.repairIn?.repairType?.name ?? m.repairOut?.repairType?.name ?? "";
-      const defectStr = m.repairIn?.defectName?.length ? m.repairIn.defectName.join(" ") : "";
-      const modernStr = m.repairOut?.modernName?.length ? m.repairOut.modernName.join(" ") : "";
-      const searchable = [
-        dateTimeStr,
-        dateInStr,
-        dateOutInStr,
-        dateOutStr,
-        cisternNum,
-        repairType,
-        m.repairIn?.vU23 ?? "",
-        m.repairOut?.vU36 ?? "",
-        m.repairIn?.depotName ?? "",
-        m.repairIn?.stationName ?? "",
-        m.repairIn?.roadName ?? "",
-        defectStr,
-        m.repairOut?.depotName ?? "",
-        m.repairOut?.roadName ?? "",
-        modernStr,
-      ].join(" ").toLowerCase();
-      return searchable.includes(q);
-    });
-  }, [repairsMatchingSorted, searchQuery, activeTab]);
+  const repairsMatchingFiltered = useMemo(
+    () => repairsMatchingSorted ?? [],
+    [repairsMatchingSorted]
+  );
 
-  const planningRowsFiltered = useMemo(() => {
-    if (!planningSearchQuery.trim()) return planningRows ?? [];
-    const q = planningSearchQuery.trim().toLowerCase();
-    return (planningRows ?? []).filter((row) => {
-      const buildDate = row.buildDate
-        ? new Date(row.buildDate).toLocaleDateString("ru-RU")
-        : "";
-      const serviceEndDate = formatPlanningServiceEndDate(
-        row.buildDate,
-        row.serviceLifeYears
-      );
-      const searchable = [
-        row.number,
-        row.registrationNumber ?? "",
-        buildDate,
-        serviceEndDate,
-        row.wagonModelName ?? "",
-        String(row.serviceLifeYears ?? ""),
-        row.commissioningDate ?? "",
-        row.commissioningEndDate ?? "",
-        row.periodMajorRepair ?? "",
-        row.periodPeriodicTest ?? "",
-        row.periodIntermediateTest ?? "",
-        row.periodDepotRepair ?? "",
-        row.periodPPRRepair ?? "",
-        row.periodPaintRepair ?? "",
-        row.planPeriodMajorRepair ?? "",
-        row.planPeriodPeriodicTest ?? "",
-        row.planPeriodIntermediateTest ?? "",
-        row.planPeriodDepotRepair ?? "",
-        row.planPeriodPPRRepair ?? "",
-        row.planPeriodMajorRepairStatus ?? "",
-        row.planPeriodPeriodicTestStatus ?? "",
-        row.planPeriodIntermediateTestStatus ?? "",
-        row.planPeriodDepotRepairStatus ?? "",
-        row.planPeriodPPRRepairStatus ?? "",
-        String(row.milage ?? ""),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return searchable.includes(q);
-    });
-  }, [planningRows, planningSearchQuery]);
+  const planningRowsFiltered = useMemo(() => planningRows ?? [], [planningRows]);
 
   useEffect(() => {
     setPageIn(1);
-    setPageOut(1);
-    setPageMatched(1);
-  }, [searchQuery]);
+  }, [filtersIn, sortFields]);
 
   useEffect(() => {
-    setPagePlanning(1);
-  }, [planningSearchQuery]);
+    setPageOut(1);
+  }, [filtersOut, sortFields]);
 
   useEffect(() => {
     setPageIn(1);
@@ -457,19 +310,9 @@ export default function RepairsPage() {
     }
   }, [isFilterModeIn, isFilterModeOut]);
 
-  const repairsInPaginated = useMemo(() => {
-    if (isFilterModeIn) return repairsInFiltered ?? [];
-    const list = repairsInFiltered ?? [];
-    const start = (pageIn - 1) * pageSize;
-    return list.slice(start, start + pageSize);
-  }, [repairsInFiltered, pageIn, pageSize, isFilterModeIn]);
+  const repairsInPaginated = useMemo(() => repairsInFiltered ?? [], [repairsInFiltered]);
 
-  const repairsOutPaginated = useMemo(() => {
-    if (isFilterModeOut) return repairsOutFiltered ?? [];
-    const list = repairsOutFiltered ?? [];
-    const start = (pageOut - 1) * pageSize;
-    return list.slice(start, start + pageSize);
-  }, [repairsOutFiltered, pageOut, pageSize, isFilterModeOut]);
+  const repairsOutPaginated = useMemo(() => repairsOutFiltered ?? [], [repairsOutFiltered]);
 
   const repairsMatchingPaginated = useMemo(() => {
     const list = repairsMatchingFiltered ?? [];
@@ -483,26 +326,12 @@ export default function RepairsPage() {
     return list.slice(start, start + pageSize);
   }, [planningRowsFiltered, pagePlanning, pageSize]);
 
-  const totalCountIn = isFilterModeIn
-    ? (filterDataIn?.totalCount ?? 0)
-    : (repairsInFiltered ?? []).length;
-  const totalCountOut = isFilterModeOut
-    ? (filterDataOut?.totalCount ?? 0)
-    : (repairsOutFiltered ?? []).length;
+  const totalCountIn = filterDataIn?.totalCount ?? 0;
+  const totalCountOut = filterDataOut?.totalCount ?? 0;
   const totalCountMatched = (repairsMatchingFiltered ?? []).length;
   const totalCountPlanning = (planningRowsFiltered ?? []).length;
-  const totalPagesIn = Math.max(
-    1,
-    isFilterModeIn
-      ? (filterDataIn?.totalPages ?? 1)
-      : Math.ceil(totalCountIn / pageSize)
-  );
-  const totalPagesOut = Math.max(
-    1,
-    isFilterModeOut
-      ? (filterDataOut?.totalPages ?? 1)
-      : Math.ceil(totalCountOut / pageSize)
-  );
+  const totalPagesIn = Math.max(1, filterDataIn?.totalPages ?? 1);
+  const totalPagesOut = Math.max(1, filterDataOut?.totalPages ?? 1);
   const totalPagesMatched = Math.max(1, Math.ceil(totalCountMatched / pageSize));
   const totalPagesPlanning = Math.max(1, Math.ceil(totalCountPlanning / pageSize));
 
@@ -561,7 +390,7 @@ export default function RepairsPage() {
     type ExportColumn = {
       key: string;
       label: string;
-      type: "string";
+      type: "string" | "date" | "number";
     };
 
     let columns: ExportColumn[] = [];
@@ -573,29 +402,29 @@ export default function RepairsPage() {
         { key: "number", label: "Вагон", type: "string" },
         { key: "registrationNumber", label: "Рег. №", type: "string" },
         { key: "serviceLifeYears", label: "Срок эксплуатации, лет", type: "string" },
-        { key: "buildDate", label: "Дата постройки", type: "string" },
+        { key: "buildDate", label: "Дата постройки", type: "date" },
         { key: "model", label: "Модель", type: "string" },
-        { key: "periodMajorRepair", label: "Капитальный ремонт — последний", type: "string" },
-        { key: "planPeriodMajorRepair", label: "Капитальный ремонт — следующий", type: "string" },
-        { key: "periodDepotRepair", label: "Деповской ремонт — последний", type: "string" },
-        { key: "planPeriodDepotRepair", label: "Деповской ремонт — следующий", type: "string" },
-        { key: "periodPeriodicTest", label: "ГИ (периодическое испытание) — последний", type: "string" },
-        { key: "planPeriodPeriodicTest", label: "ГИ (периодическое испытание) — следующий", type: "string" },
-        { key: "periodIntermediateTest", label: "ИГ (промежуточное испытание) — последний", type: "string" },
-        { key: "planPeriodIntermediateTest", label: "ИГ (промежуточное испытание) — следующий", type: "string" },
-        { key: "periodPPRRepair", label: "Профремонт (ППР) — последний", type: "string" },
-        { key: "planPeriodPPRRepair", label: "Профремонт (ППР) — следующий", type: "string" },
-        { key: "mileage", label: "Пробег", type: "string" },
-        { key: "paintingLast", label: "Покраска — последняя", type: "string" },
+        { key: "periodMajorRepair", label: "Капитальный ремонт — последний", type: "date" },
+        { key: "planPeriodMajorRepair", label: "Капитальный ремонт — следующий", type: "date" },
+        { key: "periodDepotRepair", label: "Деповской ремонт — последний", type: "date" },
+        { key: "planPeriodDepotRepair", label: "Деповской ремонт — следующий", type: "date" },
+        { key: "periodPeriodicTest", label: "ГИ (периодическое испытание) — последний", type: "date" },
+        { key: "planPeriodPeriodicTest", label: "ГИ (периодическое испытание) — следующий", type: "date" },
+        { key: "periodIntermediateTest", label: "ИГ (промежуточное испытание) — последний", type: "date" },
+        { key: "planPeriodIntermediateTest", label: "ИГ (промежуточное испытание) — следующий", type: "date" },
+        { key: "periodPPRRepair", label: "Профремонт (ППР) — последний", type: "date" },
+        { key: "planPeriodPPRRepair", label: "Профремонт (ППР) — следующий", type: "date" },
+        { key: "mileage", label: "Пробег", type: "number" },
+        { key: "paintingLast", label: "Покраска — последняя", type: "date" },
         {
           key: "serviceEndDate",
           label: "Дата окончания эксплуатации",
-          type: "string",
+          type: "date",
         },
         {
           key: "currentUncouplingLast",
           label: "Текущий отцепочный ремонт — последний",
-          type: "string",
+          type: "date",
         },
       ] satisfies ExportColumn[];
       columns = allPlanningColumns.filter((col) => visibleExportKeys.has(col.key));
@@ -631,7 +460,7 @@ export default function RepairsPage() {
       });
     } else if (activeTab === "in") {
       columns = [
-        { key: "dateIn", label: "Дата приёма", type: "string" },
+        { key: "dateIn", label: "Дата приёма", type: "date" },
         { key: "number", label: "Номер вагона", type: "string" },
         { key: "repairType", label: "Тип ремонта", type: "string" },
         { key: "vu23", label: "ВУ23", type: "string" },
@@ -659,8 +488,8 @@ export default function RepairsPage() {
       }));
     } else if (activeTab === "out") {
       columns = [
-        { key: "dateIn", label: "Дата начала ремонта", type: "string" },
-        { key: "dateOut", label: "Дата выпуска", type: "string" },
+        { key: "dateIn", label: "Дата начала ремонта", type: "date" },
+        { key: "dateOut", label: "Дата выпуска", type: "date" },
         { key: "number", label: "Номер вагона", type: "string" },
         { key: "repairType", label: "Тип ремонта", type: "string" },
         { key: "vu36", label: "ВУ36", type: "string" },
@@ -692,11 +521,11 @@ export default function RepairsPage() {
       }));
     } else {
       columns = [
-        { key: "dateTime", label: "Дата сопоставления", type: "string" },
+        { key: "dateTime", label: "Дата сопоставления", type: "date" },
         { key: "number", label: "Номер вагона", type: "string" },
-        { key: "dateIn", label: "Дата приёма", type: "string" },
-        { key: "dateOutIn", label: "Дата нач. ремонта", type: "string" },
-        { key: "dateOut", label: "Дата выпуска", type: "string" },
+        { key: "dateIn", label: "Дата приёма", type: "date" },
+        { key: "dateOutIn", label: "Дата нач. ремонта", type: "date" },
+        { key: "dateOut", label: "Дата выпуска", type: "date" },
         { key: "repairType", label: "Тип ремонта", type: "string" },
         { key: "vu23", label: "ВУ23", type: "string" },
         { key: "vu36", label: "ВУ36", type: "string" },
@@ -805,14 +634,10 @@ export default function RepairsPage() {
   const handleCisternSelect = useCallback(async () => {
     setIsInitialLoading(true);
     try {
-      const [res1, res2, res3, res4] = await Promise.all([
-        CisternRepairs.getAllRepairsIn(),
-        CisternRepairs.getAllRepairsOut(),
+      const [res3, res4] = await Promise.all([
         CisternRepairs.getAllRepairsMatching(),
         cisternsApi.getRepairsFilter({}),
       ]);
-      setRepairsIn(res1);
-      setRepairsOut(res2);
       setRepairsMatching(res3);
       setPlanningRows(res4);
     } finally {
@@ -944,17 +769,7 @@ export default function RepairsPage() {
         </TabsList>
 
         <TabsContent value="details" className="mt-6 space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-          <Input
-            type="search"
-            placeholder="Быстрый поиск по столбцам..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-md"
-          />
-        </div>
+      <div className="flex items-center justify-end gap-4">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-md border bg-background p-1">
             <Button
@@ -1027,18 +842,14 @@ export default function RepairsPage() {
               </TabsList>
               <TabsContent value="in" className="mt-4">
                 <Card>
+                  <CardContent className="px-4 py-0 overflow-x-auto">
                   <TableRecordsHeader
                     {...getRecordsCountDisplay({
                       count: totalCountIn,
-                      isSearch:
-                        activeTab === "in" &&
-                        !isFilterModeIn &&
-                        !!searchQuery.trim(),
+                      isSearch: false,
                       isFilter: isFilterModeIn || (onlyUnmatchedRepairs && !isFilterModeIn),
-                      searchQuery,
                     })}
                   />
-                  <CardContent className="px-4 py-0 overflow-x-auto">
                     <Table className="w-full text-xs">
                       <TableHeader>
                         <TableRow>
@@ -1054,7 +865,7 @@ export default function RepairsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {isInitialLoading || isFilterLoadingIn ? (
+                        {isInitialLoading || isFilterLoadingIn || isFetchingIn ? (
                           <TableRow>
                             <TableCell
                               colSpan={9}
@@ -1120,18 +931,14 @@ export default function RepairsPage() {
               </TabsContent>
               <TabsContent value="out" className="mt-4">
                 <Card>
+                  <CardContent className="px-4 py-0 overflow-x-auto">
                   <TableRecordsHeader
                     {...getRecordsCountDisplay({
                       count: totalCountOut,
-                      isSearch:
-                        activeTab === "out" &&
-                        !isFilterModeOut &&
-                        !!searchQuery.trim(),
+                      isSearch: false,
                       isFilter: isFilterModeOut || (onlyUnmatchedRepairs && !isFilterModeOut),
-                      searchQuery,
                     })}
                   />
-                  <CardContent className="px-4 py-0 overflow-x-auto">
                     <Table className="w-full text-xs">
                       <TableHeader>
                         <TableRow>
@@ -1147,7 +954,7 @@ export default function RepairsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {isInitialLoading || isFilterLoadingOut ? (
+                        {isInitialLoading || isFilterLoadingOut || isFetchingOut ? (
                           <TableRow>
                             <TableCell
                               colSpan={9}
@@ -1220,15 +1027,15 @@ export default function RepairsPage() {
               </TabsContent>
               <TabsContent value="matched" className="mt-4">
                 <Card>
+
+                  <CardContent className="px-4 py-0 overflow-x-auto">
                   <TableRecordsHeader
                     {...getRecordsCountDisplay({
                       count: totalCountMatched,
-                      isSearch: activeTab === "matched" && !!searchQuery.trim(),
+                      isSearch: false,
                       isFilter: false,
-                      searchQuery,
                     })}
                   />
-                  <CardContent className="px-4 py-0 overflow-x-auto">
                     <Table className="w-full text-xs">
                       <TableHeader>
                         <TableRow>
@@ -1344,17 +1151,7 @@ export default function RepairsPage() {
         </TabsContent>
 
         <TabsContent value="planning" className="mt-6">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-              <Input
-                type="search"
-                placeholder="Быстрый поиск по столбцам..."
-                value={planningSearchQuery}
-                onChange={(e) => setPlanningSearchQuery(e.target.value)}
-                className="max-w-md"
-              />
-            </div>
+          <div className="mb-4 flex items-center justify-end gap-4">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 rounded-md border bg-background p-1">
               <Button
@@ -1410,15 +1207,14 @@ export default function RepairsPage() {
             </div>
           </div>
           <Card>
+            <CardContent className="px-4 py-0 overflow-x-auto">
             <TableRecordsHeader
               {...getRecordsCountDisplay({
                 count: totalCountPlanning,
-                isSearch: !!planningSearchQuery.trim(),
+                isSearch: false,
                 isFilter: activePlanningFiltersCount > 0,
-                searchQuery: planningSearchQuery,
               })}
             />
-            <CardContent className="px-4 py-0 overflow-x-auto">
               <PlanningRepairsTable
                 rows={planningRowsPaginated ?? []}
                 visibleColumns={planningVisibleColumns}

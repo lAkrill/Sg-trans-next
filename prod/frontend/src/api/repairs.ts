@@ -5,6 +5,8 @@ import { RailwayCisternListDTO } from "../types/cisterns";
 import type {
   RepairsInFilterSortDTO,
   RepairsOutFilterSortDTO,
+  RepairsMatchingFilterSortDTO,
+  RepairsMatchingFilterSortWithoutPaginationDTO,
   PaginatedRepairsResponse,
 } from "@/types/repairs";
 
@@ -144,6 +146,26 @@ export const CisternRepairs= {
   ): Promise<PaginatedRepairsResponse<RepairsOut>> => {
     const response = await api.post<PaginatedRepairsResponse<RepairsOut>>(
       "/api/repairs-out/filter",
+      filterData
+    );
+    return response.data;
+  },
+
+  filterRepairsMatching: async (
+    filterData: RepairsMatchingFilterSortDTO
+  ): Promise<PaginatedRepairsResponse<RepairsMatching>> => {
+    const response = await api.post<PaginatedRepairsResponse<RepairsMatching>>(
+      "/api/repairs-matching/filter",
+      filterData
+    );
+    return response.data;
+  },
+
+  filterAllRepairsMatching: async (
+    filterData: RepairsMatchingFilterSortWithoutPaginationDTO
+  ): Promise<Array<Pick<RepairsMatching, "repairInId" | "repairOutId">>> => {
+    const response = await api.post<Array<Pick<RepairsMatching, "repairInId" | "repairOutId">>>(
+      "/api/repairs-matching/filter/all",
       filterData
     );
     return response.data;

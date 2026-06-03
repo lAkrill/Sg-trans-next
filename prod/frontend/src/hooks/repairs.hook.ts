@@ -3,9 +3,10 @@ import { CisternRepairs } from "@/api/repairs";
 import type {
   RepairsInFilterSortDTO,
   RepairsOutFilterSortDTO,
+  RepairsMatchingFilterSortDTO,
   PaginatedRepairsResponse,
 } from "@/types/repairs";
-import type { RepairsIn, RepairsOut } from "@/api/repairs";
+import type { RepairsIn, RepairsOut, RepairsMatching } from "@/api/repairs";
 
 export const repairsKeys = {
   all: ["repairs"] as const,
@@ -16,6 +17,8 @@ export const repairsKeys = {
     [...repairsKeys.in(), "filter", data] as const,
   filterOut: (data: RepairsOutFilterSortDTO) =>
     [...repairsKeys.out(), "filter", data] as const,
+  filterMatching: (data: RepairsMatchingFilterSortDTO) =>
+    [...repairsKeys.matching(), "filter", data] as const,
 };
 
 export const useRepairsInFilter = (
@@ -37,6 +40,18 @@ export const useRepairsOutFilter = (
   return useQuery<PaginatedRepairsResponse<RepairsOut>>({
     queryKey: repairsKeys.filterOut(filterData),
     queryFn: () => CisternRepairs.filterRepairsOut(filterData),
+    enabled,
+    staleTime: 30000,
+  });
+};
+
+export const useRepairsMatchingFilter = (
+  filterData: RepairsMatchingFilterSortDTO,
+  enabled: boolean = true
+) => {
+  return useQuery<PaginatedRepairsResponse<RepairsMatching>>({
+    queryKey: repairsKeys.filterMatching(filterData),
+    queryFn: () => CisternRepairs.filterRepairsMatching(filterData),
     enabled,
     staleTime: 30000,
   });

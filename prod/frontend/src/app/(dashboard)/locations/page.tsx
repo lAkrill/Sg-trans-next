@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import type {
   AllCisternLastLocation,
   CisternsLocationFilterPayload,
@@ -42,6 +42,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { cisternsApi } from "@/api/cisterns";
+import { cn } from "@/lib/utils";
 
 import "@/lib/leaflet/dist/leaflet.css";
 import L, {
@@ -119,6 +120,110 @@ function toIsoFromLocal(localValue: string): string {
   return new Date(localValue).toISOString();
 }
 
+const LOCATION_TABLE_COLUMNS = [
+  { key: "dateOpr", label: "Дата операции", headClassName: "whitespace-nowrap w-0", cellClassName: "whitespace-nowrap" },
+  { key: "numCistern", label: "№ Вагона", headClassName: "whitespace-nowrap w-0", cellClassName: "whitespace-nowrap" },
+  { key: "stationOpr", label: "Станция операции", headClassName: "whitespace-normal w-0", cellClassName: "whitespace-normal break-words min-w-0" },
+  { key: "operationNote", label: "Операция", headClassName: "whitespace-normal w-0", cellClassName: "whitespace-normal break-words min-w-0" },
+  { key: "cargo", label: "Груз", headClassName: "whitespace-normal w-0", cellClassName: "whitespace-normal break-words min-w-0" },
+  { key: "stationOut", label: "Станция отправления", headClassName: "whitespace-normal w-0", cellClassName: "whitespace-normal break-words min-w-0" },
+  { key: "stationEnd", label: "Станция назначения", headClassName: "whitespace-normal w-0", cellClassName: "whitespace-normal break-words min-w-0" },
+  { key: "numShipmen", label: "Номер отправки", headClassName: "whitespace-normal w-0", cellClassName: "whitespace-nowrap" },
+  { key: "weightShip", label: "Вес", headClassName: "whitespace-normal w-0", cellClassName: "whitespace-nowrap text-right tabular-nums" },
+  { key: "downtime", label: "Простой", headClassName: "whitespace-normal w-0", cellClassName: "whitespace-nowrap" },
+] as const;
+
+type LocationColumnKey = (typeof LOCATION_TABLE_COLUMNS)[number]["key"];
+
+function formatLocationDateOpr(value?: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleString("ru-RU", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+function formatLocationWeight(value?: number | null): string {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 }).format(Number(value));
+}
+
+function getLocationCellPlainText(
+  row: AllCisternLastLocation,
+  columnKey: LocationColumnKey
+): string {
+  switch (columnKey) {
+    case "dateOpr":
+      return formatLocationDateOpr(row.dateOpr);
+    case "numCistern":
+      return row.numCistern?.trim() || "—";
+    case "stationOpr":
+      return formatNameWithCode(row.nameStationOpr, row.codeStationOpr);
+    case "operationNote":
+      return row.operationNote ?? "—";
+    case "cargo":
+      return formatNameWithCode(row.nameShip, row.codeShip);
+    case "stationOut":
+      return formatNameWithCode(row.nameStationOut, row.codeStationOut);
+    case "stationEnd":
+      return formatNameWithCode(row.nameStationEnd, row.codeStationEnd);
+    case "numShipmen":
+      return row.numShipmen != null && String(row.numShipmen).trim() !== ""
+        ? String(row.numShipmen)
+        : "—";
+    case "weightShip":
+      return formatLocationWeight(row.weightShip);
+    case "downtime":
+      return row.downtime != null ? String(row.downtime) : "—";
+    default:
+      return "—";
+  }
+}
+
+function renderLocationCell(
+  row: AllCisternLastLocation,
+  columnKey: LocationColumnKey,
+  cisternIdByNumber: Map<string, string>
+): ReactNode {
+  switch (columnKey) {
+    case "dateOpr":
+      return formatLocationDateOpr(row.dateOpr);
+    case "numCistern": {
+      const wagonNum = row.numCistern?.trim() ?? "";
+      const cisternPassportId = wagonNum ? cisternIdByNumber.get(wagonNum) : undefined;
+      if (wagonNum && cisternPassportId) {
+        return (
+          <Link
+            href={`/cisterns/${cisternPassportId}?tab=location`}
+            className="text-primary font-medium hover:underline"
+          >
+            {row.numCistern}
+          </Link>
+        );
+      }
+      return row.numCistern ?? "—";
+    }
+    case "stationOpr":
+      return formatNameWithCode(row.nameStationOpr, row.codeStationOpr);
+    case "operationNote":
+      return row.operationNote ?? "—";
+    case "cargo":
+      return formatNameWithCode(row.nameShip, row.codeShip);
+    case "stationOut":
+      return formatNameWithCode(row.nameStationOut, row.codeStationOut);
+    case "stationEnd":
+      return formatNameWithCode(row.nameStationEnd, row.codeStationEnd);
+    case "numShipmen":
+      return getLocationCellPlainText(row, columnKey);
+    case "weightShip":
+      return formatLocationWeight(row.weightShip);
+    case "downtime":
+      return getLocationCellPlainText(row, columnKey);
+    default:
+      return "—";
+  }
+}
+
 export default function LocationsPage() {
   const [location, setLocation] = useState<AllCisternLastLocation[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -134,6 +239,7 @@ export default function LocationsPage() {
   const [weightShipFrom, setWeightShipFrom] = useState("");
   const [weightShipTo, setWeightShipTo] = useState("");
   const [cisternIdByNumber, setCisternIdByNumber] = useState<Map<string, string>>(() => new Map());
+  const [selectedColumnKey, setSelectedColumnKey] = useState<LocationColumnKey | null>(null);
 
   const mapInstanceRef = useRef<InstanceType<typeof LeafletMap> | null>(null);
   const markersLayerRef = useRef<LayerGroup | null>(null);
@@ -274,6 +380,28 @@ export default function LocationsPage() {
     return locationFiltered.slice(start, start + pageSize);
   }, [locationFiltered, page, pageSize]);
 
+  useEffect(() => {
+    setSelectedColumnKey(null);
+  }, [location, searchQuery, page]);
+
+  useEffect(() => {
+    if (!selectedColumnKey) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "c") return;
+      if (window.getSelection()?.toString()) return;
+
+      event.preventDefault();
+      const text = locationFiltered
+        .map((row) => getLocationCellPlainText(row, selectedColumnKey))
+        .join("\n");
+      void navigator.clipboard.writeText(text);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedColumnKey, locationFiltered]);
+
   const handlePageChange = useCallback(
     (nextPage: number) => {
       setPage(Math.max(1, Math.min(nextPage, totalPages)));
@@ -290,11 +418,11 @@ export default function LocationsPage() {
     type ExportColumn = {
       key: string;
       label: string;
-      type: "string";
+      type: "string" | "date" | "number";
     };
 
     const columns: ExportColumn[] = [
-      { key: "dateOpr", label: "Дата операции", type: "string" },
+      { key: "dateOpr", label: "Дата операции", type: "date" },
       { key: "numCistern", label: "№ Вагона", type: "string" },
       { key: "stationOpr", label: "Станция операции", type: "string" },
       { key: "operationNote", label: "Операция", type: "string" },
@@ -302,8 +430,8 @@ export default function LocationsPage() {
       { key: "stationOut", label: "Станция отправления", type: "string" },
       { key: "stationEnd", label: "Станция назначения", type: "string" },
       { key: "numShipmen", label: "Номер отправки", type: "string" },
-      { key: "weightShip", label: "Вес", type: "string" },
-      { key: "downtime", label: "Простой", type: "string" },
+      { key: "weightShip", label: "Вес", type: "number" },
+      { key: "downtime", label: "Простой", type: "number" },
     ];
 
     const data = locationFiltered.map((row) => ({
@@ -741,47 +869,64 @@ export default function LocationsPage() {
                   Сбросить фильтр
                 </Button>
               </div>
+              {selectedColumnKey ? (
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Выделен столбец «
+                  {LOCATION_TABLE_COLUMNS.find((col) => col.key === selectedColumnKey)?.label}
+                  ». Выделяйте значения мышью или нажмите Ctrl+C, чтобы скопировать все значения
+                  столбца. Повторный клик по заголовку снимает выделение.
+                </p>
+              ) : (
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Клик по заголовку столбца — выделение для копирования значений только из этого
+                  столбца.
+                </p>
+              )}
               <Table className="w-full text-xs">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="whitespace-nowrap w-0">Дата операции</TableHead>
-                          <TableHead className="whitespace-nowrap w-0">№ Вагона</TableHead>
-                          <TableHead className="whitespace-normal w-0">Станция операции</TableHead>
-                          <TableHead className="whitespace-normal w-0">Операция</TableHead>
-                          <TableHead className="whitespace-normal w-0">Груз</TableHead>
-                          <TableHead className="whitespace-normal w-0">Станция отправления</TableHead>
-                          <TableHead className="whitespace-normal w-0">Станция назначения</TableHead>
-                          <TableHead className="whitespace-normal w-0">Номер отправки</TableHead>
-                          <TableHead className="whitespace-normal w-0">Вес</TableHead>
-                          <TableHead className="whitespace-normal w-0">Простой</TableHead>
+                          {LOCATION_TABLE_COLUMNS.map((column) => (
+                            <TableHead
+                              key={column.key}
+                              className={cn(
+                                column.headClassName,
+                                "cursor-pointer transition-colors hover:bg-muted/60",
+                                selectedColumnKey === column.key &&
+                                  "bg-primary/10 ring-1 ring-inset ring-primary/30"
+                              )}
+                              title="Выделить столбец для копирования"
+                              onClick={() =>
+                                setSelectedColumnKey((current) =>
+                                  current === column.key ? null : column.key
+                                )
+                              }
+                            >
+                              {column.label}
+                            </TableHead>
+                          ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {isLoading ? (
                           <TableRow>
-                            <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={LOCATION_TABLE_COLUMNS.length} className="text-center text-muted-foreground py-8">
                               Загрузка данных...
                             </TableCell>
                           </TableRow>
                         ) : !location || location.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={LOCATION_TABLE_COLUMNS.length} className="text-center text-muted-foreground py-8">
                               Нет данных
                             </TableCell>
                           </TableRow>
                         ) : locationFiltered.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={LOCATION_TABLE_COLUMNS.length} className="text-center text-muted-foreground py-8">
                               Нет данных по запросу
                             </TableCell>
                           </TableRow>
                         ) : (
-                          locationPaginated.map((row) => {
-                            const wagonNum = row.numCistern?.trim() ?? "";
-                            const cisternPassportId = wagonNum
-                              ? cisternIdByNumber.get(wagonNum)
-                              : undefined;
-                            return (
+                          locationPaginated.map((row) => (
                             <TableRow
                               key={row.id}
                               className={
@@ -790,59 +935,23 @@ export default function LocationsPage() {
                                   : undefined
                               }
                             >
-                              <TableCell className="whitespace-nowrap">
-                                {row.dateOpr
-                                  ? new Date(row.dateOpr).toLocaleString("ru-RU", {
-                                      dateStyle: "short",
-                                      timeStyle: "short",
-                                    })
-                                  : "—"}
-                              </TableCell>
-                              <TableCell className="whitespace-nowrap">
-                                {wagonNum && cisternPassportId ? (
-                                  <Link
-                                    href={`/cisterns/${cisternPassportId}?tab=location`}
-                                    className="text-primary font-medium hover:underline"
-                                  >
-                                    {row.numCistern}
-                                  </Link>
-                                ) : (
-                                  row.numCistern ?? "—"
-                                )}
-                              </TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">
-                                {formatNameWithCode(row.nameStationOpr, row.codeStationOpr)}
-                              </TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">
-                                {row.operationNote ?? "—"}
-                              </TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">
-                                {formatNameWithCode(row.nameShip, row.codeShip)}
-                              </TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">
-                                {formatNameWithCode(row.nameStationOut, row.codeStationOut)}
-                              </TableCell>
-                              <TableCell className="whitespace-normal break-words min-w-0">
-                                {formatNameWithCode(row.nameStationEnd, row.codeStationEnd)}
-                              </TableCell>
-                              <TableCell className="whitespace-nowrap">
-                                {row.numShipmen != null && String(row.numShipmen).trim() !== ""
-                                  ? String(row.numShipmen)
-                                  : "—"}
-                              </TableCell>
-                              <TableCell className="whitespace-nowrap text-right tabular-nums">
-                                {row.weightShip != null && Number.isFinite(Number(row.weightShip))
-                                  ? new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 }).format(
-                                      Number(row.weightShip)
-                                    )
-                                  : "—"}
-                              </TableCell>
-                              <TableCell className="whitespace-nowrap">
-                                {row.downtime != null ? String(row.downtime) : "—"}
-                              </TableCell>
+                              {LOCATION_TABLE_COLUMNS.map((column) => (
+                                <TableCell
+                                  key={column.key}
+                                  className={cn(
+                                    column.cellClassName,
+                                    selectedColumnKey
+                                      ? selectedColumnKey === column.key
+                                        ? "select-text bg-primary/5"
+                                        : "select-none"
+                                      : "select-text"
+                                  )}
+                                >
+                                  {renderLocationCell(row, column.key, cisternIdByNumber)}
+                                </TableCell>
+                              ))}
                             </TableRow>
-                            );
-                          })
+                          ))
                         )}
                       </TableBody>
               </Table>

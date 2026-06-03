@@ -104,18 +104,7 @@ public static class RepairsMatchingFilterEndpoints
     {
         if (selectedColumns == null || !selectedColumns.Any())
         {
-            return new
-            {
-                r.Id,
-                r.CisternId,
-                r.RepairInId,
-                r.RepairOutId,
-                r.DateTime,
-                r.RepairPeriod,
-                Cistern = r.Cistern != null ? new { r.Cistern.Id, r.Cistern.Number } : null,
-                RepairIn = r.RepairIn != null ? new { r.RepairIn.Id, r.RepairIn.VU23, r.RepairIn.DateIn } : null,
-                RepairOut = r.RepairOut != null ? new { r.RepairOut.Id, r.RepairOut.VU36, r.RepairOut.DateOut } : null
-            };
+            return r.ToRepairsMatchingDTO();
         }
 
         var selectedProperties = new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
@@ -178,9 +167,13 @@ public static class RepairsMatchingFilterEndpoints
     private static IQueryable<RepairsMatching> BuildFilterQuery(ApplicationDbContext context, RepairsMatchingFilterCriteria? filters)
     {
         var query = context.RepairsMatchings
+            .AsNoTracking()
             .Include(r => r.Cistern)
             .Include(r => r.RepairIn)
+                .ThenInclude(ri => ri.RepairType)
             .Include(r => r.RepairOut)
+                .ThenInclude(ro => ro.RepairType)
+            .AsSplitQuery()
             .AsQueryable();
 
         if (filters == null)
