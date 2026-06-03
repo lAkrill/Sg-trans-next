@@ -144,7 +144,7 @@ public class DocumentExportService
                                 if (DateTime.TryParse(value.ToString(), out var dateValue))
                                 {
                                     cell.Value = dateValue;
-                                    cell.Style.DateFormat.Format = "yyyy-MM-dd";
+                                    cell.Style.DateFormat.Format = "dd.MM.yyyy";
                                 }
                                 else
                                 {

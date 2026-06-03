@@ -225,7 +225,7 @@ public static class RailwayCisternEndpoints
                 var models = await context.WagonModels.ToListAsync();
                 var personalCisRepairPeriods = await context.PersonalCisRepairPeriods.ToListAsync();
                 var milageCisterns = await context.MilageCisterns.ToListAsync();
-                Guid DepoRepairType = Guid.Parse("423e276f-4caa-4e58-99a4-28339703f6bf");
+                Guid MajorRepairType  = Guid.Parse("423e276f-4caa-4e58-99a4-28339703f6bf");
                 foreach (var cistern in cisterns)
                 {
 
@@ -278,16 +278,34 @@ public static class RailwayCisternEndpoints
                             DepoRep = pers.DepoRep.Value;
                     }
 
-                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, cistern.ServiceLifeYears, periodictest);
-                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.CommissioningDate, cistern.ServiceLifeYears, IntermediateTest);
-                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, PPRRepair);
-                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, MajorRep);
-                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, DepoRep);
+                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest);
+                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, IntermediateTest);
+                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, PPRRepair);
+                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, MajorRep);
+                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+
+                    DateOnly? nextDepot=cistern.PlanPeriodDepotRepair, prevDepot = cistern.PlanPeriodDepotRepair;
+                    while (nextDepot < cistern.PlanPeriodMajorRepair)
+                    {
+                        prevDepot = nextDepot;
+                        nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                    }
+
+                    int diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
+                    if(diff <= 180)
+                    {
+                        cistern.PlanPeriodMajorRepair = prevDepot;
+                    }
+                    else
+                    {
+                        cistern.PlanPeriodMajorRepair = nextDepot;
+                    }
+
 
                     if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
                     {
                         cistern.PlanPeriodDepotRepair = milage.RepairDate;
-                        if (milage.RepairTypeId == DepoRepairType)
+                        if (milage.RepairTypeId == MajorRepairType)
                         {
                             cistern.PlanPeriodMajorRepair = milage.RepairDate;
                         }
@@ -425,7 +443,7 @@ public static class RailwayCisternEndpoints
                 var models = await context.WagonModels.ToListAsync();
                 var personalCisRepairPeriods = await context.PersonalCisRepairPeriods.ToListAsync();
                 var milageCisterns = await context.MilageCisterns.ToListAsync();
-                Guid DepoRepairType = Guid.Parse("423e276f-4caa-4e58-99a4-28339703f6bf");
+                Guid MajorRepairType  = Guid.Parse("423e276f-4caa-4e58-99a4-28339703f6bf");
                 foreach (var cistern in cisterns)
                 {
 
@@ -478,16 +496,34 @@ public static class RailwayCisternEndpoints
                             DepoRep = pers.DepoRep.Value;
                     }
 
-                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, cistern.ServiceLifeYears, periodictest);
-                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.CommissioningDate, cistern.ServiceLifeYears, IntermediateTest);
-                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, PPRRepair);
-                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, MajorRep);
-                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, DepoRep);
+                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest);
+                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, IntermediateTest);
+                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, PPRRepair);
+                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, MajorRep);
+                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+
+                    DateOnly? nextDepot = cistern.PlanPeriodDepotRepair, prevDepot = cistern.PlanPeriodDepotRepair;
+                    while (nextDepot < cistern.PlanPeriodMajorRepair)
+                    {
+                        prevDepot = nextDepot;
+                        nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                    }
+
+                    int diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
+                    if (diff <= 180)
+                    {
+                        cistern.PlanPeriodMajorRepair = prevDepot;
+                    }
+                    else
+                    {
+                        cistern.PlanPeriodMajorRepair = nextDepot;
+                    }
+
 
                     if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
                     {
                         cistern.PlanPeriodDepotRepair = milage.RepairDate;
-                        if (milage.RepairTypeId == DepoRepairType)
+                        if (milage.RepairTypeId == MajorRepairType )
                         {
                             cistern.PlanPeriodMajorRepair = milage.RepairDate;
                         }
@@ -625,7 +661,7 @@ public static class RailwayCisternEndpoints
                 var models = await context.WagonModels.ToListAsync();
                 var personalCisRepairPeriods = await context.PersonalCisRepairPeriods.ToListAsync();
                 var milageCisterns = await context.MilageCisterns.ToListAsync();
-                Guid DepoRepairType = Guid.Parse("423e276f-4caa-4e58-99a4-28339703f6bf");
+                Guid MajorRepairType  = Guid.Parse("423e276f-4caa-4e58-99a4-28339703f6bf");
                 foreach (var cistern in cisterns)
                 {
 
@@ -678,16 +714,34 @@ public static class RailwayCisternEndpoints
                             DepoRep = pers.DepoRep.Value;
                     }
 
-                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, cistern.ServiceLifeYears, periodictest);
-                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.CommissioningDate, cistern.ServiceLifeYears, IntermediateTest);
-                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, PPRRepair);
-                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, MajorRep);
-                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, DepoRep);
+                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest);
+                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, IntermediateTest);
+                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, PPRRepair);
+                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, MajorRep);
+                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+
+                    DateOnly? nextDepot = cistern.PlanPeriodDepotRepair, prevDepot = cistern.PlanPeriodDepotRepair;
+                    while (nextDepot < cistern.PlanPeriodMajorRepair)
+                    {
+                        prevDepot = nextDepot;
+                        nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                    }
+
+                    int diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
+                    if (diff <= 180)
+                    {
+                        cistern.PlanPeriodMajorRepair = prevDepot;
+                    }
+                    else
+                    {
+                        cistern.PlanPeriodMajorRepair = nextDepot;
+                    }
+
 
                     if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
                     {
                         cistern.PlanPeriodDepotRepair = milage.RepairDate;
-                        if (milage.RepairTypeId == DepoRepairType)
+                        if (milage.RepairTypeId == MajorRepairType )
                         {
                             cistern.PlanPeriodMajorRepair = milage.RepairDate;
                         }
@@ -904,11 +958,29 @@ public static class RailwayCisternEndpoints
                         DepoRep = pers.DepoRep.Value;
                 }
 
-                cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, cistern.ServiceLifeYears, periodictest);
-                cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.CommissioningDate, cistern.ServiceLifeYears, IntermediateTest);
-                cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, PPRRepair);
-                cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, MajorRep);
-                cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, DepoRep);
+                cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest);
+                cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, IntermediateTest);
+                cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, PPRRepair);
+                cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, MajorRep);
+                cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+
+                DateOnly? nextDepot = cistern.PlanPeriodDepotRepair, prevDepot = cistern.PlanPeriodDepotRepair;
+                while (nextDepot < cistern.PlanPeriodMajorRepair)
+                {
+                    prevDepot = nextDepot;
+                    nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                }
+
+                int diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
+                if (diff <= 180)
+                {
+                    cistern.PlanPeriodMajorRepair = prevDepot;
+                }
+                else
+                {
+                    cistern.PlanPeriodMajorRepair = nextDepot;
+                }
+
 
                 if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
                 {
@@ -1202,15 +1274,14 @@ public static class RailwayCisternEndpoints
                         PeriodDepotRepair = rc.PeriodDepotRepair,
                         PeriodPPRRepair = rc.PeriodPPRRepair,
                         PeriodPaintRepair = rc.PeriodPaintRepair,
-                        CommissioningEndDate = rc.CommissioningDate != null
-                            ? rc.CommissioningDate.Value.AddYears(rc.ServiceLifeYears)
-                            : null,
+                        CommissioningEndDate = rc.BuildDate.AddYears(rc.ServiceLifeYears),
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate,
                     }).ToListAsync();
 
                 var models = await context.WagonModels.ToListAsync();
                 var personalCisRepairPeriods = await context.PersonalCisRepairPeriods.ToListAsync();
                 var milageCisterns = await context.MilageCisterns.ToListAsync();
-                Guid DepoRepairType = Guid.Parse("423e276f-4caa-4e58-99a4-28339703f6bf");
+                Guid MajorRepairType  = Guid.Parse("423e276f-4caa-4e58-99a4-28339703f6bf");
                 foreach (var cistern in cisterns)
                 {
 
@@ -1284,17 +1355,35 @@ public static class RailwayCisternEndpoints
                         }
                     }
 
-                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.CommissioningDate, cistern.ServiceLifeYears, periodictest);
-                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.CommissioningDate, cistern.ServiceLifeYears, IntermediateTest);
-                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, PPRRepair);
-                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, MajorRep);
-                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.CommissioningDate, cistern.ServiceLifeYears, DepoRep);
+                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest);
+                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, IntermediateTest);
+                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, PPRRepair);
+                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, MajorRep);
+                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+
+                    DateOnly? nextDepot = cistern.PlanPeriodDepotRepair, prevDepot = cistern.PlanPeriodDepotRepair;
+                    while (nextDepot < cistern.PlanPeriodMajorRepair)
+                    {
+                        prevDepot = nextDepot;
+                        nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                    }
+
+                    int diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
+                    if (diff <= 180)
+                    {
+                        cistern.PlanPeriodMajorRepair = prevDepot;
+                    }
+                    else
+                    {
+                        cistern.PlanPeriodMajorRepair = nextDepot;
+                    }
+
 
                     if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
                     {
                         cistern.PlanPeriodDepotRepair = milage.RepairDate;
                         cistern.PlanPeriodDepotRepairStatus = "Из пробега " + milage.RepairDate.ToString("dd.MM.yyyy");
-                        if (milage.RepairTypeId == DepoRepairType)
+                        if (milage.RepairTypeId == MajorRepairType)
                         {
                             cistern.PlanPeriodMajorRepair = milage.RepairDate;
                             cistern.PlanPeriodMajorRepairStatus = "Из пробега " + milage.RepairDate.ToString("dd.MM.yyyy");
