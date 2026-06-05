@@ -15,7 +15,6 @@ public class RepairsMatchingFilterSortWithoutPaginationDTO
 {
     public RepairsMatchingFilterCriteria? Filters { get; set; }
     public List<SortCriteria>? SortFields { get; set; }
-    public List<string>? SelectedColumns { get; set; }
 }
 
 public class RepairsMatchingFilterCriteria

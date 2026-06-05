@@ -90,13 +90,13 @@ public static class RepairsMatchingFilterEndpoints
             }
 
             var repairs = await query
-                .Select(r => SelectColumns(r, request.SelectedColumns))
+                .Select(r => r.ToRepairsMatchingDTO())
                 .ToListAsync();
 
             return Results.Ok(repairs);
         })
         .WithName("FilterAllRepairsMatching")
-        .Produces<List<object>>(StatusCodes.Status200OK)
+        .Produces<List<RepairsMatchingDTO>>(StatusCodes.Status200OK)
         .RequirePermissions(Permission.Read);
     }
 
