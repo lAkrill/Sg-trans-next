@@ -55,6 +55,33 @@ export interface RepairsOutFilterSortDTO {
   pageSize: number;
 }
 
+export interface IntRange {
+  from?: number;
+  to?: number;
+}
+
+export interface RepairsMatchingFilterCriteria {
+  cisternIds?: string[];
+  repairInIds?: string[];
+  repairOutIds?: string[];
+  dateTime?: DateTimeRange;
+  repairPeriod?: IntRange;
+}
+
+export interface RepairsMatchingFilterSortDTO {
+  filters?: RepairsMatchingFilterCriteria;
+  sortFields?: RepairsSortCriteria[];
+  selectedColumns?: string[];
+  page: number;
+  pageSize: number;
+}
+
+export interface RepairsMatchingFilterSortWithoutPaginationDTO {
+  filters?: RepairsMatchingFilterCriteria;
+  sortFields?: RepairsSortCriteria[];
+  selectedColumns?: string[];
+}
+
 export interface PaginatedRepairsResponse<T> {
   items: T[];
   pageNumber: number;
