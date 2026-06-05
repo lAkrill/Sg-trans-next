@@ -221,4 +221,6 @@ public class FilterRepairsCisternsResponseDTO
     public int MilageRemain {get; set;}
     public DateOnly? CommissioningEndDate {get; set;}
     public DateOnly? ExtensionServiceLifeDate { get; set; }
+    public DateOnly? ReRegistrationDate { get; set; }
+    public DateOnly? ReRegistrationNextDate { get; set; }
 }
