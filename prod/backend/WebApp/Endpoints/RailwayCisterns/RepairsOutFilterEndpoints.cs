@@ -47,7 +47,8 @@ public static class RepairsOutFilterEndpoints
             var repairs = await query
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(r => SelectColumns(r, request.SelectedColumns))
+                .Select(r => SelectColumns(r, request.SelectedColumns, 
+                    context.RepairsMatchings.Any(rm => rm.RepairOutId == r.Id)))
                 .ToListAsync();
 
             var result = new PaginatedList<object>
@@ -90,7 +91,8 @@ public static class RepairsOutFilterEndpoints
             }
 
             var repairs = await query
-                .Select(r => SelectColumns(r, request.SelectedColumns))
+                .Select(r => SelectColumns(r, request.SelectedColumns, 
+                    context.RepairsMatchings.Any(rm => rm.RepairOutId == r.Id)))
                 .ToListAsync();
 
             return Results.Ok(repairs);
@@ -100,7 +102,7 @@ public static class RepairsOutFilterEndpoints
         .RequirePermissions(Permission.Read);
     }
 
-    private static dynamic SelectColumns(RepairsOut r, List<string>? selectedColumns)
+    private static dynamic SelectColumns(RepairsOut r, List<string>? selectedColumns, bool isMatching)
     {
         if (selectedColumns == null || !selectedColumns.Any())
         {
@@ -120,6 +122,7 @@ public static class RepairsOutFilterEndpoints
                 r.RoadCode,
                 r.RoadName,
                 r.ModernName,
+                isMatching,
                 Cistern = r.Cistern != null ? new { r.Cistern.Id, r.Cistern.Number } : null,
                 RepairType = r.RepairType != null ? new { r.RepairType.Id, r.RepairType.Name } : null,
                 Depot = r.Depot != null ? new { r.Depot.Id, r.Depot.Name, r.Depot.Code } : null
@@ -128,8 +131,9 @@ public static class RepairsOutFilterEndpoints
 
         var selectedProperties = new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
         
-        // ID всегда добавляется
+        // ID и isMatching всегда добавляются
         selectedProperties["id"] = r.Id;
+        selectedProperties["isMatching"] = isMatching;
         
         foreach (var column in selectedColumns)
         {
