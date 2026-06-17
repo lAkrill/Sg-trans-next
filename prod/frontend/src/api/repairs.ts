@@ -6,7 +6,6 @@ import type {
   RepairsInFilterSortDTO,
   RepairsOutFilterSortDTO,
   RepairsMatchingFilterSortDTO,
-  RepairsMatchingFilterSortWithoutPaginationDTO,
   PaginatedRepairsResponse,
 } from "@/types/repairs";
 
@@ -42,7 +41,7 @@ export interface RepairsIn {
     repairType: RepairTypeDTO;
     depot: DepotDTO;
     station: StationDTO;
-  
+    isMatching: boolean;
 }
 
 export interface RepairsOut {
@@ -64,6 +63,7 @@ export interface RepairsOut {
   cistern: RailwayCisternListDTO;
   repairType: RepairTypeDTO;
   depot: DepotDTO;
+  isMatching: boolean;
 
 }
 
@@ -121,11 +121,6 @@ export const CisternRepairs= {
     return response.data;
   },
 
-  getAllRepairsMatching: async (): Promise<RepairsMatching[]> => {
-    const response = await api.get<RepairsMatching[]>(`/api/RepairsMatching/all`);
-    return response.data;
-  },
- 
   getRepairsMatchingById: async (id: string): Promise<RepairsMatching[]> => {
     const response = await api.get<RepairsMatching[]>(`/api/RepairsMatching/byCisternId/${id}`);
     return response.data;
@@ -156,16 +151,6 @@ export const CisternRepairs= {
   ): Promise<PaginatedRepairsResponse<RepairsMatching>> => {
     const response = await api.post<PaginatedRepairsResponse<RepairsMatching>>(
       "/api/repairs-matching/filter",
-      filterData
-    );
-    return response.data;
-  },
-
-  filterAllRepairsMatching: async (
-    filterData: RepairsMatchingFilterSortWithoutPaginationDTO
-  ): Promise<Array<Pick<RepairsMatching, "repairInId" | "repairOutId">>> => {
-    const response = await api.post<Array<Pick<RepairsMatching, "repairInId" | "repairOutId">>>(
-      "/api/repairs-matching/filter/all",
       filterData
     );
     return response.data;

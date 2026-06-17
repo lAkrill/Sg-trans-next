@@ -12,6 +12,7 @@ export const PLANNING_COLUMN_OPTIONS = [
   { value: "milage", label: "Пробег" },
   { value: "periodPaintRepair", label: "Покраска" },
   { value: "commissioningEndDate", label: "Дата окончания эксплуатации" },
+  { value: "reRegistration", label: "Перерегистрация" },
   { value: "uncouplingRepair", label: "Текущий отцепочный ремонт" },
 ] as const;
 
@@ -27,6 +28,7 @@ const PAIRED_COLUMN_KEYS: PlanningColumnKey[] = [
   "periodicTest",
   "intermediateTest",
   "pprRepair",
+  "reRegistration",
 ];
 
 export function isPlanningColumnVisible(
@@ -60,6 +62,7 @@ const EXPORT_KEYS_BY_VISIBLE: Record<PlanningColumnKey, string[]> = {
   milage: ["mileage"],
   periodPaintRepair: ["paintingLast"],
   commissioningEndDate: ["serviceEndDate"],
+  reRegistration: ["reRegistrationDate", "reRegistrationNextDate"],
   uncouplingRepair: ["currentUncouplingLast"],
 };
 

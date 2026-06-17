@@ -136,6 +136,9 @@ export interface RailwayCisternRepairsFilterListDTO {
     milageNorm?:  number;
     milageRemain?:  number;
     commissioningEndDate?: string;
+    extensionServiceLifeDate?: string;
+    reRegistrationDate?: string;
+    reRegistrationNextDate?: string;
 }
 
 export interface RailwayCisternListDTO {

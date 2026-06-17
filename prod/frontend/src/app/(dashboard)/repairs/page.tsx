@@ -32,13 +32,11 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { api } from "@/lib/api";
-import { CisternRepairs } from "@/api/repairs";
 import type {
   RailwayCisternRepairsFilterListDTO,
   RailwayCisternRepairsFilterRequestDTO,
 } from "@/types/cisterns";
 import { cisternsApi } from "@/api/cisterns";
-import type { RepairsIn, RepairsOut, RepairsMatching } from "@/api/repairs";
 import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
 import { PlanningRepairsFilters, countPlanningRepairsFilters } from "@/components/repairs/planning-repairs-filters";
 import { PlanningRepairsTable } from "@/components/repairs/planning-repairs-table";
@@ -46,7 +44,7 @@ import {
   DEFAULT_PLANNING_VISIBLE_COLUMNS,
   getPlanningExportColumnKeys,
 } from "@/lib/repairs/planning-columns";
-import { useRepairsInFilter, useRepairsOutFilter } from "@/hooks";
+import { useRepairsInFilter, useRepairsOutFilter, useRepairsMatchingFilter } from "@/hooks";
 import type {
   RepairsInFilterCriteria,
   RepairsOutFilterCriteria,
@@ -152,7 +150,6 @@ function TableRecordsHeader({
 }
 
 export default function RepairsPage() {
-  const [repairsMatching, setRepairsMatching] = useState<RepairsMatching[] | null>(null);
   const [planningRows, setPlanningRows] = useState<RailwayCisternRepairsFilterListDTO[] | null>(
     null
   );
@@ -214,11 +211,26 @@ export default function RepairsPage() {
     [filtersOut, hasFiltersOut, sortFields, pageOut, pageSize]
   );
 
+  const filterRequestMatched = useMemo(
+    () => ({
+      sortFields: [{ fieldName: "dateTime", descending: true }],
+      page: pageMatched,
+      pageSize,
+    }),
+    [pageMatched, pageSize]
+  );
+
   const { data: filterDataIn, isLoading: isFilterLoadingIn, isFetching: isFetchingIn } =
     useRepairsInFilter(filterRequestIn);
 
   const { data: filterDataOut, isLoading: isFilterLoadingOut, isFetching: isFetchingOut } =
     useRepairsOutFilter(filterRequestOut);
+
+  const {
+    data: filterDataMatching,
+    isLoading: isFilterLoadingMatching,
+    isFetching: isFetchingMatching,
+  } = useRepairsMatchingFilter(filterRequestMatched);
 
   const handlePlanningFiltersApply = useCallback(
     async (filters: RailwayCisternRepairsFilterRequestDTO) => {
@@ -251,38 +263,26 @@ export default function RepairsPage() {
 
   const repairsOutSorted = useMemo(() => repairsOutSource, [repairsOutSource]);
 
-  const repairsMatchingSorted = useMemo(() => {
-    if (!repairsMatching?.length) return repairsMatching ?? [];
-    return [...repairsMatching].sort(
-      (a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()
-    );
-  }, [repairsMatching]);
-
-  const matchedInIds = useMemo(() => {
-    if (!repairsMatching?.length) return new Set<string>();
-    return new Set(repairsMatching.map((m) => m.repairInId));
-  }, [repairsMatching]);
-
-  const matchedOutIds = useMemo(() => {
-    if (!repairsMatching?.length) return new Set<string>();
-    return new Set(repairsMatching.map((m) => m.repairOutId));
-  }, [repairsMatching]);
+  const repairsMatchingSorted = useMemo(
+    () => filterDataMatching?.items ?? [],
+    [filterDataMatching?.items]
+  );
 
   const repairsInFiltered = useMemo(() => {
     let list = repairsInSorted ?? [];
     if (onlyUnmatchedRepairs && !isFilterModeIn) {
-      list = list.filter((r) => !matchedInIds.has(r.id));
+      list = list.filter((r) => !r.isMatching);
     }
     return list;
-  }, [repairsInSorted, isFilterModeIn, onlyUnmatchedRepairs, matchedInIds]);
+  }, [repairsInSorted, isFilterModeIn, onlyUnmatchedRepairs]);
 
   const repairsOutFiltered = useMemo(() => {
     let list = repairsOutSorted ?? [];
     if (onlyUnmatchedRepairs && !isFilterModeOut) {
-      list = list.filter((r) => !matchedOutIds.has(r.id));
+      list = list.filter((r) => !r.isMatching);
     }
     return list;
-  }, [repairsOutSorted, isFilterModeOut, onlyUnmatchedRepairs, matchedOutIds]);
+  }, [repairsOutSorted, isFilterModeOut, onlyUnmatchedRepairs]);
 
   const repairsMatchingFiltered = useMemo(
     () => repairsMatchingSorted ?? [],
@@ -314,11 +314,10 @@ export default function RepairsPage() {
 
   const repairsOutPaginated = useMemo(() => repairsOutFiltered ?? [], [repairsOutFiltered]);
 
-  const repairsMatchingPaginated = useMemo(() => {
-    const list = repairsMatchingFiltered ?? [];
-    const start = (pageMatched - 1) * pageSize;
-    return list.slice(start, start + pageSize);
-  }, [repairsMatchingFiltered, pageMatched, pageSize]);
+  const repairsMatchingPaginated = useMemo(
+    () => repairsMatchingFiltered ?? [],
+    [repairsMatchingFiltered]
+  );
 
   const planningRowsPaginated = useMemo(() => {
     const list = planningRowsFiltered ?? [];
@@ -328,11 +327,11 @@ export default function RepairsPage() {
 
   const totalCountIn = filterDataIn?.totalCount ?? 0;
   const totalCountOut = filterDataOut?.totalCount ?? 0;
-  const totalCountMatched = (repairsMatchingFiltered ?? []).length;
+  const totalCountMatched = filterDataMatching?.totalCount ?? 0;
   const totalCountPlanning = (planningRowsFiltered ?? []).length;
   const totalPagesIn = Math.max(1, filterDataIn?.totalPages ?? 1);
   const totalPagesOut = Math.max(1, filterDataOut?.totalPages ?? 1);
-  const totalPagesMatched = Math.max(1, Math.ceil(totalCountMatched / pageSize));
+  const totalPagesMatched = Math.max(1, filterDataMatching?.totalPages ?? 1);
   const totalPagesPlanning = Math.max(1, Math.ceil(totalCountPlanning / pageSize));
 
   const handlePageChangeIn = useCallback((page: number) => {
@@ -422,6 +421,16 @@ export default function RepairsPage() {
           type: "date",
         },
         {
+          key: "reRegistrationDate",
+          label: "Перерегистрация — последняя",
+          type: "date",
+        },
+        {
+          key: "reRegistrationNextDate",
+          label: "Перерегистрация — следующая",
+          type: "date",
+        },
+        {
           key: "currentUncouplingLast",
           label: "Текущий отцепочный ремонт — последний",
           type: "date",
@@ -450,6 +459,8 @@ export default function RepairsPage() {
         paintingLast: formatRuDate(row.periodPaintRepair),
         serviceEndDate: formatPlanningServiceEndDate(row.buildDate, row.serviceLifeYears),
         currentUncouplingLast: "—",
+        reRegistrationDate: formatRuDate(row.reRegistrationDate),
+        reRegistrationNextDate: formatRuDate(row.reRegistrationNextDate),
       }));
       data = allRows.map((row) => {
         const filtered: Record<string, string> = {};
@@ -634,12 +645,8 @@ export default function RepairsPage() {
   const handleCisternSelect = useCallback(async () => {
     setIsInitialLoading(true);
     try {
-      const [res3, res4] = await Promise.all([
-        CisternRepairs.getAllRepairsMatching(),
-        cisternsApi.getRepairsFilter({}),
-      ]);
-      setRepairsMatching(res3);
-      setPlanningRows(res4);
+      const planningData = await cisternsApi.getRepairsFilter({});
+      setPlanningRows(planningData);
     } finally {
       setIsInitialLoading(false);
     }
@@ -882,7 +889,7 @@ export default function RepairsPage() {
                             <TableRow
                               key={r.id}
                               className={
-                                matchedInIds.has(r.id)
+                                r.isMatching
                                   ? "even:bg-muted/30"
                                   : "bg-rose-200/80 dark:bg-rose-900/60"
                               }
@@ -971,7 +978,7 @@ export default function RepairsPage() {
                             <TableRow
                               key={r.id}
                               className={
-                                matchedOutIds.has(r.id)
+                                r.isMatching
                                   ? "even:bg-muted/30"
                                   : "bg-rose-200/80 dark:bg-rose-900/60"
                               }
@@ -1058,7 +1065,7 @@ export default function RepairsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {isInitialLoading ? (
+                        {isInitialLoading || isFilterLoadingMatching || isFetchingMatching ? (
                           <TableRow>
                             <TableCell colSpan={15} className="text-center text-muted-foreground py-8">
                               <div className="inline-flex items-center gap-2">
