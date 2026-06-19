@@ -46,6 +46,7 @@ public class RailwayCistern
     public Guid CisternStatusId {get; set;}
     public DateOnly? ReRegistrationNextDate { get; set; }
     public DateOnly? ExtensionServiceLifeDate { get; set; }
+    public DateOnly? PeriodDetachRepair { get; set; }
 
     public Affiliation Affiliation { get; set; } = null!;
     public Manufacturer Manufacturer { get; set; } = null!;

@@ -51,6 +51,7 @@ public class RailwayCisternDetailDTO
     public DateOnly? PlanPeriodIntermediateTest { get; set; }
     public DateOnly? PlanPeriodDepotRepair { get; set; }
     public DateOnly? PlanPeriodPPRRepair { get; set; }
+    public DateOnly? PeriodDetachRepair { get; set; }
 
     public int DangerClass { get; set; }
     public string Substance { get; set; }
@@ -121,6 +122,7 @@ public class CreateRailwayCisternDTO
     public Guid RailwayCisternStatusId {get; set; }
     public DateOnly? ReRegistrationNextDate { get; set; }
     public DateOnly? ExtensionServiceLifeDate { get; set; }
+    public DateOnly? PeriodDetachRepair { get; set; }
 }
 
 public class UpdateRailwayCisternDTO
@@ -165,6 +167,7 @@ public class UpdateRailwayCisternDTO
     public Guid RailwayCisternStatusId {get; set; }
     public DateOnly? ReRegistrationNextDate { get; set; }
     public DateOnly? ExtensionServiceLifeDate { get; set; }
+    public DateOnly? PeriodDetachRepair { get; set; }
 }
 
 public class FilterRepairsCisternsRequestDTO
@@ -180,6 +183,7 @@ public class FilterRepairsCisternsRequestDTO
     public DateRange? PeriodIntermediateTest { get; set; }
     public DateRange? PeriodDepotRepair { get; set; }
     public DateRange? PeriodPPRRepair { get; set; }
+    public DateRange? PeriodDetachRepair { get; set; }
     public DateTimeWithoutOffsetRange? PeriodPaintRepair {get; set; }
     //PLAN
     public DateRange? PlanPeriodMajorRepair { get; set; }
@@ -205,6 +209,7 @@ public class FilterRepairsCisternsResponseDTO
     public DateOnly? PeriodDepotRepair { get; set; }
     public DateOnly? PeriodPPRRepair { get; set; }
     public DateTime? PeriodPaintRepair {get; set; }
+    public DateOnly? PeriodDetachRepair { get; set; }
     //PLAN
     public DateOnly? PlanPeriodMajorRepair { get; set; }
     public string? PlanPeriodMajorRepairStatus { get; set; }

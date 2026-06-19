@@ -218,8 +218,9 @@ public static class RailwayCisternEndpoints
                             : null,
                         RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO(),
                         ReRegistrationNextDate = rc.ReRegistrationNextDate,
-                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate
-                        
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate,
+                        PeriodDetachRepair =rc.PeriodDetachRepair
+
                     })
                     .ToListAsync();
                 var models = await context.WagonModels.ToListAsync();
@@ -439,7 +440,8 @@ public static class RailwayCisternEndpoints
                             : null,
                         RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO(),
                            ReRegistrationNextDate = rc.ReRegistrationNextDate,
-                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate,
+                        PeriodDetachRepair = rc.PeriodDetachRepair
                     })
                     .ToListAsync();
 
@@ -661,7 +663,8 @@ public static class RailwayCisternEndpoints
                             : null,
                         RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO(),
                            ReRegistrationNextDate = rc.ReRegistrationNextDate,
-                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate,
+                        PeriodDetachRepair = rc.PeriodDetachRepair
                     })
                     .ToListAsync();
                 var models = await context.WagonModels.ToListAsync();
@@ -912,7 +915,8 @@ public static class RailwayCisternEndpoints
                             : null,
                         RailwayCisternStatus = rc.RailwayCisternStatus.ToRailwayCisternStatusDTO(),
                            ReRegistrationNextDate = rc.ReRegistrationNextDate,
-                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate
+                        ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate,
+                        PeriodDetachRepair = rc.PeriodDetachRepair
                     })
                     .FirstOrDefaultAsync();
                 if (cistern == null)
@@ -1061,7 +1065,8 @@ public static class RailwayCisternEndpoints
                         TareWeight3 = dto.TareWeight3,
                         CisternStatusId = dto.RailwayCisternStatusId,
                         ReRegistrationNextDate = dto.ReRegistrationNextDate,
-                        ExtensionServiceLifeDate = dto.ExtensionServiceLifeDate
+                        ExtensionServiceLifeDate = dto.ExtensionServiceLifeDate,
+                        PeriodDetachRepair = dto.PeriodDetachRepair
                     };
 
                     context.Add(cistern);
@@ -1123,6 +1128,7 @@ public static class RailwayCisternEndpoints
                     cistern.CisternStatusId = dto.RailwayCisternStatusId;
                     cistern.ReRegistrationNextDate = dto.ReRegistrationNextDate;
                     cistern.ExtensionServiceLifeDate = dto.ExtensionServiceLifeDate;
+                    cistern.PeriodDetachRepair = dto.PeriodDetachRepair;
 
                     await context.SaveChangesAsync();
                     return Results.NoContent();
@@ -1266,6 +1272,18 @@ public static class RailwayCisternEndpoints
                             query = query.Where(rc => rc.PeriodPaintRepair <= req.PeriodPaintRepair.To.Value);
                         }
                     }
+
+                    if (req.PeriodDetachRepair != null)
+                    {
+                        if (req.PeriodDetachRepair.From.HasValue)
+                        {
+                            query = query.Where(rc => rc.PeriodDetachRepair >= req.PeriodDetachRepair.From.Value);
+                        }
+                        if (req.PeriodDetachRepair.To.HasValue)
+                        {
+                            query = query.Where(rc => rc.PeriodDetachRepair <= req.PeriodDetachRepair.To.Value);
+                        }
+                    }
                 }
 
                 var cisterns = await query.Select(rc => new FilterRepairsCisternsResponseDTO
@@ -1292,7 +1310,8 @@ public static class RailwayCisternEndpoints
                         ExtensionServiceLifeDate = rc.ExtensionServiceLifeDate,
                         ReRegistrationDate = rc.ReRegistrationDate,
                         ReRegistrationNextDate = rc.ReRegistrationNextDate,
-                    }).ToListAsync();
+                        PeriodDetachRepair = rc.PeriodDetachRepair
+                }).ToListAsync();
 
                 var models = await context.WagonModels.ToListAsync();
                 var personalCisRepairPeriods = await context.PersonalCisRepairPeriods.ToListAsync();
