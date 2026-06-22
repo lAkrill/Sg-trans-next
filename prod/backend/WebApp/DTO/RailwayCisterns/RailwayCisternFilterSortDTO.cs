@@ -6,7 +6,6 @@ public class RailwayCisternFilterSortDTO
 {
     public FilterCriteria? Filters { get; set; }
     public List<SortCriteria>? SortFields { get; set; }
-    public List<string>? SelectedColumns { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 10;
 }
@@ -15,7 +14,6 @@ public class RailwayCisternFilterSortWithoutPaginationDTO
 {
     public FilterCriteria? Filters { get; set; }
     public List<SortCriteria>? SortFields { get; set; }
-    public List<string>? SelectedColumns { get; set; }
 }
 
 public class FilterCriteria
@@ -52,6 +50,12 @@ public class FilterCriteria
     public DateRange? PeriodIntermediateTest { get; set; }
     public DateRange? PeriodDepotRepair { get; set; }
     public DateRange? PeriodPPRRepair { get; set; }
+    public DateTimeWithoutOffsetRange? PeriodPaintRepair { get; set; }
+    public DateRange? PeriodDetachRepair { get; set; }
+    public DateRange? ReRegistrationNextDate { get; set; }
+    public DateRange? ExtensionServiceLifeDate { get; set; }
+    public List<Guid>? CisternStatusIds { get; set; }
+    public List<string>? Notes { get; set; }
     public List<int>? DangerClasses { get; set; }
     public List<string>? Substances { get; set; }
     public DecimalRange? TareWeight2 { get; set; }

@@ -1,4 +1,6 @@
-﻿namespace WebApp.DTO.RailwayCisterns;
+﻿using WebApp.Data.Entities.RailwayCisterns;
+
+namespace WebApp.DTO.RailwayCisterns;
 
 public class VesselDTO
 {
@@ -35,6 +37,22 @@ public class VesselListWithCisternNumberDTO
     public RailwayCisternIdAndNumberDTO RailwayCisternIdAndNumberDto { get; set; }
 }
 
+public static class VesselDTOMapper
+{
+    public static VesselListDTO ToVesselListDTO(this Vessel vessel)
+    {
+        return new VesselListDTO
+        {
+            Id = vessel.Id,
+            SerialNumber = vessel.SerialNumber,
+            BuildDate = vessel.BuildDate,
+            Manufacturer = vessel.Manufacturer,
+            WagonModelId = vessel.WagonModelId,
+            Pressure = vessel.Pressure,
+            Capacity = vessel.Capacity
+        };
+    }
+}
 
 public class CreateVesselDTO
 {
