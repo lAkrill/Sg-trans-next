@@ -122,6 +122,7 @@ export interface RailwayCisternRepairsFilterListDTO {
     periodDepotRepair?: string;
     periodPPRRepair?: string;
     periodPaintRepair?: string;
+    periodDetachRepair?: string;
     planPeriodMajorRepair?: string;
     planPeriodMajorRepairStatus?: string;
     planPeriodPeriodicTest?: string;
@@ -225,6 +226,7 @@ export interface RailwayCisternRepairsFilterRequestDTO {
   periodPPRRepair?: DateRange;
   /** Все границы диапазонов — строки `YYYY-MM-DD` (как в теле repairs-filter). */
   periodPaintRepair?: DateRange;
+  periodDetachRepair?: DateRange;
   planPeriodMajorRepair?: DateRange;
   planPeriodPeriodicTest?: DateRange;
   planPeriodIntermediateTest?: DateRange;

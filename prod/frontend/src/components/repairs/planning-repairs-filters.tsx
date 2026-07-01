@@ -226,6 +226,7 @@ function normalizeRequest(
     "planPeriodIntermediateTest",
     "planPeriodDepotRepair",
     "planPeriodPPRRepair",
+    "periodDetachRepair",
   ];
   for (const key of rangeKeys) {
     const r = f[key];
@@ -304,7 +305,7 @@ export function PlanningRepairsFilters({
     setQuickRepairType(DEFAULT_QUICK_REPAIR_TYPE);
     setQuickMonths(DEFAULT_QUICK_MONTHS);
     onApply({});
-    onVisibleColumnsChange([...DEFAULT_PLANNING_VISIBLE_COLUMNS]);
+    onVisibleColumnsChange(DEFAULT_PLANNING_VISIBLE_COLUMNS);
   }, [onApply, onVisibleColumnsChange]);
 
   const handleApply = useCallback(() => {
@@ -614,8 +615,9 @@ export function PlanningRepairsFilters({
                         if (checked) {
                           onVisibleColumnsChange([...visibleColumns, option.value]);
                         } else if (visibleColumns.length > 1) {
-                          onVisibleColumnsChange(
-                            visibleColumns.filter((col) => col !== option.value)
+                          onVisibleColumnsChange(                
+                              visibleColumns.filter((col) => col !== option.value)
+                            
                           );
                         }
                       }}

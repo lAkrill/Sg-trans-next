@@ -133,8 +133,8 @@ export function PlanningRepairsTable({
               Перерегистрация
             </TableHead>
           )}
-          {vis("uncouplingRepair") && (
-            <TableHead className="whitespace-normal align-middle text-center">
+          {vis("periodDetachRepair") && (
+            <TableHead rowSpan={2} className="whitespace-normal align-middle text-center">
               Текущий отцепочный
               <br />
               ремонт
@@ -183,9 +183,6 @@ export function PlanningRepairsTable({
               <TableHead className="whitespace-nowrap w-0 align-middle text-center">последняя</TableHead>
               <TableHead className="whitespace-nowrap w-0 align-middle text-center">следующая</TableHead>
             </>
-          )}
-          {vis("uncouplingRepair") && (
-            <TableHead className="whitespace-normal align-middle text-center">последний</TableHead>
           )}
         </TableRow>
       </TableHeader>
@@ -253,7 +250,7 @@ export function PlanningRepairsTable({
               )}
               {vis("milage") && (
                 <TableCell className="whitespace-nowrap text-center">
-                  {row.milage != null ? row.milage : "—"}
+                  {row.milageRemain != null ? row.milageRemain : "—"}
                 </TableCell>
               )}
               {vis("periodPaintRepair") && (
@@ -272,8 +269,10 @@ export function PlanningRepairsTable({
                   <TableCell className="whitespace-nowrap">{formatRuDate(row.reRegistrationNextDate)}</TableCell>
                 </>
               )}
-              {vis("uncouplingRepair") && (
-                <TableCell className="whitespace-nowrap text-center">—</TableCell>
+              {vis("periodDetachRepair") && (
+                <TableCell className="whitespace-nowrap text-center">
+                  {formatRuDate(row.periodDetachRepair)}
+                </TableCell>
               )}
             </TableRow>
           ))

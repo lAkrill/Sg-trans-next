@@ -13,7 +13,7 @@ export const PLANNING_COLUMN_OPTIONS = [
   { value: "periodPaintRepair", label: "Покраска" },
   { value: "commissioningEndDate", label: "Дата окончания эксплуатации" },
   { value: "reRegistration", label: "Перерегистрация" },
-  { value: "uncouplingRepair", label: "Текущий отцепочный ремонт" },
+  { value: "periodDetachRepair", label: "Текущий отцепочный ремонт" },
 ] as const;
 
 export type PlanningColumnKey = (typeof PLANNING_COLUMN_OPTIONS)[number]["value"];
@@ -63,7 +63,7 @@ const EXPORT_KEYS_BY_VISIBLE: Record<PlanningColumnKey, string[]> = {
   periodPaintRepair: ["paintingLast"],
   commissioningEndDate: ["serviceEndDate"],
   reRegistration: ["reRegistrationDate", "reRegistrationNextDate"],
-  uncouplingRepair: ["currentUncouplingLast"],
+  periodDetachRepair: ["periodDetachRepair"],
 };
 
 export function getPlanningExportColumnKeys(visibleColumns: string[]): Set<string> {

@@ -67,6 +67,31 @@ function serializeRepairsFilterRequest(
   return out;
 }
 
+function toOptionalDateString(value: unknown): string | undefined {
+  if (value == null || value === "") return undefined;
+  if (typeof value === "string") return value.split("T")[0] || undefined;
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "year" in value &&
+    "month" in value &&
+    "day" in value
+  ) {
+    const { year, month, day } = value as { year: number; month: number; day: number };
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  return undefined;
+}
+
+function normalizeRepairsFilterListItem(
+  raw: RailwayCisternRepairsFilterListDTO & Record<string, unknown>
+): RailwayCisternRepairsFilterListDTO {
+  return {
+    ...raw,
+    periodDetachRepair: toOptionalDateString(raw.periodDetachRepair ?? raw.PeriodDetachRepair),
+  };
+}
+
 export const cisternsApi = {
   // Get paginated list of cisterns
   getAll: async (filter?: CisternsFilter): Promise<PaginatedCisternsResponse> => {
@@ -143,7 +168,9 @@ export const cisternsApi = {
       `${CISTERNS_ENDPOINT}/repairs-filter`,
       payload
     );
-    return response.data;
+    return response.data.map((row) =>
+      normalizeRepairsFilterListItem(row as RailwayCisternRepairsFilterListDTO & Record<string, unknown>)
+    );
   },
 
   // /api/railway-cisterns/detailed
