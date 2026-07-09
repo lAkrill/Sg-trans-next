@@ -299,55 +299,22 @@ public static class RailwayCisternEndpoints
                 async ([FromServices] ApplicationDbContext context, [FromBody] CreateRailwayCisternDTO dto,
                     HttpContext httpContext) =>
                 {
-                    var cistern = new RailwayCistern
-                    {
-                        Number = dto.Number,
-                        ManufacturerId = dto.ManufacturerId,
-                        BuildDate = dto.BuildDate,
-                        TareWeight = dto.TareWeight,
-                        LoadCapacity = dto.LoadCapacity,
-                        Length = dto.Length,
-                        AxleCount = dto.AxleCount,
-                        Volume = dto.Volume,
-                        FillingVolume = dto.FillingVolume,
-                        InitialTareWeight = dto.InitialTareWeight,
-                        TypeId = dto.TypeId,
-                        ModelId = dto.ModelId,
-                        CommissioningDate = dto.CommissioningDate,
-                        SerialNumber = dto.SerialNumber,
-                        RegistrationNumber = dto.RegistrationNumber,
-                        RegistrationDate = dto.RegistrationDate,
-                        RegistrarId = dto.RegistrarId,
-                        Notes = dto.Notes,
-                        CreatedAt = DateTimeOffset.UtcNow,
-                        UpdatedAt = DateTimeOffset.UtcNow,
-                        CreatorId = httpContext.User.FindFirstValue("userId") ?? string.Empty,
-                        OwnerId = dto.OwnerId,
-                        TechConditions = dto.TechConditions,
-                        Pripiska = dto.Pripiska,
-                        ReRegistrationDate = dto.ReRegistrationDate,
-                        Pressure = dto.Pressure,
-                        TestPressure = dto.TestPressure,
-                        Rent = dto.Rent,
-                        AffiliationId = dto.AffiliationId,
-                        ServiceLifeYears = dto.ServiceLifeYears,
-                        PeriodMajorRepair = dto.PeriodMajorRepair,
-                        PeriodPeriodicTest = dto.PeriodPeriodicTest,
-                        PeriodIntermediateTest = dto.PeriodIntermediateTest,
-                        PeriodDepotRepair = dto.PeriodDepotRepair,
-                        PeriodPPRRepair = dto.PeriodDepotRepair,
-                        PeriodPaintRepair = dto.PeriodPaintRepair,
-                        DangerClass = dto.DangerClass,
-                        Substance = dto.Substance,
-                        TareWeight2 = dto.TareWeight2,
-                        TareWeight3 = dto.TareWeight3,
-                        CisternStatusId = dto.RailwayCisternStatusId,
-                        ReRegistrationNextDate = dto.ReRegistrationNextDate,
-                        ExtensionServiceLifeDate = dto.ExtensionServiceLifeDate,
-                        PeriodDetachRepair = dto.PeriodDetachRepair
-                    };
+                    var userIdString = httpContext.User.FindFirstValue("userId");
+                    if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var creatorId))
+                        return Results.BadRequest();
+
+                    var cistern = dto.ToRailwayCistern(httpContext.User.FindFirstValue("userId") ?? string.Empty);
 
                     context.Add(cistern);
+                    context.HistoryActionsRailways.Add(new HistoryActionsRailway
+                    {
+                        Id = Guid.NewGuid(),
+                        CisternId = cistern.Id,
+                        Date = DateTime.UtcNow,
+                        CreatorId = creatorId,
+                        Note = $"Создан вагон №{cistern.Number}."
+                    });
+
                     await context.SaveChangesAsync();
 
                     return Results.Created($"/api/railway-cisterns/{cistern.Id}", cistern.Id);
@@ -359,11 +326,18 @@ public static class RailwayCisternEndpoints
 
         group.MapPut("/{id}",
                 async ([FromServices] ApplicationDbContext context, [FromRoute] Guid id,
-                    [FromBody] UpdateRailwayCisternDTO dto) =>
+                    [FromBody] UpdateRailwayCisternDTO dto,
+                    HttpContext httpContext) =>
                 {
                     var cistern = await context.Set<RailwayCistern>().FindAsync(id);
                     if (cistern == null)
                         return Results.NotFound();
+
+                    var userIdString = httpContext.User.FindFirstValue("userId");
+                    if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var creatorId))
+                        return Results.BadRequest();
+
+                    var note = BuildHistoryNoteForRailwayCisternUpdate(cistern, dto);
 
                     cistern.Number = dto.Number;
                     cistern.ManufacturerId = dto.ManufacturerId;
@@ -397,7 +371,7 @@ public static class RailwayCisternEndpoints
                     cistern.PeriodPeriodicTest = dto.PeriodPeriodicTest;
                     cistern.PeriodIntermediateTest = dto.PeriodIntermediateTest;
                     cistern.PeriodDepotRepair = dto.PeriodDepotRepair;
-                    cistern.PeriodPPRRepair = dto.PeriodDepotRepair;
+                    cistern.PeriodPPRRepair = dto.PeriodPPRRepair;
                     cistern.PeriodPaintRepair = dto.PeriodPaintRepair;
                     cistern.DangerClass = dto.DangerClass;
                     cistern.Substance = dto.Substance;
@@ -408,6 +382,18 @@ public static class RailwayCisternEndpoints
                     cistern.ExtensionServiceLifeDate = dto.ExtensionServiceLifeDate;
                     cistern.PeriodDetachRepair = dto.PeriodDetachRepair;
 
+                    if (!string.IsNullOrEmpty(note))
+                    {
+                        context.HistoryActionsRailways.Add(new HistoryActionsRailway
+                        {
+                            Id = Guid.NewGuid(),
+                            CisternId = cistern.Id,
+                            Date = DateTime.UtcNow,
+                            CreatorId = creatorId,
+                            Note = note
+                        });
+                    }
+
                     await context.SaveChangesAsync();
                     return Results.NoContent();
                 })
@@ -417,11 +403,25 @@ public static class RailwayCisternEndpoints
             .ProducesValidationProblem()
             .RequirePermissions(Permission.Update);
 
-        group.MapDelete("/{id}", async ([FromServices] ApplicationDbContext context, [FromRoute] Guid id) =>
+        group.MapDelete("/{id}", async ([FromServices] ApplicationDbContext context, [FromRoute] Guid id,
+                HttpContext httpContext) =>
             {
                 var cistern = await context.Set<RailwayCistern>().FindAsync(id);
                 if (cistern == null)
                     return Results.NotFound();
+
+                var userIdString = httpContext.User.FindFirstValue("userId");
+                if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var creatorId))
+                    return Results.BadRequest();
+
+                context.HistoryActionsRailways.Add(new HistoryActionsRailway
+                {
+                    Id = Guid.NewGuid(),
+                    CisternId = cistern.Id,
+                    Date = DateTime.UtcNow,
+                    CreatorId = creatorId,
+                    Note = $"Удален вагон №{cistern.Number}, регистрационный номер {cistern.RegistrationNumber}."
+                });
 
                 context.Remove(cistern);
                 await context.SaveChangesAsync();
@@ -989,5 +989,77 @@ public static class RailwayCisternEndpoints
         if (serviceDate <= date)
             date = serviceDate;
         return date;
+    }
+
+    private static string BuildHistoryNoteForRailwayCisternUpdate(RailwayCistern existing, UpdateRailwayCisternDTO dto)
+    {
+        var changes = new List<string>();
+
+        void AddChange(string field, object? oldValue, object? newValue)
+        {
+            if (oldValue == null && newValue == null)
+                return;
+            if (oldValue != null && oldValue.Equals(newValue))
+                return;
+
+            static string FormatValue(object? value)
+            {
+                return value switch
+                {
+                    null => "null",
+                    DateOnly d => d.ToString("yyyy-MM-dd"),
+                    DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    DateTimeOffset dto => dto.ToString("yyyy-MM-dd HH:mm:ss"),
+                    bool b => b.ToString(),
+                    _ => value.ToString() ?? string.Empty,
+                };
+            }
+
+            changes.Add($"{field}: {FormatValue(oldValue)} -> {FormatValue(newValue)}");
+        }
+
+        AddChange("Номер", existing.Number, dto.Number);
+        AddChange("Производитель", existing.ManufacturerId, dto.ManufacturerId);
+        AddChange("Дата постройки", existing.BuildDate, dto.BuildDate);
+        AddChange("Тара", existing.TareWeight, dto.TareWeight);
+        AddChange("Грузоподъемность", existing.LoadCapacity, dto.LoadCapacity);
+        AddChange("Длина", existing.Length, dto.Length);
+        AddChange("Число осей", existing.AxleCount, dto.AxleCount);
+        AddChange("Объем", existing.Volume, dto.Volume);
+        AddChange("Объем заполнения", existing.FillingVolume, dto.FillingVolume);
+        AddChange("Начальная тара", existing.InitialTareWeight, dto.InitialTareWeight);
+        AddChange("Тип", existing.TypeId, dto.TypeId);
+        AddChange("Модель", existing.ModelId, dto.ModelId);
+        AddChange("Дата ввода в эксплуатацию", existing.CommissioningDate, dto.CommissioningDate);
+        AddChange("Серийный номер", existing.SerialNumber, dto.SerialNumber);
+        AddChange("Рег. номер", existing.RegistrationNumber, dto.RegistrationNumber);
+        AddChange("Дата регистрации", existing.RegistrationDate, dto.RegistrationDate);
+        AddChange("Регистратор", existing.RegistrarId, dto.RegistrarId);
+        AddChange("Примечания", existing.Notes, dto.Notes);
+        AddChange("Владелец", existing.OwnerId, dto.OwnerId);
+        AddChange("Техусловия", existing.TechConditions, dto.TechConditions);
+        AddChange("Приписка", existing.Pripiska, dto.Pripiska);
+        AddChange("Дата перерегистрации", existing.ReRegistrationDate, dto.ReRegistrationDate);
+        AddChange("Давление", existing.Pressure, dto.Pressure);
+        AddChange("Испытательное давление", existing.TestPressure, dto.TestPressure);
+        AddChange("Аренда", existing.Rent, dto.Rent);
+        AddChange("Принадлежность", existing.AffiliationId, dto.AffiliationId);
+        AddChange("Срок службы", existing.ServiceLifeYears, dto.ServiceLifeYears);
+        AddChange("Капитальный ремонт", existing.PeriodMajorRepair, dto.PeriodMajorRepair);
+        AddChange("Периодический осмотр", existing.PeriodPeriodicTest, dto.PeriodPeriodicTest);
+        AddChange("Промежуточный осмотр", existing.PeriodIntermediateTest, dto.PeriodIntermediateTest);
+        AddChange("Деповский ремонт", existing.PeriodDepotRepair, dto.PeriodDepotRepair);
+        AddChange("ППР", existing.PeriodPPRRepair, dto.PeriodPPRRepair);
+        AddChange("Покрасочный ремонт", existing.PeriodPaintRepair, dto.PeriodPaintRepair);
+        AddChange("Класс опасности", existing.DangerClass, dto.DangerClass);
+        AddChange("Вещество", existing.Substance, dto.Substance);
+        AddChange("Тара 2", existing.TareWeight2, dto.TareWeight2);
+        AddChange("Тара 3", existing.TareWeight3, dto.TareWeight3);
+        AddChange("Статус цистерны", existing.CisternStatusId, dto.RailwayCisternStatusId);
+        AddChange("Дата следующей перерегистрации", existing.ReRegistrationNextDate, dto.ReRegistrationNextDate);
+        AddChange("Дата продления срока службы", existing.ExtensionServiceLifeDate, dto.ExtensionServiceLifeDate);
+        AddChange("Дата отцепки ремонта", existing.PeriodDetachRepair, dto.PeriodDetachRepair);
+
+        return changes.Count == 0 ? string.Empty : string.Join("; ", changes);
     }
 }

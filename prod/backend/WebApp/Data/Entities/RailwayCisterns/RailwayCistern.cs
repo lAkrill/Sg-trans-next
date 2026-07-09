@@ -57,6 +57,7 @@ public class RailwayCistern
     public ICollection<Vessel>? Vessels { get; set; }
     public ICollection<MilageCistern> MilageCisterns { get; set; } = new List<MilageCistern>();
     public ICollection<PartInstallation> PartInstallations { get; set; } = new List<PartInstallation>();
+    public ICollection<HistoryActionsRailway> HistoryActionsRailways { get; set; } = new List<HistoryActionsRailway>();
     public PersonalCisRepairPeriod? personalCisRepairPeriod {get; set;}
     public RailwayCisternStatus RailwayCisternStatus {get; set; } = null!;
 }

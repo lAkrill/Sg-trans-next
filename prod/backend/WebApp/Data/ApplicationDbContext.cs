@@ -19,6 +19,7 @@ public class ApplicationDbContext(
     public DbSet<MilageCistern> MilageCisterns { get; set; }
     public DbSet<Owner> Owners { get; set; }
     public DbSet<RailwayCistern> RailwayCisterns { get; set; }
+    public DbSet<HistoryActionsRailway> HistoryActionsRailways { get; set; }
     public DbSet<SavedFilter> SavedFilters { get; set; }
     public DbSet<WagonType> WagonTypes { get; set; }
     public DbSet<WagonModel> WagonModels { get; set; }

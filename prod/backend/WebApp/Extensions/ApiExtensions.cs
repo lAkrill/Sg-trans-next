@@ -62,6 +62,7 @@ public static class ApiExtensions
         app.MapRepairsInFilterEndpoints();
         app.MapRepairsOutFilterEndpoints();
         app.MapRepairsMatchingFilterEndpoints();
+        app.MapHistoryActionsRailwayEndpoints();
 
         app.MapPersonalCisRepairPeriodEndpoints();
 
