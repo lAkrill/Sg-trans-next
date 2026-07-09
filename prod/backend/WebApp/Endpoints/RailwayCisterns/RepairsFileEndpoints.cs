@@ -29,8 +29,8 @@ public static class RepairsFileEndpoints
         var group2 = app.MapGroup("/api/ImportFiles")
             .RequireAuthorization()
             .WithTags("ImportFiles");
-            
-        group.MapPost("/process-import-file", ImportFile)
+
+        group2.MapPost("/process-import-file", ImportFile)
             .WithName("ProcessImportFile")
             .WithOpenApi()
             .DisableAntiforgery()
