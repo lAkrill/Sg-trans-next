@@ -310,7 +310,7 @@ public static class RailwayCisternEndpoints
                     {
                         Id = Guid.NewGuid(),
                         CisternId = cistern.Id,
-                        Date = DateTime.UtcNow,
+                        Date = DateTime.Now,
                         CreatorId = creatorId,
                         Note = $"Создан вагон №{cistern.Number}."
                     });
@@ -388,7 +388,7 @@ public static class RailwayCisternEndpoints
                         {
                             Id = Guid.NewGuid(),
                             CisternId = cistern.Id,
-                            Date = DateTime.UtcNow,
+                            Date = DateTime.Now,
                             CreatorId = creatorId,
                             Note = note
                         });
