@@ -6,7 +6,6 @@ public class PartFilterSortDTO
 {
     public PartFilterCriteria? Filters { get; set; }
     public List<SortCriteria>? SortFields { get; set; }
-    public List<string>? SelectedColumns { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 100;
 }
@@ -15,7 +14,6 @@ public class PartFilterSortWithoutPaginationDTO
 {
     public PartFilterCriteria? Filters { get; set; }
     public List<SortCriteria>? SortFields { get; set; }
-    public List<string>? SelectedColumns { get; set; }
 }
 
 public class PartFilterCriteria

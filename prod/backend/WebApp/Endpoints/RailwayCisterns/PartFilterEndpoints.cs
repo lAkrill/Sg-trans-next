@@ -48,10 +48,10 @@ public static class PartFilterEndpoints
             var parts = await query
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(p => SelectPartColumns(p, request.SelectedColumns))
+                .Select(p => MapPartToDto(p))
                 .ToListAsync();
 
-            var result = new PaginatedList<object>
+            var result = new PaginatedList<PartDTO>
             {
                 Items = parts,
                 PageNumber = request.Page,
@@ -63,7 +63,7 @@ public static class PartFilterEndpoints
             return Results.Ok(result);
         })
         .WithName("FilterParts")
-        .Produces<PaginatedList<object>>(StatusCodes.Status200OK)
+        .Produces<PaginatedList<PartDTO>>(StatusCodes.Status200OK)
         .RequirePermissions(Permission.Read);
 
         // Фильтрация без пагинации
@@ -91,13 +91,13 @@ public static class PartFilterEndpoints
             }
 
             var parts = await query
-                .Select(p => SelectPartColumns(p, request.SelectedColumns))
+                .Select(p => MapPartToDto(p))
                 .ToListAsync();
 
             return Results.Ok(parts);
         })
         .WithName("FilterAllParts")
-        .Produces<List<object>>(StatusCodes.Status200OK)
+        .Produces<List<PartDTO>>(StatusCodes.Status200OK)
         .RequirePermissions(Permission.Read);
 
         // Поиск по сохраненному фильтру
@@ -115,10 +115,6 @@ public static class PartFilterEndpoints
 
             var filterCriteria = System.Text.Json.JsonSerializer.Deserialize<PartFilterCriteria>(savedFilter.FilterJson);
             var sortFields = System.Text.Json.JsonSerializer.Deserialize<List<SortCriteria>>(savedFilter.SortFieldsJson);
-            var selectedColumns = savedFilter.SelectedColumnsJson != null 
-                ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(savedFilter.SelectedColumnsJson)
-                : null;
-
             var query = BuildFilterQuery(context, filterCriteria);
 
             if (sortFields != null && sortFields.Any())
@@ -139,224 +135,93 @@ public static class PartFilterEndpoints
             }
 
             var parts = await query
-                .Select(p => SelectPartColumns(p, selectedColumns))
+                .Select(p => MapPartToDto(p))
                 .ToListAsync();
 
             return Results.Ok(parts);
         })
         .WithName("GetPartsBySavedFilter")
-        .Produces<List<object>>(StatusCodes.Status200OK)
+        .Produces<List<PartDTO>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status404NotFound)
         .RequirePermissions(Permission.Read);
     }
 
-    private static dynamic SelectPartColumns(Part p, List<string>? selectedColumns)
+    private static PartDTO MapPartToDto(Part p)
     {
-        if (selectedColumns == null || !selectedColumns.Any())
+        return new PartDTO
         {
-            return new
+            Id = p.Id,
+            PartType = new PartTypeDTO
             {
-                p.Id,
-                PartType = new { p.PartType.Id, p.PartType.Name, p.PartType.Code },
-                Depot = p.Depot != null ? new { p.Depot.Id, p.Depot.Name, p.Depot.Code, p.Depot.ShortName, p.Depot.Location } : null,
-                StampNumber = p.StampNumber != null ? new { p.StampNumber.Id, p.StampNumber.Value } : null,
-                p.SerialNumber,
-                p.ManufactureYear,
-                p.CurrentLocation,
-                Status = new { p.Status.Id, p.Status.Name, p.Status.Code },
-                p.Notes,
-                p.CreatedAt,
-                p.UpdatedAt,
-                p.Code,
-                Document = p.Document != null ? new 
-                {
-                    p.Document.Id,
-                    p.Document.Number,
-                    p.Document.Type,
-                    p.Document.Date,
-                    p.Document.Author,
-                    p.Document.Price,
-                    p.Document.Note
-                } : null,
-                WheelPair = p.PartType.Code == 1 && p.WheelPair != null ? new
-                {
-                    p.WheelPair.ThicknessLeft,
-                    p.WheelPair.ThicknessRight,
-                    p.WheelPair.WheelType
-                } : null,
-                SideFrame = p.PartType.Code == 3 && p.SideFrame != null ? new
-                {
-                    p.SideFrame.ServiceLifeYears,
-                    p.SideFrame.ExtendedUntil
-                } : null,
-                Bolster = p.PartType.Code == 2 && p.Bolster != null ? new
-                {
-                    p.Bolster.ServiceLifeYears,
-                    p.Bolster.ExtendedUntil
-                } : null,
-                Coupler = p.PartType.Code == 4 ? new { } : null,
-                ShockAbsorber = p.PartType.Code == 10 && p.ShockAbsorber != null ? new
-                {
-                    p.ShockAbsorber.Model,
-                    p.ShockAbsorber.ManufacturerCode,
-                    p.ShockAbsorber.NextRepairDate,
-                    p.ShockAbsorber.ServiceLifeYears
-                } : null
-            };
-        }
-
-        var selectedProperties = new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
-        
-        // ID части всегда добавляется, даже если не выбрана в selectedColumns
-        selectedProperties["id"] = p.Id;
-        
-        foreach (var column in selectedColumns)
-        {
-            var normalizedColumn = column.ToLower();
-            switch (normalizedColumn)
+                Id = p.PartType.Id,
+                Name = p.PartType.Name,
+                Code = p.PartType.Code
+            },
+            Depot = p.Depot != null ? new DepotDTO
             {
-                // Основные поля
-                case "id":
-                    // ID уже добавлён выше, пропускаем
-                    break;
-
-                // PartType
-                case "parttype.id":
-                    selectedProperties["partTypeId"] = p.PartType.Id;
-                    break;
-                case "parttype.name":
-                    selectedProperties["partTypeName"] = p.PartType.Name;
-                    break;
-                case "parttype.code":
-                    selectedProperties["partTypeCode"] = p.PartType.Code;
-                    break;
-
-                // StampNumber
-                case "stampnumber.id":
-                    selectedProperties["stampNumberId"] = p.StampNumber?.Id ?? Guid.Empty;
-                    break;
-                case "stampnumber.value":
-                    selectedProperties["stampNumberValue"] = p.StampNumber?.Value ?? "";
-                    break;
-
-                // Status
-                case "status.id":
-                    selectedProperties["statusId"] = p.Status?.Id ?? Guid.Empty;
-                    break;
-                case "status.name":
-                    selectedProperties["statusName"] = p.Status?.Name ?? "";
-                    break;
-                case "status.code":
-                    selectedProperties["statusCode"] = p.Status?.Code ?? 0;
-                    break;
-
-                // WheelPair
-                case "wheelpair.thicknessleft":
-                    selectedProperties["wheelPairThicknessLeft"] = p.WheelPair?.ThicknessLeft ?? 0;
-                    break;
-                case "wheelpair.thicknessright":
-                    selectedProperties["wheelPairThicknessRight"] = p.WheelPair?.ThicknessRight ?? 0;
-                    break;
-                case "wheelpair.wheeltype":
-                    selectedProperties["wheelPairWheelType"] = p.WheelPair?.WheelType ?? "";
-                    break;
-
-                // SideFrame
-                case "sideframe.servicelifeyears":
-                    selectedProperties["sideFrameServiceLifeYears"] = p.SideFrame?.ServiceLifeYears ?? 0;
-                    break;
-                case "sideframe.extendeduntil":
-                    selectedProperties["sideFrameExtendedUntil"] = p.SideFrame?.ExtendedUntil ?? default(DateOnly);
-                    break;
-
-                // Bolster
-                case "bolster.servicelifeyears":
-                    selectedProperties["bolsterServiceLifeYears"] = p.Bolster?.ServiceLifeYears ?? 0;
-                    break;
-                case "bolster.extendeduntil":
-                    selectedProperties["bolsterExtendedUntil"] = p.Bolster?.ExtendedUntil ?? default(DateOnly);
-                    break;
-
-                // ShockAbsorber
-                case "shockabsorber.model":
-                    selectedProperties["shockAbsorberModel"] = p.ShockAbsorber?.Model ?? "";
-                    break;
-                case "shockabsorber.manufacturercode":
-                    selectedProperties["shockAbsorberManufacturerCode"] = p.ShockAbsorber?.ManufacturerCode ?? "";
-                    break;
-                case "shockabsorber.nextrepairdate":
-                    selectedProperties["shockAbsorberNextRepairDate"] = p.ShockAbsorber?.NextRepairDate ?? default(DateOnly);
-                    break;
-                case "shockabsorber.servicelifeyears":
-                    selectedProperties["shockAbsorberServiceLifeYears"] = p.ShockAbsorber?.ServiceLifeYears ?? 0;
-                    break;
-
-                // Depot
-                case "depot.id":
-                    selectedProperties["depotId"] = p.Depot?.Id ?? Guid.Empty;
-                    break;
-                case "depot.name":
-                    selectedProperties["depotName"] = p.Depot?.Name ?? "";
-                    break;
-                case "depot.code":
-                    selectedProperties["depotCode"] = p.Depot?.Code ?? "";
-                    break;
-                case "depot.location":
-                    selectedProperties["depotLocation"] = p.Depot?.Location ?? "";
-                    break;
-                case "depot.shortname":
-                    selectedProperties["depotShortName"] = p.Depot?.ShortName ?? "";
-                    break;
-
-                // Базовые поля
-                case "depotid":
-                    selectedProperties["depotId"] = p.DepotId ?? Guid.Empty;
-                    break;
-                case "serialnumber":
-                    selectedProperties["serialNumber"] = p.SerialNumber ?? "";
-                    break;
-                case "manufactureyear":
-                    selectedProperties["manufactureYear"] = p.ManufactureYear ?? default(DateOnly);
-                    break;
-                case "notes":
-                    selectedProperties["notes"] = p.Notes ?? "";
-                    break;
-                case "createdat":
-                    selectedProperties["createdAt"] = p.CreatedAt;
-                    break;
-                case "updatedat":
-                    selectedProperties["updatedAt"] = p.UpdatedAt;
-                    break;
-
-                // Поля документа
-                case "code":
-                    selectedProperties["code"] = p.Code ?? 0;
-                    break;
-                case "document.id":
-                    selectedProperties["documentId"] = p.Document?.Id ?? Guid.Empty;
-                    break;
-                case "document.number":
-                    selectedProperties["documentNumber"] = p.Document?.Number ?? "";
-                    break;
-                case "document.type":
-                    selectedProperties["documentType"] = p.Document?.Type ?? 0;
-                    break;
-                case "document.date":
-                    selectedProperties["documentDate"] = p.Document?.Date ?? default(DateOnly);
-                    break;
-                case "document.author":
-                    selectedProperties["documentAuthor"] = p.Document?.Author ?? "";
-                    break;
-                case "document.price":
-                    selectedProperties["documentPrice"] = p.Document?.Price ?? 0;
-                    break;
-                case "document.note":
-                    selectedProperties["documentNote"] = p.Document?.Note ?? "";
-                    break;
-            }
-        }
-
-        return selectedProperties;
+                Id = p.Depot.Id,
+                Name = p.Depot.Name,
+                Code = p.Depot.Code,
+                ShortName = p.Depot.ShortName,
+                Location = p.Depot.Location
+            } : null,
+            StampNumber = new StampNumberDTO
+            {
+                Id = p.StampNumber.Id,
+                Value = p.StampNumber.Value
+            },
+            SerialNumber = p.SerialNumber,
+            ManufactureYear = p.ManufactureYear,
+            CurrentLocation = p.RailwayCistern != null ? new RailwayCisternIdAndNumberDTO
+            {
+                Id = p.RailwayCistern.Id,
+                Number = p.RailwayCistern.Number,
+            } : null,
+            Status = new PartStatusDTO
+            {
+                Id = p.Status.Id,
+                Name = p.Status.Name,
+                Code = p.Status.Code
+            },
+            Notes = p.Notes,
+            CreatedAt = p.CreatedAt,
+            UpdatedAt = p.UpdatedAt,
+            Code = p.Code,
+            Document = p.Document != null ? new DocumentDTO
+            {
+                Id = p.Document.Id,
+                Number = p.Document.Number,
+                Type = p.Document.Type,
+                Date = p.Document.Date,
+                Author = p.Document.Author,
+                Price = p.Document.Price,
+                Note = p.Document.Note
+            } : null,
+            WheelPair = p.PartType.Code == 1 && p.WheelPair != null ? new WheelPairDTO
+            {
+                ThicknessLeft = p.WheelPair.ThicknessLeft,
+                ThicknessRight = p.WheelPair.ThicknessRight,
+                WheelType = p.WheelPair.WheelType
+            } : null,
+            SideFrame = p.PartType.Code == 3 && p.SideFrame != null ? new SideFrameDTO
+            {
+                ServiceLifeYears = p.SideFrame.ServiceLifeYears,
+                ExtendedUntil = p.SideFrame.ExtendedUntil
+            } : null,
+            Bolster = p.PartType.Code == 2 && p.Bolster != null ? new BolsterDTO
+            {
+                ServiceLifeYears = p.Bolster.ServiceLifeYears,
+                ExtendedUntil = p.Bolster.ExtendedUntil
+            } : null,
+            Coupler = p.PartType.Code == 4 && p.Coupler != null ? new CouplerDTO() : null,
+            ShockAbsorber = p.PartType.Code == 10 && p.ShockAbsorber != null ? new ShockAbsorberDTO
+            {
+                Model = p.ShockAbsorber.Model,
+                ManufacturerCode = p.ShockAbsorber.ManufacturerCode,
+                NextRepairDate = p.ShockAbsorber.NextRepairDate,
+                ServiceLifeYears = p.ShockAbsorber.ServiceLifeYears
+            } : null
+        };
     }
 
     private static IQueryable<Part> BuildFilterQuery(ApplicationDbContext context, PartFilterCriteria? filters)
@@ -371,6 +236,7 @@ public static class PartFilterEndpoints
             .Include(p => p.Coupler)
             .Include(p => p.ShockAbsorber)
             .Include(p => p.Depot)
+            .Include(p => p.RailwayCistern)
             .Include(p => p.Document)
             .AsQueryable();
 
