@@ -337,7 +337,7 @@ public static class RailwayCisternEndpoints
                     if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var creatorId))
                         return Results.BadRequest();
 
-                    var note = BuildHistoryNoteForRailwayCisternUpdate(cistern, dto);
+                    var note = await BuildHistoryNoteForRailwayCisternUpdateAsync(context, cistern, dto);
 
                     cistern.Number = dto.Number;
                     cistern.ManufacturerId = dto.ManufacturerId;
@@ -991,9 +991,48 @@ public static class RailwayCisternEndpoints
         return date;
     }
 
-    private static string BuildHistoryNoteForRailwayCisternUpdate(RailwayCistern existing, UpdateRailwayCisternDTO dto)
+    private static async Task<string> BuildHistoryNoteForRailwayCisternUpdateAsync(
+        ApplicationDbContext context,
+        RailwayCistern existing,
+        UpdateRailwayCisternDTO dto)
     {
         var changes = new List<string>();
+
+        var oldManufacturer = await context.Manufacturers.FindAsync(existing.ManufacturerId);
+        var newManufacturer = await context.Manufacturers.FindAsync(dto.ManufacturerId);
+        var oldType = await context.WagonTypes.FindAsync(existing.TypeId);
+        var newType = await context.WagonTypes.FindAsync(dto.TypeId);
+        var oldModel = existing.ModelId.HasValue ? await context.WagonModels.FindAsync(existing.ModelId.Value) : null;
+        var newModel = dto.ModelId.HasValue ? await context.WagonModels.FindAsync(dto.ModelId.Value) : null;
+        var oldRegistrar = existing.RegistrarId.HasValue ? await context.Registrars.FindAsync(existing.RegistrarId.Value) : null;
+        var newRegistrar = dto.RegistrarId.HasValue ? await context.Registrars.FindAsync(dto.RegistrarId.Value) : null;
+        var oldOwner = existing.OwnerId.HasValue ? await context.Owners.FindAsync(existing.OwnerId.Value) : null;
+        var newOwner = dto.OwnerId.HasValue ? await context.Owners.FindAsync(dto.OwnerId.Value) : null;
+        var oldAffiliation = await context.Affiliations.FindAsync(existing.AffiliationId);
+        var newAffiliation = await context.Affiliations.FindAsync(dto.AffiliationId);
+        var oldStatus = await context.RailwayCisternStatuses.FindAsync(existing.CisternStatusId);
+        var newStatus = await context.RailwayCisternStatuses.FindAsync(dto.RailwayCisternStatusId);
+
+        static string FormatValue(object? value)
+        {
+            return value switch
+            {
+                null => "null",
+                DateOnly d => d.ToString("yyyy-MM-dd"),
+                DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
+                DateTimeOffset dto => dto.ToString("yyyy-MM-dd HH:mm:ss"),
+                bool b => b.ToString(),
+                _ => value.ToString() ?? string.Empty,
+            };
+        }
+
+        static string ResolveDisplayValue<T>(Guid? id, T? entity, Func<T, string> selector) where T : class
+        {
+            if (!id.HasValue)
+                return "null";
+
+            return entity is null ? id.Value.ToString() : selector(entity);
+        }
 
         void AddChange(string field, object? oldValue, object? newValue)
         {
@@ -1002,24 +1041,11 @@ public static class RailwayCisternEndpoints
             if (oldValue != null && oldValue.Equals(newValue))
                 return;
 
-            static string FormatValue(object? value)
-            {
-                return value switch
-                {
-                    null => "null",
-                    DateOnly d => d.ToString("yyyy-MM-dd"),
-                    DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
-                    DateTimeOffset dto => dto.ToString("yyyy-MM-dd HH:mm:ss"),
-                    bool b => b.ToString(),
-                    _ => value.ToString() ?? string.Empty,
-                };
-            }
-
             changes.Add($"{field}: {FormatValue(oldValue)} -> {FormatValue(newValue)}");
         }
 
         AddChange("Номер", existing.Number, dto.Number);
-        AddChange("Производитель", existing.ManufacturerId, dto.ManufacturerId);
+        AddChange("Производитель", ResolveDisplayValue(existing.ManufacturerId, oldManufacturer, m => m.Name), ResolveDisplayValue(dto.ManufacturerId, newManufacturer, m => m.Name));
         AddChange("Дата постройки", existing.BuildDate, dto.BuildDate);
         AddChange("Тара", existing.TareWeight, dto.TareWeight);
         AddChange("Грузоподъемность", existing.LoadCapacity, dto.LoadCapacity);
@@ -1028,22 +1054,22 @@ public static class RailwayCisternEndpoints
         AddChange("Объем", existing.Volume, dto.Volume);
         AddChange("Объем заполнения", existing.FillingVolume, dto.FillingVolume);
         AddChange("Начальная тара", existing.InitialTareWeight, dto.InitialTareWeight);
-        AddChange("Тип", existing.TypeId, dto.TypeId);
-        AddChange("Модель", existing.ModelId, dto.ModelId);
+        AddChange("Тип", ResolveDisplayValue(existing.TypeId, oldType, t => t.Name), ResolveDisplayValue(dto.TypeId, newType, t => t.Name));
+        AddChange("Модель", ResolveDisplayValue(existing.ModelId, oldModel, m => m.Name), ResolveDisplayValue(dto.ModelId, newModel, m => m.Name));
         AddChange("Дата ввода в эксплуатацию", existing.CommissioningDate, dto.CommissioningDate);
         AddChange("Серийный номер", existing.SerialNumber, dto.SerialNumber);
         AddChange("Рег. номер", existing.RegistrationNumber, dto.RegistrationNumber);
         AddChange("Дата регистрации", existing.RegistrationDate, dto.RegistrationDate);
-        AddChange("Регистратор", existing.RegistrarId, dto.RegistrarId);
+        AddChange("Регистратор", ResolveDisplayValue(existing.RegistrarId, oldRegistrar, r => r.Name), ResolveDisplayValue(dto.RegistrarId, newRegistrar, r => r.Name));
         AddChange("Примечания", existing.Notes, dto.Notes);
-        AddChange("Владелец", existing.OwnerId, dto.OwnerId);
+        AddChange("Владелец", ResolveDisplayValue(existing.OwnerId, oldOwner, o => o.Name), ResolveDisplayValue(dto.OwnerId, newOwner, o => o.Name));
         AddChange("Техусловия", existing.TechConditions, dto.TechConditions);
         AddChange("Приписка", existing.Pripiska, dto.Pripiska);
         AddChange("Дата перерегистрации", existing.ReRegistrationDate, dto.ReRegistrationDate);
         AddChange("Давление", existing.Pressure, dto.Pressure);
         AddChange("Испытательное давление", existing.TestPressure, dto.TestPressure);
         AddChange("Аренда", existing.Rent, dto.Rent);
-        AddChange("Принадлежность", existing.AffiliationId, dto.AffiliationId);
+        AddChange("Принадлежность", ResolveDisplayValue(existing.AffiliationId, oldAffiliation, a => a.Value), ResolveDisplayValue(dto.AffiliationId, newAffiliation, a => a.Value));
         AddChange("Срок службы", existing.ServiceLifeYears, dto.ServiceLifeYears);
         AddChange("Капитальный ремонт", existing.PeriodMajorRepair, dto.PeriodMajorRepair);
         AddChange("Периодический осмотр", existing.PeriodPeriodicTest, dto.PeriodPeriodicTest);
@@ -1055,7 +1081,7 @@ public static class RailwayCisternEndpoints
         AddChange("Вещество", existing.Substance, dto.Substance);
         AddChange("Тара 2", existing.TareWeight2, dto.TareWeight2);
         AddChange("Тара 3", existing.TareWeight3, dto.TareWeight3);
-        AddChange("Статус цистерны", existing.CisternStatusId, dto.RailwayCisternStatusId);
+        AddChange("Статус цистерны", ResolveDisplayValue(existing.CisternStatusId, oldStatus, s => s.Name), ResolveDisplayValue(dto.RailwayCisternStatusId, newStatus, s => s.Name));
         AddChange("Дата следующей перерегистрации", existing.ReRegistrationNextDate, dto.ReRegistrationNextDate);
         AddChange("Дата продления срока службы", existing.ExtensionServiceLifeDate, dto.ExtensionServiceLifeDate);
         AddChange("Дата отцепки ремонта", existing.PeriodDetachRepair, dto.PeriodDetachRepair);
