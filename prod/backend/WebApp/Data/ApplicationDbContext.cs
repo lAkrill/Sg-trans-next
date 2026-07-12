@@ -27,11 +27,6 @@ public class ApplicationDbContext(
     public DbSet<Vessel> Vessels { get; set; }
     public DbSet<Depot> Depots { get; set; }
     public DbSet<Part> Parts { get; set; }
-    public DbSet<WheelPair> WheelPairs { get; set; }
-    public DbSet<SideFrame> SideFrames { get; set; }
-    public DbSet<Bolster> Bolsters { get; set; }
-    public DbSet<Coupler> Couplers { get; set; }
-    public DbSet<ShockAbsorber> ShockAbsorbers { get; set; }
     public DbSet<Location> Locations { get; set; }
     public DbSet<PartInstallation> PartInstallations { get; set; }
     public DbSet<RepairType> RepairTypes { get; set; }
