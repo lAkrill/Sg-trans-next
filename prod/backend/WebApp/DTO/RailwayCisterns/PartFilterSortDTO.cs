@@ -24,23 +24,13 @@ public class PartFilterCriteria
     public List<string>? SerialNumbers { get; set; }
     public DateRange? ManufactureYear { get; set; }
     public List<string>? Locations { get; set; }
+    public List<Guid>? CurrentLocationIds { get; set; }
     public List<Guid>? StatusIds { get; set; }
-    public DateTimeRange? CreatedAt { get; set; }
-    public DateTimeRange? UpdatedAt { get; set; }
-
-    // Специфичные поля для колесных пар
-    public DecimalRange? ThicknessLeft { get; set; }
-    public DecimalRange? ThicknessRight { get; set; }
-    public List<string>? WheelTypes { get; set; }
-
-    // Боковая рама и надрессорная балка
     public IntRange? ServiceLifeYears { get; set; }
     public DateRange? ExtendedUntil { get; set; }
-
-    // Поглощающий аппарат
     public List<string>? Models { get; set; }
-    public List<string>? ManufacturerCodes { get; set; }
-    public DateRange? NextRepairDate { get; set; }
+    public DateTimeRange? CreatedAt { get; set; }
+    public DateTimeRange? UpdatedAt { get; set; }
 
     // Фильтры по коду и документу
     public IntRange? Code { get; set; }

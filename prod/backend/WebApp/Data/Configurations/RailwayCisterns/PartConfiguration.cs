@@ -17,6 +17,9 @@ public partial class PartConfiguration : IEntityTypeConfiguration<Part>
         entity.Property(e => e.UpdatedAt).HasColumnType("timestamp with time zone");
         entity.Property(e => e.Code);
         entity.Property(e => e.DocumentId);
+        entity.Property(e => e.ServiceLifeYears).HasDefaultValue(0);
+        entity.Property(e => e.ExtendedUntil).HasColumnType("date");
+        entity.Property(e => e.Model).HasColumnType("text");
 
         entity.HasOne(d => d.Depot)
             .WithMany(p => p.Parts)

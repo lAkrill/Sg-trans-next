@@ -187,6 +187,9 @@ public static class PartFilterEndpoints
             CreatedAt = p.CreatedAt,
             UpdatedAt = p.UpdatedAt,
             Code = p.Code,
+            ServiceLifeYears = p.ServiceLifeYears,
+            ExtendedUntil = p.ExtendedUntil,
+            Model = p.Model,
             Document = p.Document != null ? new DocumentDTO
             {
                 Id = p.Document.Id,
@@ -196,30 +199,6 @@ public static class PartFilterEndpoints
                 Author = p.Document.Author,
                 Price = p.Document.Price,
                 Note = p.Document.Note
-            } : null,
-            WheelPair = p.PartType.Code == 1 && p.WheelPair != null ? new WheelPairDTO
-            {
-                ThicknessLeft = p.WheelPair.ThicknessLeft,
-                ThicknessRight = p.WheelPair.ThicknessRight,
-                WheelType = p.WheelPair.WheelType
-            } : null,
-            SideFrame = p.PartType.Code == 3 && p.SideFrame != null ? new SideFrameDTO
-            {
-                ServiceLifeYears = p.SideFrame.ServiceLifeYears,
-                ExtendedUntil = p.SideFrame.ExtendedUntil
-            } : null,
-            Bolster = p.PartType.Code == 2 && p.Bolster != null ? new BolsterDTO
-            {
-                ServiceLifeYears = p.Bolster.ServiceLifeYears,
-                ExtendedUntil = p.Bolster.ExtendedUntil
-            } : null,
-            Coupler = p.PartType.Code == 4 && p.Coupler != null ? new CouplerDTO() : null,
-            ShockAbsorber = p.PartType.Code == 10 && p.ShockAbsorber != null ? new ShockAbsorberDTO
-            {
-                Model = p.ShockAbsorber.Model,
-                ManufacturerCode = p.ShockAbsorber.ManufacturerCode,
-                NextRepairDate = p.ShockAbsorber.NextRepairDate,
-                ServiceLifeYears = p.ShockAbsorber.ServiceLifeYears
             } : null
         };
     }
@@ -230,11 +209,6 @@ public static class PartFilterEndpoints
             .Include(p => p.PartType)
             .Include(p => p.Status)
             .Include(p => p.StampNumber)
-            .Include(p => p.WheelPair)
-            .Include(p => p.SideFrame)
-            .Include(p => p.Bolster)
-            .Include(p => p.Coupler)
-            .Include(p => p.ShockAbsorber)
             .Include(p => p.Depot)
             .Include(p => p.RailwayCistern)
             .Include(p => p.Document)
@@ -250,7 +224,7 @@ public static class PartFilterEndpoints
             query = query.Where(p => p.DepotId.HasValue && filters.DepotIds.Contains(p.DepotId.Value));
 
         if (filters.StampNumbers != null && filters.StampNumbers.Any())
-            query = query.Where(p => p.StampNumber != null && filters.StampNumbers.Contains(p.StampNumber.Value));
+            query = query.Where(p => filters.StampNumbers.Contains(p.StampNumber.Value));
 
         if (filters.SerialNumbers != null && filters.SerialNumbers.Any())
             query = query.Where(p => p.SerialNumber != null && filters.SerialNumbers.Contains(p.SerialNumber));
@@ -262,9 +236,34 @@ public static class PartFilterEndpoints
             if (filters.ManufactureYear.To.HasValue)
                 query = query.Where(p => p.ManufactureYear <= filters.ManufactureYear.To);
         }
+
+        if (filters.CurrentLocationIds != null && filters.CurrentLocationIds.Any())
+            query = query.Where(p => p.CurrentLocation.HasValue && filters.CurrentLocationIds.Contains(p.CurrentLocation.Value));
+
+        if (filters.Locations != null && filters.Locations.Any())
+            query = query.Where(p => p.RailwayCistern != null && filters.Locations.Contains(p.RailwayCistern.Number));
        
         if (filters.StatusIds != null && filters.StatusIds.Any())
             query = query.Where(p => filters.StatusIds.Contains(p.StatusId));
+
+        if (filters.ServiceLifeYears != null)
+        {
+            if (filters.ServiceLifeYears.From.HasValue)
+                query = query.Where(p => p.ServiceLifeYears >= filters.ServiceLifeYears.From);
+            if (filters.ServiceLifeYears.To.HasValue)
+                query = query.Where(p => p.ServiceLifeYears <= filters.ServiceLifeYears.To);
+        }
+
+        if (filters.ExtendedUntil != null)
+        {
+            if (filters.ExtendedUntil.From.HasValue)
+                query = query.Where(p => p.ExtendedUntil >= filters.ExtendedUntil.From);
+            if (filters.ExtendedUntil.To.HasValue)
+                query = query.Where(p => p.ExtendedUntil <= filters.ExtendedUntil.To);
+        }
+
+        if (filters.Models != null && filters.Models.Any())
+            query = query.Where(p => p.Model != null && filters.Models.Contains(p.Model));
 
         if (filters.CreatedAt != null)
         {
@@ -282,72 +281,6 @@ public static class PartFilterEndpoints
                 query = query.Where(p => p.UpdatedAt <= filters.UpdatedAt.To);
         }
 
-        // Специфичные фильтры для колесных пар
-        if (filters.ThicknessLeft != null)
-        {
-            if (filters.ThicknessLeft.From.HasValue)
-                query = query.Where(p => p.WheelPair != null && p.WheelPair.ThicknessLeft >= filters.ThicknessLeft.From);
-            if (filters.ThicknessLeft.To.HasValue)
-                query = query.Where(p => p.WheelPair != null && p.WheelPair.ThicknessLeft <= filters.ThicknessLeft.To);
-        }
-
-        if (filters.ThicknessRight != null)
-        {
-            if (filters.ThicknessRight.From.HasValue)
-                query = query.Where(p => p.WheelPair != null && p.WheelPair.ThicknessRight >= filters.ThicknessRight.From);
-            if (filters.ThicknessRight.To.HasValue)
-                query = query.Where(p => p.WheelPair != null && p.WheelPair.ThicknessRight <= filters.ThicknessRight.To);
-        }
-
-        if (filters.WheelTypes != null && filters.WheelTypes.Any())
-            query = query.Where(p => p.WheelPair != null && p.WheelPair.WheelType != null && 
-                                   filters.WheelTypes.Contains(p.WheelPair.WheelType));
-
-        // Специфичные фильтры для боковых рам и надрессорных балок
-        if (filters.ServiceLifeYears != null)
-        {
-            if (filters.ServiceLifeYears.From.HasValue)
-                query = query.Where(p => 
-                    (p.SideFrame != null && p.SideFrame.ServiceLifeYears >= filters.ServiceLifeYears.From) ||
-                    (p.Bolster != null && p.Bolster.ServiceLifeYears >= filters.ServiceLifeYears.From));
-            if (filters.ServiceLifeYears.To.HasValue)
-                query = query.Where(p => 
-                    (p.SideFrame != null && p.SideFrame.ServiceLifeYears <= filters.ServiceLifeYears.To) ||
-                    (p.Bolster != null && p.Bolster.ServiceLifeYears <= filters.ServiceLifeYears.To));
-        }
-
-        if (filters.ExtendedUntil != null)
-        {
-            if (filters.ExtendedUntil.From.HasValue)
-                query = query.Where(p => 
-                    (p.SideFrame != null && p.SideFrame.ExtendedUntil >= filters.ExtendedUntil.From) ||
-                    (p.Bolster != null && p.Bolster.ExtendedUntil >= filters.ExtendedUntil.From));
-            if (filters.ExtendedUntil.To.HasValue)
-                query = query.Where(p => 
-                    (p.SideFrame != null && p.SideFrame.ExtendedUntil <= filters.ExtendedUntil.To) ||
-                    (p.Bolster != null && p.Bolster.ExtendedUntil <= filters.ExtendedUntil.To));
-        }
-
-        // Специфичные фильтры для поглощающих аппаратов
-        if (filters.Models != null && filters.Models.Any())
-            query = query.Where(p => p.ShockAbsorber != null && p.ShockAbsorber.Model != null && 
-                                   filters.Models.Contains(p.ShockAbsorber.Model));
-
-        if (filters.ManufacturerCodes != null && filters.ManufacturerCodes.Any())
-            query = query.Where(p => p.ShockAbsorber != null && p.ShockAbsorber.ManufacturerCode != null && 
-                                   filters.ManufacturerCodes.Contains(p.ShockAbsorber.ManufacturerCode));
-
-        if (filters.NextRepairDate != null)
-        {
-            if (filters.NextRepairDate.From.HasValue)
-                query = query.Where(p => p.ShockAbsorber != null && 
-                                       p.ShockAbsorber.NextRepairDate >= filters.NextRepairDate.From);
-            if (filters.NextRepairDate.To.HasValue)
-                query = query.Where(p => p.ShockAbsorber != null && 
-                                       p.ShockAbsorber.NextRepairDate <= filters.NextRepairDate.To);
-        }
-
-        // Фильтры по коду
         if (filters.Code != null)
         {
             if (filters.Code.From.HasValue)
@@ -356,7 +289,6 @@ public static class PartFilterEndpoints
                 query = query.Where(p => p.Code <= filters.Code.To);
         }
 
-        // Фильтры по документу
         if (filters.DocumentId.HasValue)
             query = query.Where(p => p.DocumentId == filters.DocumentId);
 
@@ -379,144 +311,59 @@ public static class PartFilterEndpoints
 
     private static IOrderedQueryable<Part> ApplySort(IQueryable<Part> query, SortCriteria sort)
     {
-        return sort.FieldName.ToLower() switch
+        var fieldName = sort.FieldName?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        return fieldName switch
         {
-            "parttypename" => sort.Descending ? query.OrderByDescending(p => p.PartType.Name) : query.OrderBy(p => p.PartType.Name),
-            "stampnumber" => sort.Descending ? query.OrderByDescending(p => p.StampNumber != null ? p.StampNumber.Value : "") 
-                : query.OrderBy(p => p.StampNumber != null ? p.StampNumber.Value : ""),
+            "parttype" or "parttypename" => sort.Descending ? query.OrderByDescending(p => p.PartType.Name) : query.OrderBy(p => p.PartType.Name),
+            "depot" or "depotname" => sort.Descending ? query.OrderByDescending(p => p.Depot != null ? p.Depot.Name : "") : query.OrderBy(p => p.Depot != null ? p.Depot.Name : ""),
+            "stampnumber" => sort.Descending ? query.OrderByDescending(p => p.StampNumber.Value) : query.OrderBy(p => p.StampNumber.Value),
             "serialnumber" => sort.Descending ? query.OrderByDescending(p => p.SerialNumber ?? "") : query.OrderBy(p => p.SerialNumber ?? ""),
             "manufactureyear" => sort.Descending ? query.OrderByDescending(p => p.ManufactureYear) : query.OrderBy(p => p.ManufactureYear),
-            // "currentlocation" => sort.Descending ? query.OrderByDescending(p => p.CurrentLocation) : query.OrderBy(p => p.CurrentLocation),
-            "statusname" => sort.Descending ? query.OrderByDescending(p => p.Status.Name) : query.OrderBy(p => p.Status.Name),
+            "currentlocation" or "location" => sort.Descending ? query.OrderByDescending(p => p.RailwayCistern != null ? p.RailwayCistern.Number : "") : query.OrderBy(p => p.RailwayCistern != null ? p.RailwayCistern.Number : ""),
+            "status" or "statusname" => sort.Descending ? query.OrderByDescending(p => p.Status.Name) : query.OrderBy(p => p.Status.Name),
             "notes" => sort.Descending ? query.OrderByDescending(p => p.Notes ?? "") : query.OrderBy(p => p.Notes ?? ""),
             "createdat" => sort.Descending ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt),
             "updatedat" => sort.Descending ? query.OrderByDescending(p => p.UpdatedAt) : query.OrderBy(p => p.UpdatedAt),
-            
-            // Специфичные поля для колесных пар
-            "thicknessleft" => sort.Descending ? 
-                query.OrderByDescending(p => p.WheelPair != null ? p.WheelPair.ThicknessLeft : null) : 
-                query.OrderBy(p => p.WheelPair != null ? p.WheelPair.ThicknessLeft : null),
-            "thicknessright" => sort.Descending ? 
-                query.OrderByDescending(p => p.WheelPair != null ? p.WheelPair.ThicknessRight : null) : 
-                query.OrderBy(p => p.WheelPair != null ? p.WheelPair.ThicknessRight : null),
-            "wheeltype" => sort.Descending ? 
-                query.OrderByDescending(p => p.WheelPair != null ? p.WheelPair.WheelType ?? "" : "") : 
-                query.OrderBy(p => p.WheelPair != null ? p.WheelPair.WheelType ?? "" : ""),
-            
-            // Специфичные поля для боковых рам и надрессорных балок
-            "servicelifeyears" => sort.Descending ? 
-                query.OrderByDescending(p => p.SideFrame != null ? p.SideFrame.ServiceLifeYears : 
-                    p.Bolster != null ? p.Bolster.ServiceLifeYears : null) : 
-                query.OrderBy(p => p.SideFrame != null ? p.SideFrame.ServiceLifeYears : 
-                    p.Bolster != null ? p.Bolster.ServiceLifeYears : null),
-            "extendeduntil" => sort.Descending ? 
-                query.OrderByDescending(p => p.SideFrame != null ? p.SideFrame.ExtendedUntil : 
-                    p.Bolster != null ? p.Bolster.ExtendedUntil : null) : 
-                query.OrderBy(p => p.SideFrame != null ? p.SideFrame.ExtendedUntil : 
-                    p.Bolster != null ? p.Bolster.ExtendedUntil : null),
-            
-            // Специфичные поля для поглощающих аппаратов
-            "model" => sort.Descending ? 
-                query.OrderByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model ?? "" : "") : 
-                query.OrderBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model ?? "" : ""),
-            "manufacturercode" => sort.Descending ? 
-                query.OrderByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode ?? "" : "") : 
-                query.OrderBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode ?? "" : ""),
-            "nextrepairdate" => sort.Descending ? 
-                query.OrderByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.NextRepairDate : null) : 
-                query.OrderBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.NextRepairDate : null),
-            
-            // Поля документа и кода
+            "servicelifeyears" => sort.Descending ? query.OrderByDescending(p => p.ServiceLifeYears) : query.OrderBy(p => p.ServiceLifeYears),
+            "extendeduntil" => sort.Descending ? query.OrderByDescending(p => p.ExtendedUntil) : query.OrderBy(p => p.ExtendedUntil),
+            "model" => sort.Descending ? query.OrderByDescending(p => p.Model ?? "") : query.OrderBy(p => p.Model ?? ""),
             "code" => sort.Descending ? query.OrderByDescending(p => p.Code) : query.OrderBy(p => p.Code),
-            "documentnumber" => sort.Descending ? 
-                query.OrderByDescending(p => p.Document != null ? p.Document.Number : "") : 
-                query.OrderBy(p => p.Document != null ? p.Document.Number : ""),
-            "documenttype" => sort.Descending ? 
-                query.OrderByDescending(p => p.Document != null ? p.Document.Type : 0) : 
-                query.OrderBy(p => p.Document != null ? p.Document.Type : 0),
-            "documentdate" => sort.Descending ? 
-                query.OrderByDescending(p => p.Document != null ? p.Document.Date : DateOnly.MinValue) : 
-                query.OrderBy(p => p.Document != null ? p.Document.Date : DateOnly.MinValue),
-            "documentauthor" => sort.Descending ? 
-                query.OrderByDescending(p => p.Document != null ? p.Document.Author : "") : 
-                query.OrderBy(p => p.Document != null ? p.Document.Author : ""),
-            "documentprice" => sort.Descending ? 
-                query.OrderByDescending(p => p.Document != null ? p.Document.Price : 0) : 
-                query.OrderBy(p => p.Document != null ? p.Document.Price : 0),
-            
-            _ => query.OrderByDescending(p => p.UpdatedAt) // сортировка по умолчанию
+            "documentnumber" => sort.Descending ? query.OrderByDescending(p => p.Document != null ? p.Document.Number : "") : query.OrderBy(p => p.Document != null ? p.Document.Number : ""),
+            "documenttype" => sort.Descending ? query.OrderByDescending(p => p.Document != null ? p.Document.Type : 0) : query.OrderBy(p => p.Document != null ? p.Document.Type : 0),
+            "documentdate" => sort.Descending ? query.OrderByDescending(p => p.Document != null ? p.Document.Date : DateOnly.MinValue) : query.OrderBy(p => p.Document != null ? p.Document.Date : DateOnly.MinValue),
+            "documentauthor" => sort.Descending ? query.OrderByDescending(p => p.Document != null ? p.Document.Author : "") : query.OrderBy(p => p.Document != null ? p.Document.Author : ""),
+            "documentprice" => sort.Descending ? query.OrderByDescending(p => p.Document != null ? p.Document.Price : 0) : query.OrderBy(p => p.Document != null ? p.Document.Price : 0),
+            _ => query.OrderByDescending(p => p.UpdatedAt)
         };
     }
 
     private static IOrderedQueryable<Part> ApplyThenBy(IOrderedQueryable<Part> query, SortCriteria sort)
     {
-        return sort.FieldName.ToLower() switch
+        var fieldName = sort.FieldName?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        return fieldName switch
         {
-            "parttypename" => sort.Descending ? query.ThenByDescending(p => p.PartType.Name) : query.ThenBy(p => p.PartType.Name),
-            "stampnumber" => sort.Descending ? 
-                query.ThenByDescending(p => p.StampNumber != null ? p.StampNumber.Value : "") : 
-                query.ThenBy(p => p.StampNumber != null ? p.StampNumber.Value : ""),
+            "parttype" or "parttypename" => sort.Descending ? query.ThenByDescending(p => p.PartType.Name) : query.ThenBy(p => p.PartType.Name),
+            "depot" or "depotname" => sort.Descending ? query.ThenByDescending(p => p.Depot != null ? p.Depot.Name : "") : query.ThenBy(p => p.Depot != null ? p.Depot.Name : ""),
+            "stampnumber" => sort.Descending ? query.ThenByDescending(p => p.StampNumber.Value) : query.ThenBy(p => p.StampNumber.Value),
             "serialnumber" => sort.Descending ? query.ThenByDescending(p => p.SerialNumber ?? "") : query.ThenBy(p => p.SerialNumber ?? ""),
             "manufactureyear" => sort.Descending ? query.ThenByDescending(p => p.ManufactureYear) : query.ThenBy(p => p.ManufactureYear),
-            // "currentlocation" => sort.Descending ? query.ThenByDescending(p => p.CurrentLocation) : query.ThenBy(p => p.CurrentLocation),
-            "statusname" => sort.Descending ? query.ThenByDescending(p => p.Status.Name) : query.ThenBy(p => p.Status.Name),
+            "currentlocation" or "location" => sort.Descending ? query.ThenByDescending(p => p.RailwayCistern != null ? p.RailwayCistern.Number : "") : query.ThenBy(p => p.RailwayCistern != null ? p.RailwayCistern.Number : ""),
+            "status" or "statusname" => sort.Descending ? query.ThenByDescending(p => p.Status.Name) : query.ThenBy(p => p.Status.Name),
             "notes" => sort.Descending ? query.ThenByDescending(p => p.Notes ?? "") : query.ThenBy(p => p.Notes ?? ""),
             "createdat" => sort.Descending ? query.ThenByDescending(p => p.CreatedAt) : query.ThenBy(p => p.CreatedAt),
             "updatedat" => sort.Descending ? query.ThenByDescending(p => p.UpdatedAt) : query.ThenBy(p => p.UpdatedAt),
-            
-            // Специфичные поля для колесных пар
-            "thicknessleft" => sort.Descending ? 
-                query.ThenByDescending(p => p.WheelPair != null ? p.WheelPair.ThicknessLeft : null) : 
-                query.ThenBy(p => p.WheelPair != null ? p.WheelPair.ThicknessLeft : null),
-            "thicknessright" => sort.Descending ? 
-                query.ThenByDescending(p => p.WheelPair != null ? p.WheelPair.ThicknessRight : null) : 
-                query.ThenBy(p => p.WheelPair != null ? p.WheelPair.ThicknessRight : null),
-            "wheeltype" => sort.Descending ? 
-                query.ThenByDescending(p => p.WheelPair != null ? p.WheelPair.WheelType ?? "" : "") : 
-                query.ThenBy(p => p.WheelPair != null ? p.WheelPair.WheelType ?? "" : ""),
-            
-            // Специфичные поля для боковых рам и надрессорных балок
-            "servicelifeyears" => sort.Descending ? 
-                query.ThenByDescending(p => p.SideFrame != null ? p.SideFrame.ServiceLifeYears : 
-                    p.Bolster != null ? p.Bolster.ServiceLifeYears : null) : 
-                query.ThenBy(p => p.SideFrame != null ? p.SideFrame.ServiceLifeYears : 
-                    p.Bolster != null ? p.Bolster.ServiceLifeYears : null),
-            "extendeduntil" => sort.Descending ? 
-                query.ThenByDescending(p => p.SideFrame != null ? p.SideFrame.ExtendedUntil : 
-                    p.Bolster != null ? p.Bolster.ExtendedUntil : null) : 
-                query.ThenBy(p => p.SideFrame != null ? p.SideFrame.ExtendedUntil : 
-                    p.Bolster != null ? p.Bolster.ExtendedUntil : null),
-            
-            // Специфичные поля для поглощающих аппаратов
-            "model" => sort.Descending ? 
-                query.ThenByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model ?? "" : "") : 
-                query.ThenBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.Model ?? "" : ""),
-            "manufacturercode" => sort.Descending ? 
-                query.ThenByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode ?? "" : "") : 
-                query.ThenBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.ManufacturerCode ?? "" : ""),
-            "nextrepairdate" => sort.Descending ? 
-                query.ThenByDescending(p => p.ShockAbsorber != null ? p.ShockAbsorber.NextRepairDate : null) : 
-                query.ThenBy(p => p.ShockAbsorber != null ? p.ShockAbsorber.NextRepairDate : null),
-            
-            // Поля документа и кода
+            "servicelifeyears" => sort.Descending ? query.ThenByDescending(p => p.ServiceLifeYears) : query.ThenBy(p => p.ServiceLifeYears),
+            "extendeduntil" => sort.Descending ? query.ThenByDescending(p => p.ExtendedUntil) : query.ThenBy(p => p.ExtendedUntil),
+            "model" => sort.Descending ? query.ThenByDescending(p => p.Model ?? "") : query.ThenBy(p => p.Model ?? ""),
             "code" => sort.Descending ? query.ThenByDescending(p => p.Code) : query.ThenBy(p => p.Code),
-            "documentnumber" => sort.Descending ? 
-                query.ThenByDescending(p => p.Document != null ? p.Document.Number : "") : 
-                query.ThenBy(p => p.Document != null ? p.Document.Number : ""),
-            "documenttype" => sort.Descending ? 
-                query.ThenByDescending(p => p.Document != null ? p.Document.Type : 0) : 
-                query.ThenBy(p => p.Document != null ? p.Document.Type : 0),
-            "documentdate" => sort.Descending ? 
-                query.ThenByDescending(p => p.Document != null ? p.Document.Date : DateOnly.MinValue) : 
-                query.ThenBy(p => p.Document != null ? p.Document.Date : DateOnly.MinValue),
-            "documentauthor" => sort.Descending ? 
-                query.ThenByDescending(p => p.Document != null ? p.Document.Author : "") : 
-                query.ThenBy(p => p.Document != null ? p.Document.Author : ""),
-            "documentprice" => sort.Descending ? 
-                query.ThenByDescending(p => p.Document != null ? p.Document.Price : 0) : 
-                query.ThenBy(p => p.Document != null ? p.Document.Price : 0),
-            
-            _ => query // если поле неизвестно, оставляем текущую сортировку
+            "documentnumber" => sort.Descending ? query.ThenByDescending(p => p.Document != null ? p.Document.Number : "") : query.ThenBy(p => p.Document != null ? p.Document.Number : ""),
+            "documenttype" => sort.Descending ? query.ThenByDescending(p => p.Document != null ? p.Document.Type : 0) : query.ThenBy(p => p.Document != null ? p.Document.Type : 0),
+            "documentdate" => sort.Descending ? query.ThenByDescending(p => p.Document != null ? p.Document.Date : DateOnly.MinValue) : query.ThenBy(p => p.Document != null ? p.Document.Date : DateOnly.MinValue),
+            "documentauthor" => sort.Descending ? query.ThenByDescending(p => p.Document != null ? p.Document.Author : "") : query.ThenBy(p => p.Document != null ? p.Document.Author : ""),
+            "documentprice" => sort.Descending ? query.ThenByDescending(p => p.Document != null ? p.Document.Price : 0) : query.ThenBy(p => p.Document != null ? p.Document.Price : 0),
+            _ => query
         };
     }
 }

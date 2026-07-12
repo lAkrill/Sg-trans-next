@@ -27,12 +27,13 @@ public class Part
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public Guid CreatorId { get; set; }
     
+    // Поля, добавленные в справочник
+    public int ServiceLifeYears { get; set; } = 0;
+    public DateOnly? ExtendedUntil { get; set; }
+    public string? Model { get; set; }
+    
     // Навигационные свойства для специализированных деталей
-    public WheelPair? WheelPair { get; set; }
-    public SideFrame? SideFrame { get; set; }
-    public Bolster? Bolster { get; set; }
-    public Coupler? Coupler { get; set; }
-    public ShockAbsorber? ShockAbsorber { get; set; }
+    
     
     public ICollection<PartInstallation> PartInstallations { get; set; } = new List<PartInstallation>();
     
