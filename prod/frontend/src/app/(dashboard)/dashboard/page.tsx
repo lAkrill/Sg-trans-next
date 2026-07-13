@@ -2,7 +2,8 @@ import { Card, CardContent, Button } from "@/components/ui";
 import Link from "next/link";
 import { Settings } from "lucide-react";
 import QuickActions from "@/components/dashboard/quick-actions";
-import UserInfoCard from "@/components/cards/user-info.card";
+
+import UserMessageCard from "@/components/cards/user-message";
 
 export default function DashboardPage() {
 
@@ -40,7 +41,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* User info card */}
-      <UserInfoCard />
+      <UserMessageCard />
     </div>
   );
 }

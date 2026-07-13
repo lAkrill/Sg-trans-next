@@ -214,6 +214,7 @@ export interface CisternsFilter {
 
 /** POST /api/railway-cisterns/repairs-filter request body. Во всех `DateRange` поля `from`/`to` — дата `YYYY-MM-DD`. */
 export interface RailwayCisternRepairsFilterRequestDTO {
+  isAnd?: boolean;
   numbers?: string[];
   wagonModelsNames?: string[];
   buildDate?: DateRange;

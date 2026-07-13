@@ -58,7 +58,10 @@ function normalizeRepairsFilterDateRange(range?: DateRange): DateRange | undefin
 function serializeRepairsFilterRequest(
   data: RailwayCisternRepairsFilterRequestDTO
 ): RailwayCisternRepairsFilterRequestDTO {
-  const out: RailwayCisternRepairsFilterRequestDTO = { ...data };
+  const out: RailwayCisternRepairsFilterRequestDTO = {
+    ...data,
+    isAnd: data.isAnd ?? true,
+  };
   for (const key of REPAIRS_FILTER_DATE_RANGE_KEYS) {
     const normalized = normalizeRepairsFilterDateRange(data[key] as DateRange | undefined);
     if (normalized) (out as Record<string, unknown>)[key] = normalized;

@@ -156,8 +156,9 @@ export default function RepairsPage() {
   const [planningFiltersApplied, setPlanningFiltersApplied] =
     useState<RailwayCisternRepairsFilterRequestDTO>({});
   const [isPlanningFilterLoading, setIsPlanningFilterLoading] = useState(false);
-  const [planningVisibleColumns, setPlanningVisibleColumns] = useState<string[]>(() => [
-    ...DEFAULT_PLANNING_VISIBLE_COLUMNS]);
+  const [planningVisibleColumns, setPlanningVisibleColumns] = useState<string[]>([
+    ...DEFAULT_PLANNING_VISIBLE_COLUMNS,
+  ]);
   const [mainSection, setMainSection] = useState<"details" | "planning">("planning");
   const [activeTab, setActiveTab] = useState<"in" | "out" | "matched">("in");
   const [pageIn, setPageIn] = useState(1);
