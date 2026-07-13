@@ -51,3 +51,24 @@ public class StampInfoDTO
 {
     public string Value { get; set; } = null!;
 }
+
+public class CreatePartEquipmentDTO
+{
+    public Guid RailwayCisternsId { get; set; }
+    public int Operation { get; set; }
+    public Guid? EquipmentTypeId { get; set; }
+    public string DefectsId { get; set; } = "0";
+    public string? AdminOwnerId { get; set; }
+    public Guid PartsId { get; set; }
+    public Guid JobDepotsId { get; set; }
+    public string? JobDate { get; set; }
+    public string JobTypeId { get; set; } = "0";
+    public int ThicknessLeft { get; set; }
+    public int ThicknessRight { get; set; }
+    public int? TruckType { get; set; }
+    public string? Notes { get; set; }
+    public Guid DocumentId { get; set; }
+    public DateOnly DocumentDate { get; set; }
+    public Guid? DepotsId { get; set; }
+    public Guid RepairTypesId { get; set; }
+}

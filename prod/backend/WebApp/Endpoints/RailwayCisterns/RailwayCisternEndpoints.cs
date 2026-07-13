@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
 using WebApp.Data.Entities.RailwayCisterns;
 using WebApp.Data.Enums;
+using WebApp.DTO.Common;
 using WebApp.DTO.RailwayCisterns;
 using WebApp.Extensions;
 using System.Text.Json;
@@ -716,81 +717,66 @@ public static class RailwayCisternEndpoints
                             if (!match && req.WagonModelsNames != null && rc.WagonModelName != null && req.WagonModelsNames.Contains(rc.WagonModelName)) match = true;
                             if (!match && req.BuildDate != null)
                             {
-                                if (req.BuildDate.From.HasValue && rc.BuildDate >= req.BuildDate.From.Value) match = true;
-                                if (req.BuildDate.To.HasValue && rc.BuildDate <= req.BuildDate.To.Value) match = true;
+                                match = MatchesDateRange(rc.BuildDate, req.BuildDate);
                             }
                             if (!match && req.CommissioningDate != null)
                             {
-                                if (req.CommissioningDate.From.HasValue && rc.CommissioningDate >= req.CommissioningDate.From.Value) match = true;
-                                if (req.CommissioningDate.To.HasValue && rc.CommissioningDate <= req.CommissioningDate.To.Value) match = true;
+                                match = MatchesDateRange(rc.CommissioningDate, req.CommissioningDate);
                             }
 
                             if (!match && req.PeriodMajorRepair != null)
                             {
-                                if (req.PeriodMajorRepair.From.HasValue && rc.PeriodMajorRepair >= req.PeriodMajorRepair.From.Value) match = true;
-                                if (req.PeriodMajorRepair.To.HasValue && rc.PeriodMajorRepair <= req.PeriodMajorRepair.To.Value) match = true;
+                                match = MatchesDateRange(rc.PeriodMajorRepair, req.PeriodMajorRepair);
                             }
                             if (!match && req.PeriodPeriodicTest != null)
                             {
-                                if (req.PeriodPeriodicTest.From.HasValue && rc.PeriodPeriodicTest >= req.PeriodPeriodicTest.From.Value) match = true;
-                                if (req.PeriodPeriodicTest.To.HasValue && rc.PeriodPeriodicTest <= req.PeriodPeriodicTest.To.Value) match = true;
+                                match = MatchesDateRange(rc.PeriodPeriodicTest, req.PeriodPeriodicTest);
                             }
                             if (!match && req.PeriodIntermediateTest != null)
                             {
-                                if (req.PeriodIntermediateTest.From.HasValue && rc.PeriodIntermediateTest >= req.PeriodIntermediateTest.From.Value) match = true;
-                                if (req.PeriodIntermediateTest.To.HasValue && rc.PeriodIntermediateTest <= req.PeriodIntermediateTest.To.Value) match = true;
+                                match = MatchesDateRange(rc.PeriodIntermediateTest, req.PeriodIntermediateTest);
                             }
                             if (!match && req.PeriodDepotRepair != null)
                             {
-                                if (req.PeriodDepotRepair.From.HasValue && rc.PeriodDepotRepair >= req.PeriodDepotRepair.From.Value) match = true;
-                                if (req.PeriodDepotRepair.To.HasValue && rc.PeriodDepotRepair <= req.PeriodDepotRepair.To.Value) match = true;
+                                match = MatchesDateRange(rc.PeriodDepotRepair, req.PeriodDepotRepair);
                             }
                             if (!match && req.PeriodPPRRepair != null)
                             {
-                                if (req.PeriodPPRRepair.From.HasValue && rc.PeriodPPRRepair >= req.PeriodPPRRepair.From.Value) match = true;
-                                if (req.PeriodPPRRepair.To.HasValue && rc.PeriodPPRRepair <= req.PeriodPPRRepair.To.Value) match = true;
+                                match = MatchesDateRange(rc.PeriodPPRRepair, req.PeriodPPRRepair);
                             }
                             if (!match && req.PeriodPaintRepair != null)
                             {
-                                if (req.PeriodPaintRepair.From.HasValue && rc.PeriodPaintRepair >= req.PeriodPaintRepair.From.Value) match = true;
-                                if (req.PeriodPaintRepair.To.HasValue && rc.PeriodPaintRepair <= req.PeriodPaintRepair.To.Value) match = true;
+                                match = MatchesDateTimeRange(rc.PeriodPaintRepair, req.PeriodPaintRepair);
                             }
                             if (!match && req.PeriodDetachRepair != null)
                             {
-                                if (req.PeriodDetachRepair.From.HasValue && rc.PeriodDetachRepair >= req.PeriodDetachRepair.From.Value) match = true;
-                                if (req.PeriodDetachRepair.To.HasValue && rc.PeriodDetachRepair <= req.PeriodDetachRepair.To.Value) match = true;
+                                match = MatchesDateRange(rc.PeriodDetachRepair, req.PeriodDetachRepair);
                             }
 
                             if (!match && req.CommissioningEndDate != null)
                             {
-                                if (req.CommissioningEndDate.From.HasValue && rc.CommissioningEndDate >= req.CommissioningEndDate.From.Value) match = true;
-                                if (req.CommissioningEndDate.To.HasValue && rc.CommissioningEndDate <= req.CommissioningEndDate.To.Value) match = true;
+                                match = MatchesDateRange(rc.CommissioningEndDate, req.CommissioningEndDate);
                             }
 
                             if (!match && req.PlanPeriodMajorRepair != null)
                             {
-                                if (req.PlanPeriodMajorRepair.From.HasValue && rc.PlanPeriodMajorRepair >= req.PlanPeriodMajorRepair.From.Value) match = true;
-                                if (req.PlanPeriodMajorRepair.To.HasValue && rc.PlanPeriodMajorRepair <= req.PlanPeriodMajorRepair.To.Value) match = true;
+                                match = MatchesDateRange(rc.PlanPeriodMajorRepair, req.PlanPeriodMajorRepair);
                             }
                             if (!match && req.PlanPeriodPeriodicTest != null)
                             {
-                                if (req.PlanPeriodPeriodicTest.From.HasValue && rc.PlanPeriodPeriodicTest >= req.PlanPeriodPeriodicTest.From.Value) match = true;
-                                if (req.PlanPeriodPeriodicTest.To.HasValue && rc.PlanPeriodPeriodicTest <= req.PlanPeriodPeriodicTest.To.Value) match = true;
+                                match = MatchesDateRange(rc.PlanPeriodPeriodicTest, req.PlanPeriodPeriodicTest);
                             }
                             if (!match && req.PlanPeriodIntermediateTest != null)
                             {
-                                if (req.PlanPeriodIntermediateTest.From.HasValue && rc.PlanPeriodIntermediateTest >= req.PlanPeriodIntermediateTest.From.Value) match = true;
-                                if (req.PlanPeriodIntermediateTest.To.HasValue && rc.PlanPeriodIntermediateTest <= req.PlanPeriodIntermediateTest.To.Value) match = true;
+                                match = MatchesDateRange(rc.PlanPeriodIntermediateTest, req.PlanPeriodIntermediateTest);
                             }
                             if (!match && req.PlanPeriodDepotRepair != null)
                             {
-                                if (req.PlanPeriodDepotRepair.From.HasValue && rc.PlanPeriodDepotRepair >= req.PlanPeriodDepotRepair.From.Value) match = true;
-                                if (req.PlanPeriodDepotRepair.To.HasValue && rc.PlanPeriodDepotRepair <= req.PlanPeriodDepotRepair.To.Value) match = true;
+                                match = MatchesDateRange(rc.PlanPeriodDepotRepair, req.PlanPeriodDepotRepair);
                             }
                             if (!match && req.PlanPeriodPPRRepair != null)
                             {
-                                if (req.PlanPeriodPPRRepair.From.HasValue && rc.PlanPeriodPPRRepair >= req.PlanPeriodPPRRepair.From.Value) match = true;
-                                if (req.PlanPeriodPPRRepair.To.HasValue && rc.PlanPeriodPPRRepair <= req.PlanPeriodPPRRepair.To.Value) match = true;
+                                match = MatchesDateRange(rc.PlanPeriodPPRRepair, req.PlanPeriodPPRRepair);
                             }
 
                             return match;
@@ -989,6 +975,40 @@ public static class RailwayCisternEndpoints
         if (serviceDate <= date)
             date = serviceDate;
         return date;
+    }
+
+    private static bool MatchesDateRange(DateOnly? value, DateRange? range)
+    {
+        if (range == null)
+            return true;
+
+        if (!range.From.HasValue && !range.To.HasValue)
+            return true;
+
+        if (range.From.HasValue && value < range.From.Value)
+            return false;
+
+        if (range.To.HasValue && value > range.To.Value)
+            return false;
+
+        return true;
+    }
+
+    private static bool MatchesDateTimeRange(DateTime? value, DateTimeWithoutOffsetRange? range)
+    {
+        if (range == null)
+            return true;
+
+        if (!range.From.HasValue && !range.To.HasValue)
+            return true;
+
+        if (range.From.HasValue && value < range.From.Value)
+            return false;
+
+        if (range.To.HasValue && value > range.To.Value)
+            return false;
+
+        return true;
     }
 
     private static async Task<string> BuildHistoryNoteForRailwayCisternUpdateAsync(

@@ -650,5 +650,42 @@ public static class PartEquipmentEndpoints
             .WithName("GetPartEquipmentsByPart")
             .Produces<List<PartEquipmentDTO>>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
+
+        // Создание новой записи
+        group.MapPost("/", async (
+                [FromServices] ApplicationDbContext context,
+                [FromBody] CreatePartEquipmentDTO dto) =>
+            {
+                var partEquipment = new PartEquipment
+                {
+                    Id = Guid.NewGuid(),
+                    RailwayCisternsId = dto.RailwayCisternsId,
+                    Operation = dto.Operation,
+                    EquipmentTypeId = dto.EquipmentTypeId,
+                    DefectsId = dto.DefectsId,
+                    AdminOwnerId = dto.AdminOwnerId,
+                    PartsId = dto.PartsId,
+                    JobDepotsId = dto.JobDepotsId,
+                    JobDate = dto.JobDate,
+                    JobTypeId = dto.JobTypeId,
+                    ThicknessLeft = dto.ThicknessLeft,
+                    ThicknessRight = dto.ThicknessRight,
+                    TruckType = dto.TruckType,
+                    Notes = dto.Notes,
+                    DocumentId = dto.DocumentId,
+                    DocumentDate = dto.DocumentDate,
+                    DepotsId = dto.DepotsId,
+                    RepairTypesId = dto.RepairTypesId
+                };
+
+                context.PartEquipments.Add(partEquipment);
+                await context.SaveChangesAsync();
+
+                return Results.Created($"/api/part-equipments/{partEquipment.Id}", partEquipment.Id);
+            })
+            .WithName("CreatePartEquipment")
+            .Produces<Guid>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .RequirePermissions(Permission.Create);
     }
 }
