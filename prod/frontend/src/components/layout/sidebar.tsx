@@ -168,7 +168,6 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   useEffect(() => {
     setMounted(true);
-    setExpandedItems(["Справочники"]);
   }, []);
 
   const toggleExpanded = (title: string) => {

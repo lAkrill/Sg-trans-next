@@ -242,11 +242,14 @@ function normalizeRequest(
       }
     }
   }
+  if (Object.keys(out).length > 0 && typeof f.isAnd === "boolean") {
+    out.isAnd = f.isAnd;
+  }
   return out;
 }
 
 export function countPlanningRepairsFilters(f: RailwayCisternRepairsFilterRequestDTO): number {
-  return Object.keys(normalizeRequest(f)).length;
+  return Object.keys(normalizeRequest(f)).filter((key) => key !== "isAnd").length;
 }
 
 interface PlanningRepairsFiltersProps {
@@ -313,6 +316,7 @@ export function PlanningRepairsFilters({
     const listModels = parseCommaList(wagonModelsText);
     const merged: RailwayCisternRepairsFilterRequestDTO = {
       ...draft,
+      isAnd: draft.isAnd ?? true,
       numbers: listNums.length ? listNums : undefined,
       wagonModelsNames: listModels.length ? listModels : undefined,
     };
@@ -325,7 +329,7 @@ export function PlanningRepairsFilters({
       const range = buildPlanDateRangeFromToday(months);
       if (quickRepairType === "all") {
         setDraft((d) => {
-          const next = { ...d };
+          const next: RailwayCisternRepairsFilterRequestDTO = { ...d, isAnd: false };
           for (const field of QUICK_REPAIR_PLAN_FIELDS) {
             (next as Record<string, { from: string; to: string }>)[field] = range;
           }
@@ -334,7 +338,11 @@ export function PlanningRepairsFilters({
         return;
       }
       if (quickRepairOption.planField) {
-        updateDraft(quickRepairOption.planField, range);
+        setDraft((d) => ({
+          ...d,
+          isAnd: true,
+          [quickRepairOption.planField!]: range,
+        }));
       }
     },
     [quickRepairType, quickRepairOption.planField, updateDraft]

@@ -10,7 +10,6 @@ import {
   CardHeader, 
   CardTitle, 
   Button, 
-  Input, 
   Table, 
   TableBody, 
   TableCell, 
@@ -29,7 +28,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  Search,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -45,8 +43,7 @@ import type { PartDTO, PartFilterSortDTO, PartFilterCriteria } from "@/types/dir
 export default function PartsPage() {
   const router = useRouter();
   const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize] = useState(10);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [pageSize, setPageSize] = useState(10);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [isFiltered, setIsFiltered] = useState(false);
   
@@ -85,6 +82,9 @@ export default function PartsPage() {
   const currentData = isFiltered && filterMutation.data ? filterMutation.data : partsData;
   const currentItems = currentData?.items || [];
   const isCurrentLoading = isFiltered ? filterMutation.isPending : isLoading;
+  const currentPage = currentData?.pageNumber || pageNumber;
+  const totalPages = currentData?.totalPages || 1;
+  const totalCount = currentData?.totalCount || 0;
 
   // Проверяем, являются ли элементы объектами PartDTO
   const isPartDTO = (item: unknown): item is PartDTO => {
@@ -93,31 +93,156 @@ export default function PartsPage() {
 
   const filteredParts = currentItems.filter((part) => {
     if (!isPartDTO(part)) return false;
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    return (
-      part.serialNumber?.toLowerCase().includes(search) ||
-      part.partType.name.toLowerCase().includes(search) ||
-      part.stampNumber.value.toLowerCase().includes(search) ||
-      part.currentLocation?.number.toLowerCase().includes(search) ||
-      part.depot?.name.toLowerCase().includes(search)
-    );
+    return true;
   }) as PartDTO[];
 
-  const handleFilterApply = async (filters: PartFilterCriteria) => {
+  const hasActiveFilters = (filters: PartFilterCriteria) => {
+    return Object.values(filters).some((value) => {
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      if (typeof value === "object" && value !== null) {
+        return Object.values(value).some((nestedValue) => nestedValue !== undefined && nestedValue !== null && nestedValue !== "");
+      }
+      return value !== undefined && value !== null && value !== "";
+    });
+  };
+
+  const handleFilterApply = async (filters: PartFilterCriteria, page = 1, size = pageSize) => {
     try {
+      if (!hasActiveFilters(filters)) {
+        setCurrentFilters(filters);
+        setIsFiltered(false);
+        setPageNumber(1);
+        return;
+      }
+
       const filterRequest: PartFilterSortDTO = {
         filters,
-        page: 1,
-        pageSize: 50
+        page,
+        pageSize: size
       };
       await filterMutation.mutateAsync(filterRequest);
       setCurrentFilters(filters);
       setIsFiltered(true);
-      setPageNumber(1);
+      setPageNumber(page);
     } catch (error) {
       console.error('Ошибка при применении фильтров:', error);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    if (isFiltered) {
+      void handleFilterApply(currentFilters, page, pageSize);
+    } else {
+      setPageNumber(page);
+    }
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    if (isFiltered) {
+      void handleFilterApply(currentFilters, 1, newPageSize);
+    } else {
+      setPageNumber(1);
+    }
+  };
+
+  const getVisiblePages = () => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+
+    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+      range.push(i);
+    }
+
+    if (currentPage - delta > 2) {
+      rangeWithDots.push(1, "...");
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (currentPage + delta < totalPages - 1) {
+      rangeWithDots.push("...", totalPages);
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages);
+    }
+
+    return rangeWithDots;
+  };
+
+  const Pagination = () => {
+    if (totalPages <= 1) return null;
+
+    const startItem = (currentPage - 1) * pageSize + 1;
+    const endItem = Math.min(currentPage * pageSize, totalCount);
+
+    return (
+      <div className="flex items-center justify-between px-2">
+        <div className="flex items-center space-x-2">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Показано {startItem}-{endItem} из {totalCount} записей
+          </p>
+          <select
+            value={pageSize}
+            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            className="ml-2 text-sm border rounded px-2 py-1 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+          >
+            <option value={5}>5 на странице</option>
+            <option value={10}>10 на странице</option>
+            <option value={25}>25 на странице</option>
+            <option value={50}>50 на странице</option>
+          </select>
+        </div>
+
+        <div className="flex items-center space-x-1">
+          <Button variant="outline" size="sm" onClick={() => handlePageChange(1)} disabled={currentPage === 1}>
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          {getVisiblePages().map((pageNum, index) => (
+            <Button
+              key={index}
+              variant={pageNum === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => typeof pageNum === "number" && handlePageChange(pageNum)}
+              disabled={typeof pageNum !== "number"}
+              className="min-w-[40px]"
+            >
+              {pageNum}
+            </Button>
+          ))}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(totalPages)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   const handleDelete = async (id: string) => {
@@ -181,20 +306,16 @@ export default function PartsPage() {
       </div>
 
       {/* Controls */}
-      <div className="flex justify-between items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
-          <Input
-            placeholder="Поиск по заводскому номеру, типу, клейму..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
+      <div className="flex justify-end items-center gap-4">
         <div className="flex gap-2">
           {!isFiltered && (
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select
+              value={typeFilter}
+              onValueChange={(value) => {
+                setTypeFilter(value);
+                setPageNumber(1);
+              }}
+            >
               <SelectTrigger className="w-fit">
                 <SelectValue placeholder="Тип детали" />
               </SelectTrigger>
@@ -216,7 +337,7 @@ export default function PartsPage() {
             filters={currentFilters}
             visibleColumns={visibleColumns}
             isLoading={isCurrentLoading}
-            filteredCount={filteredParts.length}
+            filteredCount={currentData?.totalCount}
             totalCount={currentData?.totalCount}
           />
           <Link href="/directories/parts/create">
@@ -237,7 +358,7 @@ export default function PartsPage() {
             </CardTitle>
             <CardDescription>
               {isFiltered
-                ? `Отфильтровано: ${filteredParts.length}`
+                ? `Отфильтровано: ${currentData?.totalCount || 0}`
                 : `Всего записей: ${currentData?.totalCount || 0}`}
             </CardDescription>
           </div>
@@ -258,8 +379,6 @@ export default function PartsPage() {
                 <p className="text-gray-600 dark:text-gray-400">
                   {isFiltered
                     ? "По заданным фильтрам детали не найдены"
-                    : searchTerm
-                    ? `Детали по запросу "${searchTerm}" не найдены`
                     : "Нет данных для отображения"}
                 </p>
               </div>
@@ -335,50 +454,9 @@ export default function PartsPage() {
               </Table>
 
               {/* Пагинация */}
-              {currentData && currentData.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 px-2">
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    Показано {((pageNumber - 1) * pageSize) + 1}-{Math.min(pageNumber * pageSize, currentData.totalCount)} из {currentData.totalCount} записей
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageNumber(1)}
-                      disabled={pageNumber === 1}
-                    >
-                      <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageNumber(pageNumber - 1)}
-                      disabled={pageNumber === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm min-w-[120px] text-center">
-                      Страница {pageNumber} из {currentData.totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageNumber(pageNumber + 1)}
-                      disabled={pageNumber === currentData.totalPages}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageNumber(currentData.totalPages)}
-                      disabled={pageNumber === currentData.totalPages}
-                    >
-                      <ChevronsRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="mt-4">
+                <Pagination />
+              </div>
             </>
           )}
         </CardContent>

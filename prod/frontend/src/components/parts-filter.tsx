@@ -124,7 +124,7 @@ export function PartsFilter({
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-[400px] sm:w-[600px] flex flex-col">
+      <SheetContent className="right-[10px] w-[calc(100vw-2rem)] sm:!w-[33.333vw] sm:!max-w-[33.333vw] flex h-full flex-col">
         <SheetHeader>
           <SheetTitle>Фильтры деталей</SheetTitle>
           <SheetDescription>
@@ -137,15 +137,35 @@ export function PartsFilter({
           )}
         </SheetHeader>
 
-        <Tabs defaultValue="filters" className="flex-1 flex flex-col">
+        {/* Кнопки действий */}
+        <Separator className="my-4" />
+        <div className="flex space-x-2">
+          <Button 
+            onClick={handleApplyFilters} 
+            disabled={isLoading}
+            className="flex-1"
+          >
+            {isLoading ? 'Применение...' : 'Применить фильтры'}
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleClearFilters}
+            disabled={isLoading}
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Сбросить
+          </Button>
+        </div>
+
+        <Tabs defaultValue="filters" className="flex-1 min-h-0 flex flex-col">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="filters">Фильтры</TabsTrigger>
             <TabsTrigger value="sort">Сортировка</TabsTrigger>
             <TabsTrigger value="columns">Столбцы</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="filters" className="flex-1">
-            <ScrollArea className="flex-1">
+          <TabsContent value="filters" className="flex-1 min-h-0">
+            <ScrollArea className="h-full">
               <div className="space-y-4 pr-4">
                 {/* Базовые фильтры */}
                 <Card>
@@ -350,26 +370,6 @@ export function PartsFilter({
             </div>
           </TabsContent>
         </Tabs>
-
-        {/* Кнопки действий */}
-        <Separator className="my-4" />
-        <div className="flex space-x-2">
-          <Button 
-            onClick={handleApplyFilters} 
-            disabled={isLoading}
-            className="flex-1"
-          >
-            {isLoading ? 'Применение...' : 'Применить фильтры'}
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleClearFilters}
-            disabled={isLoading}
-          >
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Сбросить
-          </Button>
-        </div>
       </SheetContent>
     </Sheet>
   );
