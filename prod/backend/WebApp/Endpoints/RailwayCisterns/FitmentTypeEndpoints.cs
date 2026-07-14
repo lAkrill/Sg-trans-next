@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
@@ -69,7 +68,12 @@ public static class FitmentTypeEndpoints
                 HttpContext httpContext,
                 [FromBody] CreateFitmentTypeDTO dto) =>
             {
-                var creatorId = Guid.Parse(httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+                var userIdString = httpContext.User.FindFirst("userId")?.Value;
+                if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var creatorId))
+                {
+                    return Results.BadRequest();
+                }
+
                 var fitmentType = dto.ToFitmentType(creatorId);
                 context.FitmentTypes.Add(fitmentType);
                 await context.SaveChangesAsync();
