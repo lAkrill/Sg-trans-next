@@ -686,24 +686,28 @@ public static class RailwayCisternEndpoints
                         }
                     }
 
-                    if(milage == null || milage.RepairDate < cistern.PlanPeriodDepotRepair||milage.RepairTypeId == MajorRepairType)
+                    if (milage == null || milage.RepairDate < cistern.PlanPeriodDepotRepair || milage.RepairTypeId == MajorRepairType)
                     {
-                        DateOnly? nextDepot=cistern.PlanPeriodDepotRepair, prevDepot = cistern.PlanPeriodDepotRepair;
-                    while (nextDepot < cistern.PlanPeriodMajorRepair)
-                    {
-                        prevDepot = nextDepot;
-                        nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
-                    }
+                        DateOnly? nextDepot = cistern.PlanPeriodDepotRepair, prevDepot = cistern.PlanPeriodDepotRepair;
+                        while (nextDepot < cistern.PlanPeriodMajorRepair)
+                        {
+                            prevDepot = nextDepot;
+                            nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                        }
 
-                    int diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
-                    if(diff <= 180)
-                    {
-                        cistern.PlanPeriodMajorRepair = prevDepot;
+                        int diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
+                        if (diff <= 180)
+                        {
+                            cistern.PlanPeriodMajorRepair = prevDepot;
+                        }
+                        else
+                        {
+                            cistern.PlanPeriodMajorRepair = nextDepot;
+                        }
                     }
-                    else
+                    if (cistern.PeriodPeriodicTest < cistern.PeriodIntermediateTest)
                     {
-                        cistern.PlanPeriodMajorRepair = nextDepot;
-                    }
+                        cistern.PlanPeriodIntermediateTest = cistern.PlanPeriodPeriodicTest.Value.AddYears(4);
                     }
                 }
                 if (req != null)
@@ -962,6 +966,11 @@ public static class RailwayCisternEndpoints
 
             var diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
             cistern.PlanPeriodMajorRepair = diff <= 180 ? prevDepot : nextDepot;
+        }
+
+        if(cistern.PeriodPeriodicTest < cistern.PeriodIntermediateTest)
+        {
+            cistern.PlanPeriodIntermediateTest = cistern.PlanPeriodPeriodicTest.Value.AddYears(4);
         }
     }
 
