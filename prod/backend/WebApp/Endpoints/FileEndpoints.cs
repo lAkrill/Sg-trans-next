@@ -9,7 +9,7 @@ namespace WebApp.Endpoints;
 
 public static class FileEndpoints
 {
-    private const string DefaultDataDirectory = "data";
+    private const string DefaultDataDirectory = "C:\\inetpub\\wwwroot\\data";
     private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
 
     public static void MapFileEndpoints(this IEndpointRouteBuilder app)

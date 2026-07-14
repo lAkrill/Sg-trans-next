@@ -86,7 +86,10 @@ services.AddTransient<GlobalExceptionHandlingMiddleware>();
 var app = builder.Build();
 
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "AspireApp API V1");
+});
 
 app.UseCors("AllowFrontend");
 
