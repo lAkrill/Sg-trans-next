@@ -53,6 +53,11 @@ public class ApplicationDbContext(
     public DbSet<RepairsMatching> RepairsMatchings { get; set; }
 
     public DbSet<RailwayCisternStatus> RailwayCisternStatuses { get; set;}
+    
+    //Fitments
+    public DbSet<Fitment> Fitments { get; set; }
+    public DbSet<FitmentType> FitmentTypes { get; set; }
+    public DbSet<FitmentModel> FitmentModels { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

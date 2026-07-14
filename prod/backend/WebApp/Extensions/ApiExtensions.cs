@@ -67,6 +67,13 @@ public static class ApiExtensions
         app.MapPersonalCisRepairPeriodEndpoints();
 
         app.MapRailwayCistrenStatusEndpoints();
+
+        // Fitments endpoints
+        app.MapFitmentTypeEndpoints();
+        app.MapFitmentModelEndpoints();
+        app.MapFitmentEndpoints();
+
+        app.MapFileEndpoints();
     }
 
     public static void AddApiAuthentication(
