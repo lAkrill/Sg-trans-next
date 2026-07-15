@@ -127,6 +127,11 @@ const sidebarItems: SidebarItem[] = [
     icon: Cog,
   },
   {
+    title: "Арматура",
+    href: "/directories/fitments",
+    icon: Cog,
+  },
+  {
     title: "Ремонты",
     href: "/repairs",
     icon: Wrench,

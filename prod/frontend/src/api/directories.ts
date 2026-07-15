@@ -71,6 +71,9 @@ import type {
   UpdateCisternStatusDTO,
   CisternStatusDTO,
   CreateCisternStatusDTO,
+  FitmentDTO,
+  FitmentTypeDTO,
+  FitmentModelDTO,
 } from '@/types/directories';
 import { CreateVesselDTO, PaginatedVesselsResponse, UpdateVesselDto, VesselDTO } from '@/types/vessels';
 
@@ -349,6 +352,14 @@ export const partsApi = {
 
   getInstallationHistory: async (partId: string): Promise<PartEquipmentDTO[]> => {
     const response = await api.get(`/api/part-equipments/by-part/${partId}`);
+    return response.data;
+  },
+};
+
+// Fitments API
+export const fitmentsApi = {
+  getAll: async(): Promise<FitmentDTO[]> => {
+    const response = await api.get(`/api/Fitments/all`);
     return response.data;
   },
 };
