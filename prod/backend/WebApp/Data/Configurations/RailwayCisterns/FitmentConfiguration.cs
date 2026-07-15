@@ -34,6 +34,9 @@ public class FitmentConfiguration : IEntityTypeConfiguration<Fitment>
         builder.Property(f => f.UpdatedAt)
             .IsRequired();
 
+        builder.Property(f => f.ManufacturerId)
+            .IsRequired();
+
         // Foreign Keys
         builder.HasOne(f => f.FitmentType)
             .WithMany(ft => ft.Fitments)
@@ -43,6 +46,11 @@ public class FitmentConfiguration : IEntityTypeConfiguration<Fitment>
         builder.HasOne(f => f.Model)
             .WithMany(m => m.Fitments)
             .HasForeignKey(f => f.ModelId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(f => f.Manufacturer)
+            .WithMany()
+            .HasForeignKey(f => f.ManufacturerId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(f => f.Creator)

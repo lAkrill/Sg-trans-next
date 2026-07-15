@@ -13,11 +13,13 @@ public class FitmentDTO
     public int PeriodRep { get; set; }
     public int ServiceLifeYears { get; set; }
     public Guid ModelId { get; set; }
+    public Guid ManufacturerId { get; set; }
     public DateTime UpdatedAt { get; set; }
     public Guid CreatorId { get; set; }
     
     public FitmentTypeDTO FitmentType { get; set; } = null!;
     public FitmentModelDTO Model { get; set; } = null!;
+    public ManufacturerDTO Manufacturer { get; set; } = null!;
 }
 
 public class CreateFitmentDTO
@@ -30,6 +32,7 @@ public class CreateFitmentDTO
     public int PeriodRep { get; set; } = 1;
     public int ServiceLifeYears { get; set; } = 30;
     public Guid ModelId { get; set; }
+    public Guid ManufacturerId { get; set; }
 }
 
 public class UpdateFitmentDTO
@@ -42,6 +45,7 @@ public class UpdateFitmentDTO
     public int PeriodRep { get; set; }
     public int ServiceLifeYears { get; set; }
     public Guid ModelId { get; set; }
+    public Guid ManufacturerId { get; set; }
 }
 
 public class FitmentTypeDTO
@@ -98,10 +102,22 @@ public static class FitmentDTOMapper
             PeriodRep = fitment.PeriodRep,
             ServiceLifeYears = fitment.ServiceLifeYears,
             ModelId = fitment.ModelId,
+            ManufacturerId = fitment.ManufacturerId,
             UpdatedAt = fitment.UpdatedAt,
             CreatorId = fitment.CreatorId,
             FitmentType = fitment.FitmentType.ToFitmentTypeDTO(),
             Model = fitment.Model.ToFitmentModelDTO()
+            ,
+            Manufacturer = new ManufacturerDTO
+            {
+                Id = fitment.Manufacturer.Id,
+                Name = fitment.Manufacturer.Name,
+                Country = fitment.Manufacturer.Country,
+                ShortName = fitment.Manufacturer.ShortName ?? string.Empty,
+                Code = fitment.Manufacturer.Code,
+                CreatedAt = fitment.Manufacturer.CreatedAt,
+                UpdatedAt = fitment.Manufacturer.UpdatedAt
+            }
         };
     }
 
@@ -118,8 +134,9 @@ public static class FitmentDTOMapper
             PeriodRep = createFitmentDTO.PeriodRep,
             ServiceLifeYears = createFitmentDTO.ServiceLifeYears,
             ModelId = createFitmentDTO.ModelId,
+            ManufacturerId = createFitmentDTO.ManufacturerId,
             CreatorId = creatorId,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.Now
         };
     }
 
@@ -133,7 +150,8 @@ public static class FitmentDTOMapper
         fitment.PeriodRep = updateFitmentDTO.PeriodRep;
         fitment.ServiceLifeYears = updateFitmentDTO.ServiceLifeYears;
         fitment.ModelId = updateFitmentDTO.ModelId;
-        fitment.UpdatedAt = DateTime.UtcNow;
+        fitment.ManufacturerId = updateFitmentDTO.ManufacturerId;
+        fitment.UpdatedAt = DateTime.Now;
     }
 
     public static FitmentTypeDTO ToFitmentTypeDTO(this FitmentType fitmentType)
@@ -156,7 +174,7 @@ public static class FitmentDTOMapper
             Name = createFitmentTypeDTO.Name,
             Code = createFitmentTypeDTO.Code,
             CreatorId = creatorId,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.Now
         };
     }
 
@@ -164,7 +182,7 @@ public static class FitmentDTOMapper
     {
         fitmentType.Name = updateFitmentTypeDTO.Name;
         fitmentType.Code = updateFitmentTypeDTO.Code;
-        fitmentType.UpdatedAt = DateTime.UtcNow;
+        fitmentType.UpdatedAt = DateTime.Now;
     }
 
     public static FitmentModelDTO ToFitmentModelDTO(this FitmentModel fitmentModel)
@@ -185,13 +203,13 @@ public static class FitmentDTOMapper
             Id = Guid.NewGuid(),
             Name = createFitmentModelDTO.Name,
             CreatorId = creatorId,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.Now
         };
     }
 
     public static void UpdateFitmentModel(this FitmentModel fitmentModel, UpdateFitmentModelDTO updateFitmentModelDTO)
     {
         fitmentModel.Name = updateFitmentModelDTO.Name;
-        fitmentModel.UpdatedAt = DateTime.UtcNow;
+        fitmentModel.UpdatedAt = DateTime.Now;
     }
 }

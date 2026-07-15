@@ -5,8 +5,7 @@ using WebApp.Data.Entities.Users;
 namespace WebApp.Data;
 
 public class ApplicationDbContext(
-    DbContextOptions<ApplicationDbContext> options,
-    IServiceProvider serviceProvider) : DbContext(options)
+    DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {
     //Users
     public DbSet<User> Users { get; set; }
@@ -58,6 +57,10 @@ public class ApplicationDbContext(
     public DbSet<Fitment> Fitments { get; set; }
     public DbSet<FitmentType> FitmentTypes { get; set; }
     public DbSet<FitmentModel> FitmentModels { get; set; }
+    
+    // Messaging / Audit
+    public DbSet<WebApp.Data.Entities.Messaging.Message> Messages { get; set; }
+    public DbSet<WebApp.Data.Entities.Audit.ActionLog> ActionLogs { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

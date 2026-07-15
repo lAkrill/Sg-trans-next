@@ -6,6 +6,8 @@ using WebApp.Abstractions.Services;
 using WebApp.Data.Enums;
 using WebApp.Endpoints;
 using WebApp.Endpoints.RailwayCisterns;
+using WebApp.Endpoints.Messaging;
+using WebApp.Endpoints.Audit;
 using WebApp.Services;
 using WebApp.Services.Authentication;
 
@@ -72,6 +74,10 @@ public static class ApiExtensions
         app.MapFitmentTypeEndpoints();
         app.MapFitmentModelEndpoints();
         app.MapFitmentEndpoints();
+
+        // Messaging / Audit
+        app.MapMessageEndpoints();
+        app.MapActionLogEndpoints();
 
         app.MapFileEndpoints();
     }

@@ -310,7 +310,6 @@ export interface WagonModelDTO extends BaseEntity {
   pprRep: number;
   firstName: string;
   lastName: string;
-
 }
 
 export interface CreateWagonModelDTO {
@@ -325,6 +324,93 @@ export interface CreateWagonModelDTO {
 export interface UpdateWagonModelDTO {
   name: string;
   majorRep: number;
+  depoRep: number;
+  intermediateTest: number;
+  periodicTest: number;
+  pprRep: number;
+}
+
+// FitmentType (Тип арматуры)
+export interface FitmentTypeDTO extends BaseEntity {
+  name: string;
+  code: number;
+}
+
+export interface CreateFitmentTypeDTO {
+  name: string;
+  code: number;
+}
+
+export interface UpdateFitmentTypeDTO {
+  name: string;
+  code: number;
+}
+
+// FitmentModel (Модель арматуры)
+export interface FitmentModelDTO extends BaseEntity {
+  name: string;
+}
+
+export interface CreateFitmentModelDTO {
+  name: string;
+}
+
+export interface UpdateFitmentModelDTO {
+  name: string;
+}
+
+// Fitment (Арматура)
+export interface FitmentDTO extends BaseEntity {
+  fitmentTypeId: string;
+  serialNumber: string;
+  passportNumber: string;
+  buildDate: string;
+  lastRepairDate?: string;
+  periodRep: number;
+  serviceLifeYears: number;
+  modelId: string;
+  manufacturerId: string;
+  fitmentType: FitmentTypeDTO;
+  model: FitmentModelDTO;
+  manufacturer: ManufacturerDTO;
+}
+
+export interface CreateFitmentDTO {
+  fitmentTypeId: string;
+  serialNumber: string;
+  passportNumber: string;
+  buildDate: string;
+  lastRepairDate?: string;
+  periodRep: number;
+  serviceLifeYears: number;
+  modelId: string;
+  manufacturerId: string;
+}
+
+export interface UpdateFitmentDTO {
+  fitmentTypeId: string;
+  serialNumber: string;
+  passportNumber: string;
+  buildDate: string;
+  lastRepairDate?: string;
+  periodRep: number;
+  serviceLifeYears: number;
+  modelId: string;
+  manufacturerId: string;
+}
+
+export interface UpdateWagonModelDTO {
+  name: string;
+  majorRep: number;
+  depoRep: number;
+  intermediateTest: number;
+  periodicTest: number;
+  pprRep: number;
+}
+
+// PersonalWagonDateRep (Персоналдьные периоды ремонта вагона)
+export interface PersonalWagonDateRepDTO extends BaseEntity {
+  cisternNum: string;
   depoRep: number;
   intermediateTest: number;
   periodicTest: number;

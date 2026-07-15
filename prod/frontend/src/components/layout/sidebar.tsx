@@ -94,6 +94,21 @@ const directoryItems: SidebarItem[] = [
     icon: FileText,
   },
   {
+    title: "Типы арматуры",
+    href: "/directories/fitment-types",
+    icon: Wrench,
+  },
+  {
+    title: "Модели арматуры",
+    href: "/directories/fitment-models",
+    icon: Train,
+  },
+  {
+    title: "Арматура",
+    href: "/directories/fitments",
+    icon: Wrench,
+  },
+  {
     title: "Модели вагонов",
     href: "/directories/wagon-models",
     icon: Car,
