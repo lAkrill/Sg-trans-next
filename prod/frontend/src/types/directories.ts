@@ -372,7 +372,7 @@ export interface FitmentDTO extends BaseEntity {
   manufacturerId: string;
   fitmentType: FitmentTypeDTO;
   model: FitmentModelDTO;
-  manufacturer: ManufacturerDTO;
+  manufacturer?: ManufacturerDTO;
 }
 
 export interface CreateFitmentDTO {
