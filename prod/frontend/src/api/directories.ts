@@ -36,6 +36,15 @@ import type {
   WagonModelDTO,
   CreateWagonModelDTO,
   UpdateWagonModelDTO,
+  FitmentDTO,
+  CreateFitmentDTO,
+  UpdateFitmentDTO,
+  FitmentTypeDTO,
+  CreateFitmentTypeDTO,
+  UpdateFitmentTypeDTO,
+  FitmentModelDTO,
+  CreateFitmentModelDTO,
+  UpdateFitmentModelDTO,
   PersonalWagonDateRepDTO,
   CreatePersonalWagonDateRepDTO,
   UpdatePersonalWagonDateRepDTO,
@@ -71,9 +80,6 @@ import type {
   UpdateCisternStatusDTO,
   CisternStatusDTO,
   CreateCisternStatusDTO,
-  FitmentDTO,
-  FitmentTypeDTO,
-  FitmentModelDTO,
 } from '@/types/directories';
 import { CreateVesselDTO, PaginatedVesselsResponse, UpdateVesselDto, VesselDTO } from '@/types/vessels';
 
@@ -199,6 +205,27 @@ export const wagonModelsApi = createDirectoryApi<
   UpdateWagonModelDTO
 >('wagon-models');
 
+// FitmentTypes API
+export const fitmentTypesApi = createDirectoryApi<
+  FitmentTypeDTO,
+  CreateFitmentTypeDTO,
+  UpdateFitmentTypeDTO
+>('FitmentTypes');
+
+// FitmentModels API
+export const fitmentModelsApi = createDirectoryApi<
+  FitmentModelDTO,
+  CreateFitmentModelDTO,
+  UpdateFitmentModelDTO
+>('FitmentModels');
+
+// Fitments API
+export const fitmentsApi = createDirectoryApi<
+  FitmentDTO,
+  CreateFitmentDTO,
+  UpdateFitmentDTO
+>('Fitments');
+
 // PersonalWagonDateReps API
 export const personalWagonDateRepsApi = createDirectoryApi<
   PersonalWagonDateRepDTO,
@@ -247,6 +274,12 @@ export const convertToSelectOptions = {
 
   partStatuses: (partStatuses: PartStatusDTO[]) =>
     partStatuses.map(ps => ({ value: ps.id, label: ps.name })),
+
+  fitmentTypes: (fitmentTypes: FitmentTypeDTO[]) =>
+    fitmentTypes.map(ft => ({ value: ft.id, label: `${ft.name} [${ft.code}]` })),
+
+  fitmentModels: (fitmentModels: FitmentModelDTO[]) =>
+    fitmentModels.map(fm => ({ value: fm.id, label: fm.name })),
 
   vessels: (vessels: { id: string; serialNumber?: string; manufacturer?: string }[]) =>
     vessels.map(v => ({ value: v.id, label: `${v.serialNumber ?? ''} (${v.manufacturer ?? ''})` })),
