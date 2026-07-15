@@ -48,14 +48,14 @@ export const fitmentsBaseConfig: BaseDirectoryConfig = {
     {
       key: "buildDate",
       label: "Дата изготовления",
-      type: "date",
+      type: "text",
       required: true,
       placeholder: "Введите дату изготовления",
     },
     {
       key: "lastRepairDate",
       label: "Дата последнего ремонта",
-      type: "date",
+      type: "text",
       required: false,
       placeholder: "Введите дату последнего ремонта",
     },
@@ -99,7 +99,12 @@ export const fitmentsConfig: DirectoryConfig<FitmentDTO, CreateFitmentDTO, Updat
   fields: fitmentsBaseConfig.fields.map((field) => ({
     key: field.key,
     label: field.label,
-    type: field.type,
+    type:
+      field.type === "custom"
+        ? "custom"
+        : field.type === "boolean" || field.type === "select" || field.type === "textarea"
+        ? "text"
+        : field.type,
     required: field.required,
     placeholder: field.placeholder,
     customComponent: field.customComponent,
