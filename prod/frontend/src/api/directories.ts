@@ -389,6 +389,14 @@ export const partsApi = {
   },
 };
 
+// Fitments API
+export const fitmentsApi = {
+  getAll: async(): Promise<FitmentDTO[]> => {
+    const response = await api.get(`/api/Fitments/all`);
+    return response.data;
+  },
+};
+
 // Part Equipment API
 export const partEquipmentApi = {
   getAll: async (pageNumber = 1, pageSize = 10, cisternId?: string): Promise<PaginatedPartEquipmentResponse> => {

@@ -372,7 +372,7 @@ export interface FitmentDTO extends BaseEntity {
   manufacturerId: string;
   fitmentType: FitmentTypeDTO;
   model: FitmentModelDTO;
-  manufacturer: ManufacturerDTO;
+  manufacturer?: ManufacturerDTO;
 }
 
 export interface CreateFitmentDTO {
@@ -486,6 +486,43 @@ export interface PartDTO extends BaseEntity {
   documentId?: string;
   document?: DocumentDTO;
 }
+
+// Fitments (Арматура)
+
+export interface FitmentModelDTO
+{
+  id: string;
+  name: string;
+  updatedAt: string;
+  creatorId: string;
+}
+
+export interface FitmentTypeDTO
+{
+  id: string;
+  name: string;
+  code: number;
+  updatedAt: string;
+  creatorId: string;
+}
+
+export interface FitmentDTO
+{
+  id: string;
+  fitmentTypeId: string;
+  serialNumber: string;
+  passportNumber: string;
+  buildDate: string;
+  lastRepairDate?: string;
+  periodRep: number;
+  serviceLifeYears: number;
+  updatedAt: string;
+  creatorId: string;
+  fitmentType: FitmentTypeDTO;
+  model: FitmentModelDTO;
+  manufacturer?: ManufacturerDTO;
+}
+
 
 export interface WheelPairDTO {
   thicknessLeft?: number;

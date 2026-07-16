@@ -25,7 +25,7 @@ public static class FitmentEndpoints
                 var fitments = await context.Fitments
                     .AsNoTracking()
                     .Include(f => f.FitmentType)
-                    .Include(f => f.Manufacturer)
+                    .Include(f => f.Depot)
                     .Include(f => f.Model)
                     .AsSplitQuery()
                     .Skip(skip)
@@ -44,7 +44,7 @@ public static class FitmentEndpoints
                 var fitments = await context.Fitments
                     .AsNoTracking()
                     .Include(f => f.FitmentType)
-                    .Include(f => f.Manufacturer)
+                    .Include(f => f.Depot)
                     .Include(f => f.Model)
                     .AsSplitQuery()
                     .OrderBy(f => f.SerialNumber)
@@ -61,7 +61,7 @@ public static class FitmentEndpoints
                 var fitment = await context.Fitments
                     .AsNoTracking()
                     .Include(f => f.FitmentType)
-                    .Include(f => f.Manufacturer)
+                    .Include(f => f.Depot)
                     .Include(f => f.Model)
                     .AsSplitQuery()
                     .Where(f => f.Id == id)
@@ -88,7 +88,7 @@ public static class FitmentEndpoints
                     .AsNoTracking()
                     .Where(f => f.SerialNumber == serialNumber)
                     .Include(f => f.FitmentType)
-                    .Include(f => f.Manufacturer)
+                    .Include(f => f.Depot)
                     .Include(f => f.Model)
                     .AsSplitQuery()
                     .Skip(skip)
@@ -115,7 +115,7 @@ public static class FitmentEndpoints
                     .AsNoTracking()
                     .Where(f => f.FitmentTypeId == fitmentTypeId)
                     .Include(f => f.FitmentType)
-                    .Include(f => f.Manufacturer)
+                    .Include(f => f.Depot)
                     .Include(f => f.Model)
                     .AsSplitQuery()
                     .Skip(skip)
@@ -147,7 +147,7 @@ public static class FitmentEndpoints
                 // Reload with relations
                 await context.Entry(fitment).Reference(f => f.FitmentType).LoadAsync();
                 await context.Entry(fitment).Reference(f => f.Model).LoadAsync();
-                await context.Entry(fitment).Reference(f => f.Manufacturer).LoadAsync();
+                await context.Entry(fitment).Reference(f => f.Depot).LoadAsync();
 
                 return Results.Created($"/api/Fitments/{fitment.Id}", fitment.ToFitmentDTO());
             })

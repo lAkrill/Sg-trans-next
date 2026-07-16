@@ -24,8 +24,8 @@ public class Fitment
     public Guid ModelId { get; set; }
     public FitmentModel Model { get; set; }
 
-    public Guid ManufacturerId { get; set; }
-    public Manufacturer Manufacturer { get; set; }
+    public Guid DepotId { get; set; }
+    public Depot Depot { get; set; }
     
     public DateTime UpdatedAt { get; set; }
     

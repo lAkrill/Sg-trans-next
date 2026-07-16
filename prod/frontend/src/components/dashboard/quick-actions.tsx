@@ -1,6 +1,6 @@
 "use client";
 
-import { Train, MapPin, Users, Wrench } from "lucide-react";
+import { Cog, Train, MapPin, Users, Wrench } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { useCurrentUser } from "@/api";
 import { roleUtils } from "@/lib/permissions";
@@ -30,6 +30,13 @@ const QuickActions = () => {
       icon: Wrench,
       href: "/repairs",
       color: "bg-purple-500",
+    },
+    {
+      title: "Арматура",
+      description: "Справочник арматуры",
+      icon: Cog,
+      href: "/directories/fitments",
+      color: "bg-slate-500",
     },
   ];
 
