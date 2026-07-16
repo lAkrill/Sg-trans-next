@@ -15,6 +15,8 @@ import {
   countPlanningVisibleLeafColumns,
   type PlanningColumnKey,
 } from "@/lib/repairs/planning-columns";
+import { getPlannedRepairCellClass } from "@/lib/repairs/date-highlighting";
+import { cn } from "@/lib/utils";
 
 function formatPlanningServiceEndDate(
   buildDate: string | undefined,
@@ -219,25 +221,51 @@ export function PlanningRepairsTable({
               {vis("majorRepair") && (
                 <>
                   <TableCell className="whitespace-nowrap">{formatRuDate(row.periodMajorRepair)}</TableCell>
-                  <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodMajorRepair)}</TableCell>
+                  <TableCell
+                    className={cn(
+                      "whitespace-nowrap",
+                      getPlannedRepairCellClass(row.planPeriodMajorRepair)
+                    )}
+                  >
+                    {formatRuDate(row.planPeriodMajorRepair)}
+                  </TableCell>
                 </>
               )}
               {vis("depotRepair") && (
                 <>
                   <TableCell className="whitespace-nowrap">{formatRuDate(row.periodDepotRepair)}</TableCell>
-                  <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodDepotRepair)}</TableCell>
+                  <TableCell
+                    className={cn(
+                      "whitespace-nowrap",
+                      getPlannedRepairCellClass(row.planPeriodDepotRepair)
+                    )}
+                  >
+                    {formatRuDate(row.planPeriodDepotRepair)}
+                  </TableCell>
                 </>
               )}
               {vis("periodicTest") && (
                 <>
                   <TableCell className="whitespace-nowrap">{formatRuDate(row.periodPeriodicTest)}</TableCell>
-                  <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodPeriodicTest)}</TableCell>
+                  <TableCell
+                    className={cn(
+                      "whitespace-nowrap",
+                      getPlannedRepairCellClass(row.planPeriodPeriodicTest)
+                    )}
+                  >
+                    {formatRuDate(row.planPeriodPeriodicTest)}
+                  </TableCell>
                 </>
               )}
               {vis("intermediateTest") && (
                 <>
                   <TableCell className="whitespace-nowrap">{formatRuDate(row.periodIntermediateTest)}</TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell
+                    className={cn(
+                      "whitespace-nowrap",
+                      getPlannedRepairCellClass(row.planPeriodIntermediateTest)
+                    )}
+                  >
                     {formatRuDate(row.planPeriodIntermediateTest)}
                   </TableCell>
                 </>
@@ -245,7 +273,14 @@ export function PlanningRepairsTable({
               {vis("pprRepair") && (
                 <>
                   <TableCell className="whitespace-nowrap">{formatRuDate(row.periodPPRRepair)}</TableCell>
-                  <TableCell className="whitespace-nowrap">{formatRuDate(row.planPeriodPPRRepair)}</TableCell>
+                  <TableCell
+                    className={cn(
+                      "whitespace-nowrap",
+                      getPlannedRepairCellClass(row.planPeriodPPRRepair)
+                    )}
+                  >
+                    {formatRuDate(row.planPeriodPPRRepair)}
+                  </TableCell>
                 </>
               )}
               {vis("milage") && (
@@ -266,11 +301,23 @@ export function PlanningRepairsTable({
               {vis("reRegistration") && (
                 <>
                   <TableCell className="whitespace-nowrap">{formatRuDate(row.reRegistrationDate)}</TableCell>
-                  <TableCell className="whitespace-nowrap">{formatRuDate(row.reRegistrationNextDate)}</TableCell>
+                  <TableCell
+                    className={cn(
+                      "whitespace-nowrap",
+                      getPlannedRepairCellClass(row.reRegistrationNextDate)
+                    )}
+                  >
+                    {formatRuDate(row.reRegistrationNextDate)}
+                  </TableCell>
                 </>
               )}
               {vis("periodDetachRepair") && (
-                <TableCell className="whitespace-nowrap text-center">
+                <TableCell
+                  className={cn(
+                    "whitespace-nowrap text-center",
+                    getPlannedRepairCellClass(row.periodDetachRepair)
+                  )}
+                >
                   {formatRuDate(row.periodDetachRepair)}
                 </TableCell>
               )}

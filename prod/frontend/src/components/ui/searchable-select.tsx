@@ -104,6 +104,7 @@ export const SearchableSelect = React.forwardRef<
       >
         {/* Trigger Button */}
         <button
+          type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className={cn(
@@ -180,6 +181,7 @@ export const SearchableSelect = React.forwardRef<
                   {filteredOptions.map((option) => (
                     <li key={option.value}>
                       <button
+                        type="button"
                         onClick={() => handleSelect(option.value)}
                         className={cn(
                           'w-full px-3 py-2 text-left text-sm',

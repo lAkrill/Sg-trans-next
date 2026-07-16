@@ -3,6 +3,7 @@ export interface BaseEntity {
   id: string;
   createdAt?: string;
   updatedAt?: string;
+  createdId?: string;
 }
 
 // Affiliation (Принадлежность)
@@ -506,22 +507,22 @@ export interface FitmentTypeDTO
   creatorId: string;
 }
 
-export interface FitmentDTO
-{
-  id: string;
-  fitmentTypeId: string;
-  serialNumber: string;
-  passportNumber: string;
-  buildDate: string;
-  lastRepairDate?: string;
-  periodRep: number;
-  serviceLifeYears: number;
-  updatedAt: string;
-  creatorId: string;
-  fitmentType: FitmentTypeDTO;
-  model: FitmentModelDTO;
-  manufacturer?: ManufacturerDTO;
-}
+// export interface FitmentDTO
+// {
+//   id: string;
+//   fitmentTypeId: string;
+//   serialNumber: string;
+//   passportNumber: string;
+//   buildDate: string;
+//   lastRepairDate?: string;
+//   periodRep: number;
+//   serviceLifeYears: number;
+//   updatedAt: string;
+//   creatorId: string;
+//   fitmentType: FitmentTypeDTO;
+//   model: FitmentModelDTO;
+//   manufacturer?: ManufacturerDTO;
+// }
 
 
 export interface WheelPairDTO {

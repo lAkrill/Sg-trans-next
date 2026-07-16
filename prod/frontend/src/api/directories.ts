@@ -86,7 +86,7 @@ import { CreateVesselDTO, PaginatedVesselsResponse, UpdateVesselDto, VesselDTO }
 // Generic CRUD operations for directories
 const createDirectoryApi = <T, CreateT, UpdateT>(endpoint: string) => ({
   getAll: async (): Promise<T[]> => {
-    const response = await api.get(`/api/${endpoint}`);
+    const response = await api.get(`/api/${endpoint}/all`);
     return response.data;
   },
 
@@ -390,12 +390,12 @@ export const partsApi = {
 };
 
 // Fitments API
-export const fitmentsApi = {
-  getAll: async(): Promise<FitmentDTO[]> => {
-    const response = await api.get(`/api/Fitments/all`);
-    return response.data;
-  },
-};
+// export const fitmentsApi = {
+//   getAll: async(): Promise<FitmentDTO[]> => {
+//     const response = await api.get(`/api/Fitments/all`);
+//     return response.data;
+//   },
+// };
 
 // Part Equipment API
 export const partEquipmentApi = {

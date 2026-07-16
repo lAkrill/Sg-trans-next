@@ -104,11 +104,6 @@ const directoryItems: SidebarItem[] = [
     icon: Train,
   },
   {
-    title: "Арматура",
-    href: "/directories/fitments",
-    icon: Wrench,
-  },
-  {
     title: "Модели вагонов",
     href: "/directories/wagon-models",
     icon: Car,

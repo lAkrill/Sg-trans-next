@@ -44,6 +44,8 @@ import {
   DEFAULT_PLANNING_VISIBLE_COLUMNS,
   getPlanningExportColumnKeys,
 } from "@/lib/repairs/planning-columns";
+import { getUpcomingRepairCellClass } from "@/lib/repairs/date-highlighting";
+import { cn } from "@/lib/utils";
 import { useRepairsInFilter, useRepairsOutFilter, useRepairsMatchingFilter } from "@/hooks";
 import type {
   RepairsInFilterCriteria,
@@ -894,7 +896,12 @@ export default function RepairsPage() {
                                   : "bg-rose-200/80 dark:bg-rose-900/60"
                               }
                             >
-                              <TableCell className="whitespace-nowrap">
+                              <TableCell
+                                className={cn(
+                                  "whitespace-nowrap",
+                                  getUpcomingRepairCellClass(r.dateIn)
+                                )}
+                              >
                                 {r.dateIn
                                   ? new Date(r.dateIn).toLocaleString("ru-RU", {
                                       dateStyle: "short",
@@ -983,7 +990,12 @@ export default function RepairsPage() {
                                   : "bg-rose-200/80 dark:bg-rose-900/60"
                               }
                             >
-                              <TableCell className="whitespace-nowrap">
+                              <TableCell
+                                className={cn(
+                                  "whitespace-nowrap",
+                                  getUpcomingRepairCellClass(r.dateIn)
+                                )}
+                              >
                                 {r.dateIn
                                   ? new Date(r.dateIn).toLocaleString("ru-RU", {
                                       dateStyle: "short",
@@ -991,7 +1003,12 @@ export default function RepairsPage() {
                                     })
                                   : "—"}
                               </TableCell>
-                              <TableCell className="whitespace-nowrap">
+                              <TableCell
+                                className={cn(
+                                  "whitespace-nowrap",
+                                  getUpcomingRepairCellClass(r.dateOut)
+                                )}
+                              >
                                 {r.dateOut
                                   ? new Date(r.dateOut).toLocaleString("ru-RU", {
                                       dateStyle: "short",
@@ -1077,7 +1094,12 @@ export default function RepairsPage() {
                         ) : repairsMatchingPaginated?.length ? (
                           repairsMatchingPaginated.map((m) => (
                             <TableRow key={m.id} className="even:bg-muted/30">
-                              <TableCell className="whitespace-nowrap">
+                              <TableCell
+                                className={cn(
+                                  "whitespace-nowrap",
+                                  getUpcomingRepairCellClass(m.dateTime)
+                                )}
+                              >
                                 {m.dateTime
                                   ? new Date(m.dateTime).toLocaleString("ru-RU", {
                                       dateStyle: "short",
@@ -1086,7 +1108,12 @@ export default function RepairsPage() {
                                   : "—"}
                               </TableCell>
                               <TableCell className="whitespace-nowrap">{m.repairIn?.cisternNumber ?? m.repairOut?.cisternNumber ?? m.cistern?.number ?? "—"}</TableCell>
-                              <TableCell className="whitespace-nowrap">
+                              <TableCell
+                                className={cn(
+                                  "whitespace-nowrap",
+                                  getUpcomingRepairCellClass(m.repairIn?.dateIn)
+                                )}
+                              >
                                 {m.repairIn?.dateIn
                                   ? new Date(m.repairIn.dateIn).toLocaleString("ru-RU", {
                                       dateStyle: "short",
@@ -1094,7 +1121,12 @@ export default function RepairsPage() {
                                     })
                                   : "—"}
                               </TableCell>
-                              <TableCell className="whitespace-nowrap">
+                              <TableCell
+                                className={cn(
+                                  "whitespace-nowrap",
+                                  getUpcomingRepairCellClass(m.repairOut?.dateIn)
+                                )}
+                              >
                                 {m.repairOut?.dateIn
                                   ? new Date(m.repairOut.dateIn).toLocaleString("ru-RU", {
                                       dateStyle: "short",
@@ -1102,7 +1134,12 @@ export default function RepairsPage() {
                                     })
                                   : "—"}
                               </TableCell>
-                              <TableCell className="whitespace-nowrap">
+                              <TableCell
+                                className={cn(
+                                  "whitespace-nowrap",
+                                  getUpcomingRepairCellClass(m.repairOut?.dateOut)
+                                )}
+                              >
                                 {m.repairOut?.dateOut
                                   ? new Date(m.repairOut.dateOut).toLocaleString("ru-RU", {
                                       dateStyle: "short",

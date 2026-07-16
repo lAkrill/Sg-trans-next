@@ -31,13 +31,6 @@ const QuickActions = () => {
       href: "/repairs",
       color: "bg-purple-500",
     },
-    {
-      title: "Арматура",
-      description: "Справочник арматуры",
-      icon: Cog,
-      href: "/directories/fitments",
-      color: "bg-slate-500",
-    },
   ];
 
   if (roleUtils.isAdmin(user)) {
