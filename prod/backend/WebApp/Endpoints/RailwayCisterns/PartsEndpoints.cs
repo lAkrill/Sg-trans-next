@@ -199,7 +199,7 @@ public static class PartsEndpoints
 
             return Results.Ok(parts);
         })
-        .WithName("GetParts")
+        .WithName("GetAllParts")
         .ProducesValidationProblem()
         .Produces<List<PartDTO>>(StatusCodes.Status200OK)
         .RequirePermissions(Permission.Read);

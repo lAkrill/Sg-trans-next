@@ -17,7 +17,7 @@ public static class FilterTypeEndpoints
             .WithTags("filter-types");
 
         // Get all filter types
-        group.MapGet("/", async (
+        group.MapGet("/all/", async (
                 [FromServices] ApplicationDbContext context) =>
             {
                 var types = await context.Set<FilterType>()
