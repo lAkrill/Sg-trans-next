@@ -10,8 +10,10 @@ public class MessageConfiguration : IEntityTypeConfiguration<Message>
     {
         builder.HasKey(m => m.Id);
 
-        builder.Property(m => m.CreationDate).IsRequired();
-        builder.Property(m => m.ReadingDate).IsRequired();
+        builder.Property(m => m.CreationDate).IsRequired()
+            .HasColumnType("timestamp without time zone");
+        builder.Property(m => m.ReadingDate).IsRequired()
+            .HasColumnType("timestamp without time zone");
         builder.Property(m => m.Text).IsRequired(false);
         builder.Property(m => m.FileName).IsRequired(false);
         builder.Property(m => m.FilePath).IsRequired(false);

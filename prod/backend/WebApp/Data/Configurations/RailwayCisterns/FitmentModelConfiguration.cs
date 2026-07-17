@@ -14,7 +14,8 @@ public class FitmentModelConfiguration : IEntityTypeConfiguration<FitmentModel>
             .IsRequired();
 
         builder.Property(fm => fm.UpdatedAt)
-            .IsRequired();
+            .IsRequired()
+            .HasColumnType("timestamp without time zone");
 
         // Foreign Keys
         builder.HasOne(fm => fm.Creator)

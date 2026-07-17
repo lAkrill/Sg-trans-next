@@ -10,7 +10,8 @@ public class ActionLogConfiguration : IEntityTypeConfiguration<ActionLog>
     {
         builder.HasKey(a => a.Id);
 
-        builder.Property(a => a.DateTime).IsRequired();
+        builder.Property(a => a.DateTime).IsRequired()
+            .HasColumnType("timestamp without time zone");
         builder.Property(a => a.IP).IsRequired(false);
         builder.Property(a => a.API).IsRequired();
         builder.Property(a => a.Note).IsRequired(false);

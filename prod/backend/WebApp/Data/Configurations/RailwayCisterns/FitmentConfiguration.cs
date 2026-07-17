@@ -32,6 +32,7 @@ public class FitmentConfiguration : IEntityTypeConfiguration<Fitment>
             .HasDefaultValue(30);
 
         builder.Property(f => f.UpdatedAt)
+            .HasColumnType("timestamp without time zone")
             .IsRequired();
 
         builder.Property(f => f.DepotId)
