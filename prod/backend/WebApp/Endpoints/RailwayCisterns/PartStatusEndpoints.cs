@@ -16,7 +16,7 @@ public static class PartStatusEndpoints
             .RequireAuthorization()
             .WithTags("part-statuses");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var statuses = await context.Set<PartStatus>()
                 .Select(s => new PartStatusDTO

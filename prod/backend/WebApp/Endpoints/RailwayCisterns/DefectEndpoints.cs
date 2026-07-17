@@ -15,7 +15,7 @@ public static class DefectEndpoints
             .RequireAuthorization()
             .WithTags("Defect");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {
                 var defects = await context.Defects
                     .Select(d => d.ToDefectDTO())

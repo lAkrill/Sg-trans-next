@@ -17,7 +17,7 @@ public static class RailwayCisternStatusEndpoints
             .RequireAuthorization()
             .WithTags("railway-cistern-status");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var statuses = await context.RailwayCisternStatuses
                 .Include(s => s.Creator)

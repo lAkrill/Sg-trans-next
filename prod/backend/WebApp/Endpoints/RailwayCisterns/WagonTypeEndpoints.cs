@@ -16,7 +16,7 @@ public static class WagonTypeEndpoints
             .RequireAuthorization()
             .WithTags("wagon-types");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var types = await context.Set<WagonType>()
                 .Select(w => new WagonTypeDTO

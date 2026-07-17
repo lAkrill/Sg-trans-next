@@ -16,7 +16,7 @@ public static class PartTypeEndpoints
             .RequireAuthorization()
             .WithTags("part-types");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var types = await context.Set<PartType>()
                 .Select(t => new PartTypeDTO

@@ -17,7 +17,7 @@ public static class OwnerEndpoints
             .RequireAuthorization()
             .WithTags("owners");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var owners = await context.Set<Owner>()
                 .Select(o => new OwnerDTO

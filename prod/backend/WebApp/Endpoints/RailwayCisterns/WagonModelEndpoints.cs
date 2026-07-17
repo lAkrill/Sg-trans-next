@@ -17,7 +17,7 @@ public static class WagonModelEndpoints
             .RequireAuthorization()
             .WithTags("wagon-models");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var models = await context.WagonModels
                 .Select(m => m.ToWagonModelDTO())

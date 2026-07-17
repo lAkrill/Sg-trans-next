@@ -17,7 +17,7 @@ public static class HistoryActionsRailwayEndpoints
             .RequireAuthorization()
             .WithTags("history-actions-railway");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {
                 var items = await context.HistoryActionsRailways
                     .AsNoTracking()

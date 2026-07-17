@@ -17,7 +17,7 @@ public static class PersonalCisRepairPeriodEndpoints
             .RequireAuthorization()
             .WithTags("personal-cis-repair-periods");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var periods = await context.PersonalCisRepairPeriods
                 .Select(p => p.ToPersonalCisRepairPeriodDTO())

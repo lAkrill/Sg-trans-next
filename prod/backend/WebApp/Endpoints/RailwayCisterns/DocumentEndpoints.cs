@@ -60,6 +60,31 @@ public static class DocumentEndpoints
 
             return Results.Ok(result);
         })
+        .Produces<PaginatedList<DocumentDTO>>()
+        .RequirePermissions(Permission.Read);
+
+        // Получение списка документов
+        group.MapGet("/all/", async (
+            [FromServices] ApplicationDbContext context) =>
+        {
+            var query = context.Documents.AsQueryable();
+
+            var documents = await query
+                .Select(d => new DocumentDTO
+                {
+                    Id = d.Id,
+                    Number = d.Number,
+                    Type = d.Type,
+                    Date = d.Date,
+                    Author = d.Author,
+                    Price = d.Price,
+                    Note = d.Note
+                })
+                .ToListAsync();
+
+            return Results.Ok(documents);
+        })
+        .Produces<List<DocumentDTO>>()
         .RequirePermissions(Permission.Read);
 
         // Получение документа по ID
@@ -83,6 +108,7 @@ public static class DocumentEndpoints
 
             return document is null ? Results.NotFound() : Results.Ok(document);
         })
+        .Produces<DocumentDTO>()
         .RequirePermissions(Permission.Read);
 
         // Создание документа

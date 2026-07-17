@@ -122,6 +122,88 @@ public static class PartsEndpoints
         .Produces<PaginatedList<PartDTO>>(StatusCodes.Status200OK)
         .RequirePermissions(Permission.Read);
 
+         // Получение всех деталей
+        group.MapGet("/all/", async (
+            [FromServices] ApplicationDbContext context,
+            [FromQuery] Guid? typeId = null) =>
+        {
+            var query = context.Parts
+                .Include(p => p.PartType)
+                .Include(p => p.Status)
+                .Include(p => p.StampNumber)
+                .Include(p => p.Depot)
+                .Include(p => p.RailwayCistern)
+                .Include(p => p.Document)
+                .AsQueryable();
+
+            if (typeId.HasValue)
+            {
+                query = query.Where(p => p.PartTypeId == typeId);
+            }
+
+            var parts = await query
+                .Select(p => new PartDTO
+                {
+                    Id = p.Id,
+                    PartType = new PartTypeDTO
+                    {
+                        Id = p.PartType.Id,
+                        Name = p.PartType.Name,
+                        Code = p.PartType.Code
+                    },
+                    Depot = p.Depot != null ? new DepotDTO
+                    {
+                        Id = p.Depot.Id,
+                        Name = p.Depot.Name,
+                        Code = p.Depot.Code,
+                        ShortName = p.Depot.ShortName,
+                        Location = p.Depot.Location
+                    } : null,
+                    StampNumber = new StampNumberDTO
+                    {
+                        Id = p.StampNumber.Id,
+                        Value = p.StampNumber.Value
+                    },
+                    SerialNumber = p.SerialNumber,
+                    ManufactureYear = p.ManufactureYear,
+                    CurrentLocation = p.RailwayCistern != null ? new RailwayCisternIdAndNumberDTO
+                    {
+                        Id = p.RailwayCistern.Id,
+                        Number = p.RailwayCistern.Number,
+                    } : null,
+                    Status = new PartStatusDTO
+                    {
+                        Id = p.Status.Id,
+                        Name = p.Status.Name,
+                        Code = p.Status.Code
+                    },
+                    Notes = p.Notes,
+                    CreatedAt = p.CreatedAt,
+                    UpdatedAt = p.UpdatedAt,
+                    Code = p.Code,
+                    ServiceLifeYears = p.ServiceLifeYears,
+                    ExtendedUntil = p.ExtendedUntil,
+                    Model = p.Model,
+                    Document = p.Document != null ? new DocumentDTO
+                    {
+                        Id = p.Document.Id,
+                        Number = p.Document.Number,
+                        Type = p.Document.Type,
+                        Date = p.Document.Date,
+                        Author = p.Document.Author,
+                        Price = p.Document.Price,
+                        Note = p.Document.Note
+                    } : null
+                })
+                .ToListAsync();
+
+            return Results.Ok(parts);
+        })
+        .WithName("GetParts")
+        .ProducesValidationProblem()
+        .Produces<List<PartDTO>>(StatusCodes.Status200OK)
+        .RequirePermissions(Permission.Read);
+
         // Получение детали по ID
         group.MapGet("/{id}", async ([FromServices] ApplicationDbContext context, Guid id) =>
         {

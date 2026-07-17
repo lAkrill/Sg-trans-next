@@ -17,7 +17,7 @@ public static class LocationEndpoints
             .RequireAuthorization()
             .WithTags("locations");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var locations = await context.Set<Location>()
                 .Select(l => new LocationDTO

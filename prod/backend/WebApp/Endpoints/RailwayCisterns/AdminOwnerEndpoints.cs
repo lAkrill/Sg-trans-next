@@ -16,7 +16,7 @@ public static class AdminOwnerEndpoints
             .RequireAuthorization()
             .WithTags("AdminOwner");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {
                 var adminOwners = await context.AdminOwners
                     .Select(a => a.ToAdminOwnerDTO())

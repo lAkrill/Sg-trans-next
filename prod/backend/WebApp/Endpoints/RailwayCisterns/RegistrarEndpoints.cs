@@ -16,7 +16,7 @@ public static class RegistrarEndpoints
             .RequireAuthorization()
             .WithTags("registrars");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var registrars = await context.Set<Registrar>()
                 .Select(r => new RegistrarDTO

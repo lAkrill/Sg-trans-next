@@ -16,7 +16,7 @@ public static class RepairTypeEndpoints
             .RequireAuthorization()
             .WithTags("repair-types");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var repairTypes = await context.Set<RepairType>()
                 .Select(rt => rt.ToRepairTypeDto())

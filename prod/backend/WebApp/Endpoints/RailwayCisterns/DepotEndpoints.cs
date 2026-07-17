@@ -17,7 +17,7 @@ public static class DepotEndpoints
             .RequireAuthorization()
             .WithTags("depots");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var depots = await context.Set<Depot>()
                 .Select(d => new DepotDTO

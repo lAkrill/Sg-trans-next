@@ -16,7 +16,7 @@ public static class AffiliationEndpoints
             .RequireAuthorization()
             .WithTags("affiliations");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var affiliations = await context.Set<Affiliation>()
                 .Select(a => new AffiliationDTO

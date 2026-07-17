@@ -16,7 +16,7 @@ public static class StampNumberEndpoints
             .RequireAuthorization()
             .WithTags("stamp-numbers");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var numbers = await context.Set<StampNumber>()
                 .Select(s => new StampNumberDTO

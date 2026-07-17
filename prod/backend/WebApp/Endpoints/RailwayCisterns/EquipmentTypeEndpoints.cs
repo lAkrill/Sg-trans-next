@@ -17,7 +17,7 @@ public static class EquipmentTypeEndpoints
             .WithTags("equipment-types");
 
         // Получение всех типов оборудования
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var types = await context.EquipmentTypes
                 .Include(e => e.PartType)

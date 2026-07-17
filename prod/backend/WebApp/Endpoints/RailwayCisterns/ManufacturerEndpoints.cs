@@ -17,7 +17,7 @@ public static class ManufacturerEndpoints
             .RequireAuthorization()
             .WithTags("manufacturers");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var manufacturers = await context.Set<Manufacturer>()
                 .Select(m => new ManufacturerDTO

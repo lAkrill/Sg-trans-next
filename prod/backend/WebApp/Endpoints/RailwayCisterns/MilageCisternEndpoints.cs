@@ -16,7 +16,7 @@ public static class MilageCisternEndpoints
             .RequireAuthorization()
             .WithTags("milage-cisterns");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var milages = await context.Set<MilageCistern>()
                 .Select(m => new MilageCisternDTO

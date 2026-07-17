@@ -15,7 +15,7 @@ public static class UpdateEndpoints
             .RequireAuthorization()
             .WithTags("Update");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context) =>
+        group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {
                 var updates = await context.Updates
                     .Select(d => d.ToUpdateDTO())
