@@ -22,7 +22,7 @@ public class ActionLoggingMiddleware
         var request = context.Request;
         var requestBody = string.Empty;
 
-        // Only log API calls and non-GET methods
+        // Read body only for API POST/PUT/PATCH methods, to preserve request stream.
         if (request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) &&
             !HttpMethods.IsGet(request.Method) &&
             !HttpMethods.IsHead(request.Method) &&
@@ -53,12 +53,13 @@ public class ActionLoggingMiddleware
             if (HttpMethods.IsGet(request.Method) || HttpMethods.IsHead(request.Method) || HttpMethods.IsOptions(request.Method))
                 return;
 
-            // Require authenticated user with userId claim
+            if (HttpMethods.IsPost(request.Method) && IsFilteredPostEndpoint(request.Path))
+                return;
+
             var userIdString = context.User?.FindFirstValue("userId");
             if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
                 return;
 
-            // Resolve IP (check X-Forwarded-For first)
             string? ip = null;
             if (request.Headers.TryGetValue("X-Forwarded-For", out var xff))
             {
@@ -119,5 +120,18 @@ public class ActionLoggingMiddleware
         {
             // Swallow any logging errors to avoid breaking the request pipeline
         }
+    }
+
+    private static bool IsFilteredPostEndpoint(PathString path)
+    {
+        var normalized = path.Value?.TrimEnd('/').ToLowerInvariant() ?? string.Empty;
+        return normalized.StartsWith("/api/fitments/filter")
+            || normalized.StartsWith("/api/parts/filter")
+            || normalized.StartsWith("/api/repairs-in/filter")
+            || normalized.StartsWith("/api/repairs-out/filter")
+            || normalized.StartsWith("/api/repairs-matching/filter")
+            || normalized.StartsWith("/api/railway-cisterns/filter")
+            || normalized.StartsWith("/api/dislocations/locations/in-range")
+            || normalized.StartsWith("/api/dislocations/cisterns-last-location");
     }
 }
