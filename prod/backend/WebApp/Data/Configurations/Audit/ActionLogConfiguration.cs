@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml.Vml.Office;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using WebApp.Data.Entities.Audit;
@@ -8,6 +9,8 @@ public class ActionLogConfiguration : IEntityTypeConfiguration<ActionLog>
 {
     public void Configure(EntityTypeBuilder<ActionLog> builder)
     {
+        builder.ToTable("ActionLog");
+
         builder.HasKey(a => a.Id);
 
         builder.Property(a => a.DateTime).IsRequired()

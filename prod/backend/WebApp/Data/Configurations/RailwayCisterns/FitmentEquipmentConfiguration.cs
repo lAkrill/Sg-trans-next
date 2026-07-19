@@ -12,7 +12,7 @@ public class FitmentEquipmentConfiguration : IEntityTypeConfiguration<FitmentEqu
         entity.HasKey(e => e.Id);
 
         entity.Property(e => e.Operation).IsRequired();
-        entity.Property(e => e.Date).IsRequired().HasColumnType("date");
+        entity.Property(e => e.Date).HasColumnName("date").IsRequired().HasColumnType("date");
         entity.Property(e => e.DocumentId).IsRequired();
 
         entity.HasOne(fe => fe.RailwayCistern)

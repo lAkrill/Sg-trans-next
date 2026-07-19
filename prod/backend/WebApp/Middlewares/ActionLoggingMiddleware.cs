@@ -131,7 +131,8 @@ public class ActionLoggingMiddleware
             || normalized.StartsWith("/api/repairs-out/filter")
             || normalized.StartsWith("/api/repairs-matching/filter")
             || normalized.StartsWith("/api/railway-cisterns/filter")
-            || normalized.StartsWith("/api/dislocations/locations/in-range")
+            || normalized.StartsWith("/api/dislocations/locations/in-range") 
+            || normalized.StartsWith("/api/railway-cisterns/repairs-filter")
             || normalized.StartsWith("/api/dislocations/cisterns-last-location");
     }
 }
