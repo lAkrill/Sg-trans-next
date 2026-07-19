@@ -73,6 +73,36 @@ public static class MessageEndpoints
         })
         .RequirePermissions(Permission.Update);
 
+        group.MapPatch("/{id}/status", async ([FromServices] ApplicationDbContext context, Guid id, [FromBody] int status) =>
+        {
+            var msg = await context.Set<Message>().FindAsync(id);
+            if (msg is null) return Results.NotFound();
+            msg.Status = status;
+            await context.SaveChangesAsync();
+            return Results.NoContent();
+        })
+        .RequirePermissions(Permission.Update);
+
+        group.MapPatch("/{id}/priority", async ([FromServices] ApplicationDbContext context, Guid id, [FromBody] int priority) =>
+        {
+            var msg = await context.Set<Message>().FindAsync(id);
+            if (msg is null) return Results.NotFound();
+            msg.Priority = priority;
+            await context.SaveChangesAsync();
+            return Results.NoContent();
+        })
+        .RequirePermissions(Permission.Update);
+
+        group.MapPatch("/{id}/text", async ([FromServices] ApplicationDbContext context, Guid id, [FromBody] string text) =>
+        {
+            var msg = await context.Set<Message>().FindAsync(id);
+            if (msg is null) return Results.NotFound();
+            msg.Text = text;
+            await context.SaveChangesAsync();
+            return Results.NoContent();
+        })
+        .RequirePermissions(Permission.Update);
+
         group.MapDelete("/{id}", async ([FromServices] ApplicationDbContext context, Guid id) =>
         {
             var msg = await context.Set<Message>().FindAsync(id);

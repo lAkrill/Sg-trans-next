@@ -27,5 +27,10 @@ public partial class DocumentConfiguration : IEntityTypeConfiguration<Document>
             .WithOne(pe => pe.Document)
             .HasForeignKey(pe => pe.DocumentId)
             .OnDelete(DeleteBehavior.NoAction);
+
+        entity.HasMany(d => d.FitmentEquipments)
+            .WithOne(fe => fe.Document)
+            .HasForeignKey(fe => fe.DocumentId)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }

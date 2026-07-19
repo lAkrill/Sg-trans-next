@@ -35,6 +35,7 @@ public class ApplicationDbContext(
     public DbSet<StampNumber> StampNumbers { get; set; }
     public DbSet<EquipmentType> EquipmentTypes { get; set; }
     public DbSet<PartEquipment> PartEquipments { get; set; }
+    public DbSet<FitmentEquipment> FitmentEquipments { get; set; }
     public DbSet<Station> Stations { get; set; }
     public DbSet<Document> Documents { get; set; }
     public DbSet<Dislocation> Dislocations { get; set; }

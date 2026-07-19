@@ -13,4 +13,5 @@ public class Document
     // Навигационные свойства
     public ICollection<Part> Parts { get; set; } = new List<Part>();
     public ICollection<PartEquipment> PartEquipments { get; set; } = new List<PartEquipment>();
+    public ICollection<FitmentEquipment> FitmentEquipments { get; set; } = new List<FitmentEquipment>();
 }

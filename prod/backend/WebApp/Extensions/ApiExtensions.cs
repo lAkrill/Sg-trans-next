@@ -74,6 +74,8 @@ public static class ApiExtensions
         app.MapFitmentTypeEndpoints();
         app.MapFitmentModelEndpoints();
         app.MapFitmentEndpoints();
+        app.MapFitmentEquipmentEndpoints();
+        app.MapFitmentFilterEndpoints();
 
         // Messaging / Audit
         app.MapMessageEndpoints();
