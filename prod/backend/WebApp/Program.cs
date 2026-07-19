@@ -82,6 +82,7 @@ services.AddAuthorization();
 
 builder.Services.AddProblemDetails();
 services.AddTransient<GlobalExceptionHandlingMiddleware>();
+services.AddTransient<ActionLoggingMiddleware>();
 
 var app = builder.Build();
 
@@ -98,6 +99,9 @@ app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Log API actions (non-GET) for authenticated users
+app.UseMiddleware<ActionLoggingMiddleware>();
 
 app.AddMappedEndpoints();
 
