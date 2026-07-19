@@ -1,5 +1,7 @@
 using System.Net;
+using System.Text;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using System.Security.Claims;
 using WebApp.Data;
 using WebApp.Data.Entities.Audit;
@@ -17,14 +19,34 @@ public class ActionLoggingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // Let the request run and capture response status
+        var request = context.Request;
+        var requestBody = string.Empty;
+
+        // Only log API calls and non-GET methods
+        if (request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) &&
+            !HttpMethods.IsGet(request.Method) &&
+            !HttpMethods.IsHead(request.Method) &&
+            !HttpMethods.IsOptions(request.Method))
+        {
+            request.EnableBuffering();
+
+            if (request.Body.CanRead)
+            {
+                using var reader = new StreamReader(request.Body, Encoding.UTF8, leaveOpen: true);
+                requestBody = await reader.ReadToEndAsync();
+                request.Body.Position = 0;
+
+                if (!string.IsNullOrWhiteSpace(requestBody) && requestBody.Length > 2000)
+                {
+                    requestBody = requestBody[..2000] + "...";
+                }
+            }
+        }
+
         await _next(context);
 
         try
         {
-            var request = context.Request;
-
-            // Only log API calls and non-GET methods
             if (!request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -38,7 +60,7 @@ public class ActionLoggingMiddleware
 
             // Resolve IP (check X-Forwarded-For first)
             string? ip = null;
-            if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff))
+            if (request.Headers.TryGetValue("X-Forwarded-For", out var xff))
             {
                 ip = xff.ToString().Split(',').FirstOrDefault()?.Trim();
             }
@@ -47,9 +69,35 @@ public class ActionLoggingMiddleware
                 ip = context.Connection.RemoteIpAddress?.ToString();
             }
 
-            var apiName = context.GetEndpoint()?.DisplayName ?? $"{request.Method} {request.Path}{request.QueryString}";
+            var routeEndpoint = context.GetEndpoint() as RouteEndpoint;
+            var routePattern = routeEndpoint?.RoutePattern?.RawText;
+            var routeValues = request.RouteValues;
+            var routeValueText = routeValues.Count > 0
+                ? string.Join(", ", routeValues.Select(kvp => $"{kvp.Key}={kvp.Value}"))
+                : string.Empty;
 
-            // Create and save ActionLog
+            var apiName = routePattern is not null
+                ? $"{request.Method} {routePattern}{request.QueryString}"
+                : $"{request.Method} {request.Path}{request.QueryString}";
+
+            if (!string.IsNullOrWhiteSpace(routeValueText))
+            {
+                apiName += $" [{routeValueText}]";
+            }
+
+            var noteBuilder = new StringBuilder();
+            noteBuilder.Append($"Status: {context.Response?.StatusCode}");
+
+            if (!string.IsNullOrWhiteSpace(request.QueryString.Value))
+            {
+                noteBuilder.Append($"; Query: {request.QueryString.Value}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(requestBody))
+            {
+                noteBuilder.Append($"; Body: {requestBody}");
+            }
+
             var db = context.RequestServices.GetService(typeof(ApplicationDbContext)) as ApplicationDbContext;
             if (db == null)
                 return;
@@ -61,7 +109,7 @@ public class ActionLoggingMiddleware
                 DateTime = DateTime.Now,
                 IP = ip,
                 API = apiName,
-                Note = $"Status: {context.Response?.StatusCode}"
+                Note = noteBuilder.ToString()
             };
 
             db.ActionLogs.Add(entry);
