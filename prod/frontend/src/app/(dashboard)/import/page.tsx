@@ -30,7 +30,7 @@ import { Import, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { importFilesApi, type ImportFileProcessResponse } from "@/api/import-files";
 import { useCisternIdAndNumbers } from "@/hooks";
-import type { DepotDTO, RepairTypeDTO } from "@/types/directories";
+import type { DepotDTO, PartDTO, RepairTypeDTO } from "@/types/directories";
 
 const REPAIRS_FILE_URL = "http://vagon.sgtrans.by:5000/api/RepairsFiles/process-repairs-file";
 
@@ -84,10 +84,6 @@ type DocumentOptionDTO = {
   note: string | null;
 };
 
-type PaginatedDocumentsOptionResponse = {
-  items: DocumentOptionDTO[];
-};
-
 const manualPartsImportInitialValues: ManualPartsImportFormData = {
   railwayCisternsId: "",
   operation: "2",
@@ -114,7 +110,6 @@ const manualPartsImportFields: Array<{
   type?: string;
   required?: boolean;
 }> = [
-  { name: "partsId", label: "ID детали", required: true },
   { name: "jobDate", label: "Дата работы" },
   { name: "jobTypeId", label: "Код вида работ" },
   { name: "thicknessLeft", label: "Толщина слева", type: "number" },
@@ -122,6 +117,23 @@ const manualPartsImportFields: Array<{
   { name: "truckType", label: "Тип тележки", type: "number" },
   { name: "documentDate", label: "Дата документа", type: "date" },
 ];
+
+const formatPartManufactureYear = (
+  manufactureYear?: string | { year: number; month: number; day: number }
+) => {
+  if (!manufactureYear) return "—";
+  if (typeof manufactureYear === "string") {
+    return manufactureYear.match(/^\d{4}/)?.[0] || manufactureYear;
+  }
+  return String(manufactureYear.year);
+};
+
+const formatRussianDate = (date?: string) => {
+  if (!date) return "—";
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return date;
+  return parsedDate.toLocaleDateString("ru-RU");
+};
 
 export default function ImportPage() {
   const repairsFileInputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +153,7 @@ export default function ImportPage() {
   const { data: depots, isLoading: depotsLoading } = useQuery<DepotDTO[]>({
     queryKey: ["manual-parts-import", "depots"],
     queryFn: async () => {
-      const response = await api.get<DepotDTO[]>("/api/depots");
+      const response = await api.get<DepotDTO[]>("/api/depots/all");
       return response.data;
     },
   });
@@ -150,41 +162,45 @@ export default function ImportPage() {
   >({
     queryKey: ["manual-parts-import", "equipment-types"],
     queryFn: async () => {
-      const response = await api.get<EquipmentTypeOptionDTO[]>("/api/equipment-types");
+      const response = await api.get<EquipmentTypeOptionDTO[]>("/api/equipment-types/all");
       return response.data;
     },
   });
   const { data: defects, isLoading: defectsLoading } = useQuery<DefectOptionDTO[]>({
     queryKey: ["manual-parts-import", "defects"],
     queryFn: async () => {
-      const response = await api.get<DefectOptionDTO[]>("/api/defects");
+      const response = await api.get<DefectOptionDTO[]>("/api/defects/all");
       return response.data;
     },
   });
   const { data: repairTypes, isLoading: repairTypesLoading } = useQuery<RepairTypeDTO[]>({
     queryKey: ["manual-parts-import", "repair-types"],
     queryFn: async () => {
-      const response = await api.get<RepairTypeDTO[]>("/api/repair-types");
+      const response = await api.get<RepairTypeDTO[]>("/api/repair-types/all");
       return response.data;
     },
   });
   const { data: adminOwners, isLoading: adminOwnersLoading } = useQuery<AdminOwnerOptionDTO[]>({
     queryKey: ["manual-parts-import", "admin-owner"],
     queryFn: async () => {
-      const response = await api.get<AdminOwnerOptionDTO[]>("/api/admin-owner");
+      const response = await api.get<AdminOwnerOptionDTO[]>("/api/admin-owner/all");
       return response.data;
     },
   });
-  const { data: documentsResponse, isLoading: documentsLoading } =
-    useQuery<PaginatedDocumentsOptionResponse>({
-      queryKey: ["manual-parts-import", "documents"],
-      queryFn: async () => {
-        const response = await api.get<PaginatedDocumentsOptionResponse>(
-          "/api/documents?pageNumber=1&pageSize=1000"
-        );
-        return response.data;
-      },
-    });
+  const { data: documentsResponse, isLoading: documentsLoading } = useQuery<DocumentOptionDTO[]>({
+    queryKey: ["manual-parts-import", "documents"],
+    queryFn: async () => {
+      const response = await api.get<DocumentOptionDTO[]>("/api/documents/all");
+      return response.data;
+    },
+  });
+  const { data: parts, isLoading: partsLoading } = useQuery<PartDTO[]>({
+    queryKey: ["manual-parts-import", "parts"],
+    queryFn: async () => {
+      const response = await api.get<PartDTO[]>("/api/parts/all");
+      return response.data;
+    },
+  });
   const cisternOptions =
     cisternIdAndNumbers?.map((cistern) => ({
       value: cistern.id,
@@ -215,11 +231,18 @@ export default function ImportPage() {
       value: String(owner.id),
       label: `${owner.id} (${owner.name})`,
     })) || [];
-  const documents = documentsResponse?.items || [];
+  const documents = documentsResponse || [];
   const documentOptions = documents.map((document) => ({
     value: document.id,
-    label: `${document.number} (${document.author}, ${document.date})`,
+    label: `${document.number} (${document.author}, ${formatRussianDate(document.date)})`,
   }));
+  const partOptions =
+    parts?.map((part) => ({
+      value: part.id,
+      label: `${part.serialNumber || "—"} (${part.stampNumber?.value || "—"}; ${formatPartManufactureYear(
+        part.manufactureYear
+      )})`,
+    })) || [];
 
   const getUploadErrorMessage = (err: unknown) =>
     err && typeof err === "object" && "response" in err
@@ -309,6 +332,11 @@ export default function ImportPage() {
 
     if (!manualPartsImportForm.equipmentTypeId) {
       setPartsError("Выберите тип оборудования");
+      return;
+    }
+
+    if (!manualPartsImportForm.partsId) {
+      setPartsError("Выберите деталь");
       return;
     }
 
@@ -521,6 +549,17 @@ export default function ImportPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="partsId">Деталь</Label>
+                  <SearchableSelect
+                    value={manualPartsImportForm.partsId}
+                    onChange={(value) => handleManualPartsImportChange("partsId", value)}
+                    options={partOptions}
+                    placeholder="Выберите деталь"
+                    searchPlaceholder="Введите заводской номер, клеймо или год"
+                    isLoading={partsLoading}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="defectsId">Дефект</Label>
                   <SearchableSelect
                     value={manualPartsImportForm.defectsId}
@@ -711,31 +750,38 @@ export default function ImportPage() {
                   <div className="text-sm font-medium">Детали обработки</div>
                   <ScrollArea className="h-[320px] rounded-md border">
                     <div className="divide-y">
-                      {partsImportResult.details.map((detail, index) => (
-                        <div key={`${detail.EquipmentTypeId}-${detail.Part_number}-${index}`} className="p-3">
-                          <div className="grid gap-2 text-sm sm:grid-cols-4">
-                            <div>
-                              <div className="text-xs text-muted-foreground">Тип оборудования</div>
-                              <div className="font-medium">{detail.EquipmentTypeId || "—"}</div>
+                      {partsImportResult.details.map((detail, index) => {
+                        const isSuccessful = detail.status === "Добавления запчасти успешно";
+
+                        return (
+                          <div
+                            key={`${detail.EquipmentTypeId}-${detail.Part_number}-${index}`}
+                            className={`p-3 ${isSuccessful ? "" : "bg-pink-50 dark:bg-pink-950/30"}`}
+                          >
+                            <div className="grid gap-2 text-sm sm:grid-cols-4">
+                              <div>
+                                <div className="text-xs text-muted-foreground">Тип оборудования</div>
+                                <div className="font-medium">{detail.EquipmentTypeId || "—"}</div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-muted-foreground">Клеймо</div>
+                                <div className="font-medium">{detail.Part_stamp || "—"}</div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-muted-foreground">Зав. номер</div>
+                                <div className="font-medium">{detail.Part_number || "—"}</div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-muted-foreground">Год</div>
+                                <div className="font-medium">{detail.Part_year || "—"}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground">Клеймо</div>
-                              <div className="font-medium">{detail.Part_stamp || "—"}</div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground">Зав. номер</div>
-                              <div className="font-medium">{detail.Part_number || "—"}</div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground">Год</div>
-                              <div className="font-medium">{detail.Part_year || "—"}</div>
-                            </div>
+                            <pre className="mt-2 whitespace-pre-wrap break-words rounded bg-muted p-2 text-xs">
+                              {detail.status || "—"}
+                            </pre>
                           </div>
-                          <pre className="mt-2 whitespace-pre-wrap break-words rounded bg-muted p-2 text-xs">
-                            {detail.status || "—"}
-                          </pre>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </ScrollArea>
                 </div>

@@ -282,12 +282,12 @@ export default function FitmentsPage() {
                     <TableHead>Модель</TableHead>
                     <TableHead>Номер</TableHead>
                     <TableHead>Паспорт</TableHead>
-                    <TableHead>Дата постройки</TableHead>
+                    <TableHead>Дата <br />постройки</TableHead>
                     <TableHead>Дата <br />последнего ТО</TableHead>
-                    <TableHead>Период ремонта</TableHead>
-                    <TableHead>Срок службы</TableHead>
+                    <TableHead>Период <br />ремонта</TableHead>
+                    <TableHead>Срок <br />службы</TableHead>
                     <TableHead>Производитель</TableHead>
-                    <TableHead>Дата обновления</TableHead>
+                    <TableHead>Дата <br />обновления</TableHead>
                     <TableHead>Пользователь</TableHead>
                     <TableHead>Действия</TableHead>
                   </TableRow>
