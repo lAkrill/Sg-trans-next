@@ -82,7 +82,6 @@ services.AddAuthorization();
 
 builder.Services.AddProblemDetails();
 services.AddTransient<GlobalExceptionHandlingMiddleware>();
-services.AddTransient<ActionLoggingMiddleware>();
 
 var app = builder.Build();
 

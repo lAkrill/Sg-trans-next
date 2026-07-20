@@ -5,6 +5,7 @@ using WebApp.Data.Entities.RailwayCisterns;
 using WebApp.Data.Enums;
 using WebApp.DTO.Common;
 using WebApp.DTO.RailwayCisterns;
+using WebApp.Exceptions;
 using WebApp.Extensions;
 
 namespace WebApp.Endpoints.RailwayCisterns;
@@ -787,32 +788,42 @@ public static class PartEquipmentEndpoints
                 [FromServices] ApplicationDbContext context,
                 [FromBody] CreatePartEquipmentDTO dto) =>
             {
-                var partEquipment = new PartEquipment
+                try
                 {
-                    Id = Guid.NewGuid(),
-                    RailwayCisternsId = dto.RailwayCisternsId,
-                    Operation = dto.Operation,
-                    EquipmentTypeId = dto.EquipmentTypeId,
-                    DefectsId = dto.DefectsId,
-                    AdminOwnerId = dto.AdminOwnerId,
-                    PartsId = dto.PartsId,
-                    JobDepotsId = dto.JobDepotsId,
-                    JobDate = dto.JobDate,
-                    JobTypeId = dto.JobTypeId,
-                    ThicknessLeft = dto.ThicknessLeft,
-                    ThicknessRight = dto.ThicknessRight,
-                    TruckType = dto.TruckType,
-                    Notes = dto.Notes,
-                    DocumentId = dto.DocumentId,
-                    DocumentDate = dto.DocumentDate,
-                    DepotsId = dto.DepotsId,
-                    RepairTypesId = dto.RepairTypesId
-                };
+                    var partEquipment = new PartEquipment
+                    {
+                        Id = Guid.NewGuid(),
+                        RailwayCisternsId = dto.RailwayCisternsId,
+                        Operation = dto.Operation,
+                        EquipmentTypeId = dto.EquipmentTypeId,
+                        DefectsId = dto.DefectsId,
+                        AdminOwnerId = dto.AdminOwnerId,
+                        PartsId = dto.PartsId,
+                        JobDepotsId = dto.JobDepotsId,
+                        JobDate = dto.JobDate,
+                        JobTypeId = dto.JobTypeId,
+                        ThicknessLeft = dto.ThicknessLeft,
+                        ThicknessRight = dto.ThicknessRight,
+                        TruckType = dto.TruckType,
+                        Notes = dto.Notes,
+                        DocumentId = dto.DocumentId,
+                        DocumentDate = dto.DocumentDate,
+                        DepotsId = dto.DepotsId,
+                        RepairTypesId = dto.RepairTypesId
+                    };
 
-                context.PartEquipments.Add(partEquipment);
-                await context.SaveChangesAsync();
+                    context.PartEquipments.Add(partEquipment);
+                    await context.SaveChangesAsync();
 
-                return Results.Created($"/api/part-equipments/{partEquipment.Id}", partEquipment.Id);
+                    return Results.Created($"/api/part-equipments/{partEquipment.Id}", partEquipment.Id);
+                }
+                catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("unique_part_equipments", StringComparison.OrdinalIgnoreCase) ?? false)
+                {
+                    throw new ApiException(
+                        "Запись с такой комбинацией цистерны, детали, даты документа и операции уже существует. " +
+                        "Нарушено уникальное ограничение (RailwayCisternsId, PartsId, DocumentDate, Operation).",
+                        409);
+                }
             })
             .WithName("CreatePartEquipment")
             .Produces<Guid>(StatusCodes.Status201Created)
