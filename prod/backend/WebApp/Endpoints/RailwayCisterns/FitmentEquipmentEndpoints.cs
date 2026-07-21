@@ -347,6 +347,288 @@ public static class FitmentEquipmentEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .RequirePermissions(Permission.Read);
 
+        group.MapGet("/by-cistern/{cisternId}", async ([FromServices] ApplicationDbContext context, Guid cisternId) =>
+            {
+                var items = await context.Set<FitmentEquipment>()
+                    .AsNoTracking()
+                    .Include(fe => fe.Fitment)
+                    .ThenInclude(f => f.FitmentType)
+                    .Include(fe => fe.JobUser)
+                    .Include(fe => fe.TestUser)
+                    .Include(fe => fe.Depot)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Manufacturer)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Type)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Model)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Owner)
+                    .Include(fe => fe.Document)
+                    .Where(fe => fe.RailwayCisternsId == cisternId)
+                    .OrderByDescending(fe => fe.Date)
+                    .Select(fe => new FitmentEquipmentDTO
+                    {
+                        Id = fe.Id,
+                        RailwayCisternsId = fe.RailwayCisternsId,
+                        Operation = fe.Operation,
+                        FitmentId = fe.FitmentId,
+                        JobUserId = fe.JobUserId,
+                        TestUserId = fe.TestUserId,
+                        DepoId = fe.DepoId,
+                        Date = fe.Date,
+                        DocumentId = fe.DocumentId,
+                        RailwayCistern = fe.RailwayCistern != null
+                            ? new RailwayCisternDTO
+                            {
+                                Id = fe.RailwayCistern.Id,
+                                Number = fe.RailwayCistern.Number,
+                                Model = fe.RailwayCistern.Model.Name,
+                                Owner = fe.RailwayCistern.Owner.UNP,
+                            }
+                            : null,
+                        Fitment = fe.Fitment != null
+                            ? new FitmentInfoDTO
+                            {
+                                Id = fe.Fitment.Id,
+                                SerialNumber = fe.Fitment.SerialNumber,
+                                PassportNumber = fe.Fitment.PassportNumber,
+                                FitmentTypeName = fe.Fitment.FitmentType.Name
+                            }
+                            : null,
+                        JobUser = fe.JobUser != null
+                            ? new UserInfoDTO
+                            {
+                                Id = fe.JobUser.Id,
+                                Email = fe.JobUser.Email,
+                                FirstName = fe.JobUser.FirstName,
+                                LastName = fe.JobUser.LastName
+                            }
+                            : null,
+                        TestUser = fe.TestUser != null
+                            ? new UserInfoDTO
+                            {
+                                Id = fe.TestUser.Id,
+                                Email = fe.TestUser.Email,
+                                FirstName = fe.TestUser.FirstName,
+                                LastName = fe.TestUser.LastName
+                            }
+                            : null,
+                        Depot = fe.Depot != null
+                            ? new DepotDTO
+                            {
+                                Id = fe.Depot.Id,
+                                Name = fe.Depot.Name,
+                                Code = fe.Depot.Code,
+                                Location = fe.Depot.Location,
+                                ShortName = fe.Depot.ShortName
+                            }
+                            : null,
+                        Document = fe.Document != null
+                            ? new DocumentDTO
+                            {
+                                Id = fe.Document.Id,
+                                Number = fe.Document.Number,
+                                Type = fe.Document.Type,
+                                Date = fe.Document.Date,
+                                Author = fe.Document.Author,
+                                Price = fe.Document.Price,
+                                Note = fe.Document.Note
+                            }
+                            : null
+                    })
+                    .ToListAsync();
+
+                return Results.Ok(items);
+            })
+            .WithName("GetFitmentEquipmentsByCistern")
+            .Produces<List<FitmentEquipmentDTO>>(StatusCodes.Status200OK)
+            .RequirePermissions(Permission.Read);
+
+        group.MapGet("/last-by-cistern/{cisternId}", async ([FromServices] ApplicationDbContext context, Guid cisternId) =>
+            {
+                var lastItems = await context.Set<FitmentEquipment>()
+                    .AsNoTracking()
+                    .Where(fe => fe.RailwayCisternsId == cisternId)
+                    .GroupBy(fe => fe.FitmentId)
+                    .Select(g => g.OrderByDescending(fe => fe.Date).ThenByDescending(fe => fe.Id).FirstOrDefault())
+                    .Where(fe => fe != null)
+                    .Select(fe => new FitmentEquipmentDTO
+                    {
+                        Id = fe!.Id,
+                        RailwayCisternsId = fe.RailwayCisternsId,
+                        Operation = fe.Operation,
+                        FitmentId = fe.FitmentId,
+                        JobUserId = fe.JobUserId,
+                        TestUserId = fe.TestUserId,
+                        DepoId = fe.DepoId,
+                        Date = fe.Date,
+                        DocumentId = fe.DocumentId,
+                        RailwayCistern = fe.RailwayCistern != null
+                            ? new RailwayCisternDTO
+                            {
+                                Id = fe.RailwayCistern.Id,
+                                Number = fe.RailwayCistern.Number,
+                                Model = fe.RailwayCistern.Model.Name,
+                                Owner = fe.RailwayCistern.Owner.UNP,
+                            }
+                            : null,
+                        Fitment = fe.Fitment != null
+                            ? new FitmentInfoDTO
+                            {
+                                Id = fe.Fitment.Id,
+                                SerialNumber = fe.Fitment.SerialNumber,
+                                PassportNumber = fe.Fitment.PassportNumber,
+                                FitmentTypeName = fe.Fitment.FitmentType.Name
+                            }
+                            : null,
+                        JobUser = fe.JobUser != null
+                            ? new UserInfoDTO
+                            {
+                                Id = fe.JobUser.Id,
+                                Email = fe.JobUser.Email,
+                                FirstName = fe.JobUser.FirstName,
+                                LastName = fe.JobUser.LastName
+                            }
+                            : null,
+                        TestUser = fe.TestUser != null
+                            ? new UserInfoDTO
+                            {
+                                Id = fe.TestUser.Id,
+                                Email = fe.TestUser.Email,
+                                FirstName = fe.TestUser.FirstName,
+                                LastName = fe.TestUser.LastName
+                            }
+                            : null,
+                        Depot = fe.Depot != null
+                            ? new DepotDTO
+                            {
+                                Id = fe.Depot.Id,
+                                Name = fe.Depot.Name,
+                                Code = fe.Depot.Code,
+                                Location = fe.Depot.Location,
+                                ShortName = fe.Depot.ShortName
+                            }
+                            : null,
+                        Document = fe.Document != null
+                            ? new DocumentDTO
+                            {
+                                Id = fe.Document.Id,
+                                Number = fe.Document.Number,
+                                Type = fe.Document.Type,
+                                Date = fe.Document.Date,
+                                Author = fe.Document.Author,
+                                Price = fe.Document.Price,
+                                Note = fe.Document.Note
+                            }
+                            : null
+                    })
+                    .ToListAsync();
+
+                return Results.Ok(lastItems);
+            })
+            .WithName("GetLastFitmentEquipmentsByCistern")
+            .Produces<List<FitmentEquipmentDTO>>(StatusCodes.Status200OK)
+            .RequirePermissions(Permission.Read);
+
+        group.MapGet("/by-fitment/{fitmentId}", async ([FromServices] ApplicationDbContext context, Guid fitmentId) =>
+            {
+                var items = await context.Set<FitmentEquipment>()
+                    .AsNoTracking()
+                    .Include(fe => fe.Fitment)
+                    .ThenInclude(f => f.FitmentType)
+                    .Include(fe => fe.JobUser)
+                    .Include(fe => fe.TestUser)
+                    .Include(fe => fe.Depot)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Manufacturer)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Type)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Model)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Owner)
+                    .Include(fe => fe.Document)
+                    .Where(fe => fe.FitmentId == fitmentId)
+                    .OrderByDescending(fe => fe.Date)
+                    .Select(fe => new FitmentEquipmentDTO
+                    {
+                        Id = fe.Id,
+                        RailwayCisternsId = fe.RailwayCisternsId,
+                        Operation = fe.Operation,
+                        FitmentId = fe.FitmentId,
+                        JobUserId = fe.JobUserId,
+                        TestUserId = fe.TestUserId,
+                        DepoId = fe.DepoId,
+                        Date = fe.Date,
+                        DocumentId = fe.DocumentId,
+                        RailwayCistern = fe.RailwayCistern != null
+                            ? new RailwayCisternDTO
+                            {
+                                Id = fe.RailwayCistern.Id,
+                                Number = fe.RailwayCistern.Number,
+                                Model = fe.RailwayCistern.Model.Name,
+                                Owner = fe.RailwayCistern.Owner.UNP,
+                            }
+                            : null,
+                        Fitment = fe.Fitment != null
+                            ? new FitmentInfoDTO
+                            {
+                                Id = fe.Fitment.Id,
+                                SerialNumber = fe.Fitment.SerialNumber,
+                                PassportNumber = fe.Fitment.PassportNumber,
+                                FitmentTypeName = fe.Fitment.FitmentType.Name
+                            }
+                            : null,
+                        JobUser = fe.JobUser != null
+                            ? new UserInfoDTO
+                            {
+                                Id = fe.JobUser.Id,
+                                Email = fe.JobUser.Email,
+                                FirstName = fe.JobUser.FirstName,
+                                LastName = fe.JobUser.LastName
+                            }
+                            : null,
+                        TestUser = fe.TestUser != null
+                            ? new UserInfoDTO
+                            {
+                                Id = fe.TestUser.Id,
+                                Email = fe.TestUser.Email,
+                                FirstName = fe.TestUser.FirstName,
+                                LastName = fe.TestUser.LastName
+                            }
+                            : null,
+                        Depot = fe.Depot != null
+                            ? new DepotDTO
+                            {
+                                Id = fe.Depot.Id,
+                                Name = fe.Depot.Name,
+                                Code = fe.Depot.Code,
+                                Location = fe.Depot.Location,
+                                ShortName = fe.Depot.ShortName
+                            }
+                            : null,
+                        Document = fe.Document != null
+                            ? new DocumentDTO
+                            {
+                                Id = fe.Document.Id,
+                                Number = fe.Document.Number,
+                                Type = fe.Document.Type,
+                                Date = fe.Document.Date,
+                                Author = fe.Document.Author,
+                                Price = fe.Document.Price,
+                                Note = fe.Document.Note
+                            }
+                            : null
+                    })
+                    .ToListAsync();
+
+                return Results.Ok(items);
+            })
+            .WithName("GetFitmentEquipmentsByFitment")
+            .Produces<List<FitmentEquipmentDTO>>(StatusCodes.Status200OK)
+            .RequirePermissions(Permission.Read);
+
         group.MapPost("/", async (
                 [FromServices] ApplicationDbContext context,
                 [FromBody] CreateFitmentEquipmentDTO dto) =>
