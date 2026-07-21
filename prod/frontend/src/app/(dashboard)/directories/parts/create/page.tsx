@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { type DefaultValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Card,
@@ -24,6 +24,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  SearchableSelect,
 } from "@/components/ui";
 import { ArrowLeft, Save, Settings } from "lucide-react";
 import Link from "next/link";
@@ -31,146 +32,131 @@ import {
   usePartTypeOptions,
   useStampNumberOptions,
   usePartStatusOptions,
-  useCreateWheelPair,
-  useCreateSideFrame,
-  useCreateBolster,
-  useCreateCoupler,
-  useCreateShockAbsorber,
+  useCreatePart,
+  useAllDocuments,
+  useCisternIdAndNumbers,
 } from "@/hooks";
 import { DepotSearchSelect } from "@/components/depots/DepotSearchSelect";
-import {
-  wheelPairSchema,
-  sideFrameSchema,
-  bolsterSchema,
-  couplerSchema,
-  shockAbsorberSchema,
-  basePartSchema,
-} from "@/schemas/parts.schema";
-import type {
-  CreateWheelPairDTO,
-  CreateSideFrameDTO,
-  CreateBolsterDTO,
-  CreateCouplerDTO,
-  CreateShockAbsorberDTO,
-} from "@/types/directories";
+import { createPartSchema, type CreatePartFormData } from "@/schemas/parts.schema";
+import type { CreatePartDTO } from "@/types/directories";
 
 type PartFormRecord = Record<string, unknown>;
 
-function withManufactureYearDate(data: PartFormRecord): PartFormRecord {
-  const { manufactureYear } = data;
-  if (manufactureYear == null || manufactureYear === "") return data;
-  if (typeof manufactureYear === "number") {
-    return { ...data, manufactureYear: `${manufactureYear}-01-01` };
-  }
-  return { ...data, manufactureYear: `${manufactureYear}-01-01` };
+const createPartDefaultValues: DefaultValues<CreatePartFormData> = {
+  partTypeId: "",
+  stampNumberId: "",
+  statusId: "",
+  depotId: "",
+  currentLocation: "",
+  serialNumber: "",
+  manufactureYear: undefined,
+  notes: "",
+  code: 0,
+  documentId: "",
+  serviceLifeYears: undefined,
+  extendedUntil: "",
+  model: "",
+};
+
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
-function cleanFormData(data: PartFormRecord): PartFormRecord {
-  return Object.fromEntries(
-    Object.entries(data).map(([key, value]) => [key, value === "" ? undefined : value])
-  );
+function nullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function manufactureYearDate(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `${value}-01-01`;
+  }
+
+  return null;
+}
+
+function formatDocumentDate(date: string): string {
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return date;
+
+  return parsedDate.toLocaleDateString("ru-RU");
+}
+
+function buildCreatePartPayload(data: PartFormRecord): CreatePartDTO {
+  return {
+    partTypeId: String(data.partTypeId),
+    depotId: nullableString(data.depotId),
+    stampNumberId: String(data.stampNumberId),
+    serialNumber: typeof data.serialNumber === "string" ? data.serialNumber : "",
+    manufactureYear: manufactureYearDate(data.manufactureYear),
+    currentLocation: nullableString(data.currentLocation),
+    statusId: String(data.statusId),
+    notes: typeof data.notes === "string" ? data.notes : "",
+    code: nullableNumber(data.code) ?? 0,
+    documentId: nullableString(data.documentId),
+    serviceLifeYears: nullableNumber(data.serviceLifeYears),
+    extendedUntil: nullableString(data.extendedUntil),
+    model: nullableString(data.model),
+  };
 }
 
 export default function CreatePartPage() {
   const router = useRouter();
 
-  // Mutations
-  const createWheelPairMutation = useCreateWheelPair();
-  const createSideFrameMutation = useCreateSideFrame();
-  const createBolsterMutation = useCreateBolster();
-  const createCouplerMutation = useCreateCoupler();
-  const createShockAbsorberMutation = useCreateShockAbsorber();
+  const createPartMutation = useCreatePart();
 
   // Directory options
   const { data: partTypeOptions = [] } = usePartTypeOptions();
   const { data: stampNumberOptions = [] } = useStampNumberOptions();
   const { data: partStatusOptions = [] } = usePartStatusOptions();
-
-  // Track selected part type
-  const [selectedPartTypeId, setSelectedPartTypeId] = useState("");
-
-  // Find selected part type code
-  const selectedPartType = partTypeOptions.find((pt) => pt.value === selectedPartTypeId);
-  const partTypeCode = selectedPartType
-    ? parseInt(selectedPartType.label.match(/\[(\d+)\]/)?.[1] || "0")
-    : 0;
-
-  // Get schema based on part type
-  const getSchema = () => {
-    switch (partTypeCode) {
-      case 1: return wheelPairSchema;
-      case 2: return bolsterSchema;
-      case 3: return sideFrameSchema;
-      case 4: return couplerSchema;
-      case 10: return shockAbsorberSchema;
-      default: return basePartSchema;
-    }
-  };
+  const { data: documents = [], isLoading: documentsLoading } = useAllDocuments();
+  const { data: cisternIdAndNumbers = [], isLoading: cisternsLoading } = useCisternIdAndNumbers();
+  const documentOptions = documents.map((document) => ({
+    value: document.id,
+    label: `${document.number}(${formatDocumentDate(document.date)})`,
+  }));
+  const cisternOptions = cisternIdAndNumbers.map((cistern) => ({
+    value: cistern.id,
+    label: cistern.number,
+  }));
 
   // Initialize form
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const form = useForm<any>({
-    resolver: zodResolver(getSchema()),
-    defaultValues: {
-      partTypeId: "",
-      stampNumberId: "",
-      statusId: "",
-      depotId: "",
-      serialNumber: "",
-      manufactureYear: undefined,
-      notes: "",
-      // Wheel Pair
-      thicknessLeft: undefined,
-      thicknessRight: undefined,
-      wheelType: "",
-      // Side Frame & Bolster
-      serviceLifeYears: undefined,
-      extendedUntil: "",
-      // Shock Absorber
-      model: "",
-      manufacturerCode: "",
-      nextRepairDate: "",
-    },
+  const form = useForm<CreatePartFormData>({
+    resolver: zodResolver(createPartSchema),
+    defaultValues: createPartDefaultValues,
   });
 
-  // Update schema when part type changes
+  const locationCode = form.watch("code");
+
   useEffect(() => {
-    if (selectedPartTypeId !== form.getValues("partTypeId")) {
-      form.setValue("partTypeId", selectedPartTypeId);
+    if (locationCode === 0) {
+      form.setValue("currentLocation", "");
+      form.setValue("depotId", "");
+      return;
     }
-  }, [selectedPartTypeId, form]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const onSubmit = async (data: any) => {
+    if (locationCode === 1) {
+      form.setValue("depotId", "");
+      return;
+    }
+
+    if (locationCode === 2) {
+      form.setValue("currentLocation", "");
+    }
+  }, [form, locationCode]);
+
+  const onSubmit = async (data: CreatePartFormData) => {
     try {
-      const cleanData = withManufactureYearDate(cleanFormData(data as PartFormRecord));
-
-      switch (partTypeCode) {
-        case 1:
-          await createWheelPairMutation.mutateAsync(cleanData as unknown as CreateWheelPairDTO);
-          break;
-        case 2:
-          await createBolsterMutation.mutateAsync(cleanData as unknown as CreateBolsterDTO);
-          break;
-        case 3:
-          await createSideFrameMutation.mutateAsync(cleanData as unknown as CreateSideFrameDTO);
-          break;
-        case 4:
-          await createCouplerMutation.mutateAsync(cleanData as unknown as CreateCouplerDTO);
-          break;
-        case 10:
-          await createShockAbsorberMutation.mutateAsync(cleanData as unknown as CreateShockAbsorberDTO);
-          break;
-        default:
-          alert("Выберите тип детали");
-          return;
-      }
+      await createPartMutation.mutateAsync(buildCreatePartPayload(data));
 
       router.push("/directories/parts");
     } catch (error) {
       console.error("Error creating part:", error);
       alert("Ошибка при создании детали");
     }
+  };
+
+  const handleClearForm = () => {
+    form.reset(createPartDefaultValues);
   };
 
   return (
@@ -205,23 +191,16 @@ export default function CreatePartPage() {
               <CardDescription>Базовые данные о детали</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Part Type */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0">
                 <FormField
                   control={form.control}
                   name="partTypeId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Тип детали *</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedPartTypeId(value);
-                        }}
-                        value={field.value}
-                      >
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Выберите тип детали" />
                           </SelectTrigger>
                         </FormControl>
@@ -238,33 +217,6 @@ export default function CreatePartPage() {
                   )}
                 />
 
-                {/* Stamp Number */}
-                <FormField
-                  control={form.control}
-                  name="stampNumberId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Клеймо *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Выберите клеймо" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {stampNumberOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Status */}
                 <FormField
                   control={form.control}
                   name="statusId"
@@ -273,7 +225,7 @@ export default function CreatePartPage() {
                       <FormLabel>Статус *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Выберите статус" />
                           </SelectTrigger>
                         </FormControl>
@@ -290,13 +242,58 @@ export default function CreatePartPage() {
                   )}
                 />
 
-                {/* Serial Number */}
+                <FormField
+                  control={form.control}
+                  name="documentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Документ</FormLabel>
+                      <FormControl>
+                        <SearchableSelect
+                          value={field.value}
+                          onChange={field.onChange}
+                          options={documentOptions}
+                          placeholder="Выберите документ"
+                          searchPlaceholder="Введите номер или дату"
+                          isLoading={documentsLoading}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="stampNumberId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Клеймо *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Выберите клеймо" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {stampNumberOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="serialNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Заводской номер</FormLabel>
+                      <FormLabel>Заводской номер *</FormLabel>
                       <FormControl>
                         <Input placeholder="Введите заводской номер" {...field} />
                       </FormControl>
@@ -305,20 +302,21 @@ export default function CreatePartPage() {
                   )}
                 />
 
-                {/* Manufacture Year */}
                 <FormField
                   control={form.control}
                   name="manufactureYear"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Год производства</FormLabel>
+                      <FormLabel>Год производства *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="Введите год производства" 
+                        <Input
+                          type="number"
+                          placeholder="Введите год производства"
                           {...field}
                           value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          onChange={(e) =>
+                            field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -326,18 +324,119 @@ export default function CreatePartPage() {
                   )}
                 />
 
-                {/* Depot with Search */}
                 <FormField
                   control={form.control}
-                  name="depotId"
+                  name="code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Депо</FormLabel>
+                      <FormLabel>Местоположение</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        value={String(field.value ?? 0)}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Выберите местоположение" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="0">Не установлена</SelectItem>
+                          <SelectItem value="1">Вагон</SelectItem>
+                          <SelectItem value="2">Депо</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {locationCode === 0 && (
+                  <>
+                    <div className="hidden md:block" />
+                    <div className="hidden md:block" />
+                  </>
+                )}
+
+                {locationCode === 1 && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="currentLocation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Номер вагона-цистерны</FormLabel>
+                          <FormControl>
+                            <SearchableSelect
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={cisternOptions}
+                              placeholder="Выберите вагон-цистерну"
+                              searchPlaceholder="Введите номер вагона"
+                              isLoading={cisternsLoading}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="hidden md:block" />
+                  </>
+                )}
+
+                {locationCode === 2 && (
+                  <>
+                    <div className="hidden md:block" />
+
+                    <FormField
+                      control={form.control}
+                      name="depotId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Депо</FormLabel>
+                          <FormControl>
+                            <DepotSearchSelect
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              placeholder="Выберите депо"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="model"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Модель</FormLabel>
                       <FormControl>
-                        <DepotSearchSelect
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          placeholder="Выберите депо"
+                        <Input placeholder="Введите модель" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="serviceLifeYears"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Срок службы (лет) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="Введите срок службы"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -345,17 +444,31 @@ export default function CreatePartPage() {
                   )}
                 />
 
-                {/* Notes */}
+                <FormField
+                  control={form.control}
+                  name="extendedUntil"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Продлен до</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="notes"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Примечания</FormLabel>
+                    <FormItem className="md:col-span-3">
+                      <FormLabel>Примечание</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Введите примечания"
-                          rows={3}
+                          placeholder="Введите примечание"
+                          rows={1}
+                          className="h-9 min-h-9 resize-none py-1"
                           {...field}
                         />
                       </FormControl>
@@ -367,215 +480,26 @@ export default function CreatePartPage() {
             </CardContent>
           </Card>
 
-          {/* Specific Fields */}
-          {partTypeCode > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Специфичные параметры</CardTitle>
-                <CardDescription>
-                  Параметры для типа: {selectedPartType?.label}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Wheel Pair Fields */}
-                  {partTypeCode === 1 && (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="thicknessLeft"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Толщина (левая)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.1"
-                                placeholder="Введите толщину"
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="thicknessRight"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Толщина (правая)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.1"
-                                placeholder="Введите толщину"
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="wheelType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Тип колеса</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Введите тип колеса" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-
-                  {/* Side Frame & Bolster Fields */}
-                  {(partTypeCode === 2 || partTypeCode === 3) && (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="serviceLifeYears"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Срок службы (лет)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Введите срок службы"
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="extendedUntil"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Продлен до</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-
-                  {/* Coupler */}
-                  {partTypeCode === 4 && (
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Автосцепка не имеет дополнительных параметров
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Shock Absorber Fields */}
-                  {partTypeCode === 10 && (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="model"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Модель</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Введите модель" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="manufacturerCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Код производителя</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Введите код" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="serviceLifeYears"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Срок службы (лет)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Введите срок службы"
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="nextRepairDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Дата следующего ремонта</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Action Buttons */}
-          <div className="flex justify-end gap-4">
-            <Link href="/directories/parts">
-              <Button type="button" variant="outline">
-                Отмена
-              </Button>
-            </Link>
-            <Button
-              type="submit"
-              disabled={
-                createWheelPairMutation.isPending ||
-                createSideFrameMutation.isPending ||
-                createBolsterMutation.isPending ||
-                createCouplerMutation.isPending ||
-                createShockAbsorberMutation.isPending
-              }
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Сохранить
+          <div className="flex items-center justify-between gap-4">
+            <Button type="button" variant="outline" onClick={handleClearForm}>
+              Очистить форму
             </Button>
+
+            <div className="flex justify-end gap-4">
+              <Link href="/directories/parts">
+                <Button type="button" variant="outline">
+                  Отмена
+                </Button>
+              </Link>
+              <Button
+                type="submit"
+                disabled={createPartMutation.isPending}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Сохранить
+              </Button>
+            </div>
           </div>
         </form>
       </Form>

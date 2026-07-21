@@ -39,6 +39,7 @@ public static class PartsEndpoints
                 .Include(p => p.Depot)
                 .Include(p => p.RailwayCistern)
                 .Include(p => p.Document)
+                .Where(p => !p.PartType.Name.ToLower().Contains("эластомер"))
                 .AsQueryable();
 
             if (typeId.HasValue)
@@ -134,6 +135,7 @@ public static class PartsEndpoints
                 .Include(p => p.Depot)
                 .Include(p => p.RailwayCistern)
                 .Include(p => p.Document)
+                .Where(p => !p.PartType.Name.ToLower().Contains("эластомер"))
                 .AsQueryable();
 
             if (typeId.HasValue)

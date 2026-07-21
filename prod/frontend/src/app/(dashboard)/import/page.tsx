@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  Alert,
+  AlertDescription,
   Badge,
   Card,
   CardContent,
@@ -52,6 +54,11 @@ type ManualPartsImportFormData = {
   documentDate: string;
   depotsId: string;
   repairTypesId: string;
+};
+
+type ManualPartsImportRequestStatus = {
+  type: "loading" | "success" | "error";
+  message: string;
 };
 
 type EquipmentTypeOptionDTO = {
@@ -139,7 +146,9 @@ export default function ImportPage() {
   const repairsFileInputRef = useRef<HTMLInputElement>(null);
   const partsPdfFileInputRef = useRef<HTMLInputElement>(null);
   const partsTxtFileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingType, setUploadingType] = useState<"repairs" | "parts" | null>(null);
+  const [uploadingType, setUploadingType] = useState<
+    "repairs" | "parts" | "manual-parts" | null
+  >(null);
   const [repairsError, setRepairsError] = useState<string | null>(null);
   const [repairsSuccess, setRepairsSuccess] = useState(false);
   const [partsError, setPartsError] = useState<string | null>(null);
@@ -149,6 +158,8 @@ export default function ImportPage() {
   const [manualPartsImport, setManualPartsImport] = useState(false);
   const [manualPartsImportForm, setManualPartsImportForm] =
     useState<ManualPartsImportFormData>(manualPartsImportInitialValues);
+  const [manualPartsImportStatus, setManualPartsImportStatus] =
+    useState<ManualPartsImportRequestStatus | null>(null);
   const { data: cisternIdAndNumbers, isLoading: cisternsLoading } = useCisternIdAndNumbers();
   const { data: depots, isLoading: depotsLoading } = useQuery<DepotDTO[]>({
     queryKey: ["manual-parts-import", "depots"],
@@ -244,10 +255,24 @@ export default function ImportPage() {
       )})`,
     })) || [];
 
-  const getUploadErrorMessage = (err: unknown) =>
-    err && typeof err === "object" && "response" in err
-      ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-      : null;
+  const getUploadErrorMessage = (err: unknown) => {
+    if (!err || typeof err !== "object" || !("response" in err)) return null;
+
+    const data = (
+      err as {
+        response?: {
+          data?: {
+            message?: string;
+            Message?: string;
+            details?: string;
+            Details?: string;
+          };
+        };
+      }
+    ).response?.data;
+
+    return data?.message || data?.Message || data?.details || data?.Details || null;
+  };
 
   const handleRepairsFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -303,6 +328,7 @@ export default function ImportPage() {
     field: keyof ManualPartsImportFormData,
     value: string
   ) => {
+    setManualPartsImportStatus(null);
     setManualPartsImportForm((current) => ({
       ...current,
       [field]: value,
@@ -313,6 +339,7 @@ export default function ImportPage() {
   const handleManualDocumentChange = (documentId: string) => {
     const selectedDocument = documents.find((document) => document.id === documentId);
 
+    setManualPartsImportStatus(null);
     setManualPartsImportForm((current) => ({
       ...current,
       documentId,
@@ -324,23 +351,37 @@ export default function ImportPage() {
     e.preventDefault();
     setPartsError(null);
     setPartsSuccess(false);
+    setManualPartsImportStatus(null);
 
     if (manualPartsImportForm.operation === "2" && !manualPartsImportForm.railwayCisternsId) {
-      setPartsError("Выберите номер вагона для установки детали");
+      setManualPartsImportStatus({
+        type: "error",
+        message: "Выберите номер вагона для установки детали",
+      });
       return;
     }
 
     if (!manualPartsImportForm.equipmentTypeId) {
-      setPartsError("Выберите тип оборудования");
+      setManualPartsImportStatus({
+        type: "error",
+        message: "Выберите тип оборудования",
+      });
       return;
     }
 
     if (!manualPartsImportForm.partsId) {
-      setPartsError("Выберите деталь");
+      setManualPartsImportStatus({
+        type: "error",
+        message: "Выберите деталь",
+      });
       return;
     }
 
-    setUploadingType("parts");
+    setUploadingType("manual-parts");
+    setManualPartsImportStatus({
+      type: "loading",
+      message: "Отправляем запрос на сохранение комплектации...",
+    });
 
     const payload = {
       ...manualPartsImportForm,
@@ -356,11 +397,16 @@ export default function ImportPage() {
 
     try {
       await api.post("/api/part-equipments", payload);
-      setPartsSuccess(true);
-      setManualPartsImport(false);
+      setManualPartsImportStatus({
+        type: "success",
+        message: "Комплектация успешно сохранена",
+      });
       setManualPartsImportForm(manualPartsImportInitialValues);
     } catch (err: unknown) {
-      setPartsError(getUploadErrorMessage(err) || "Ошибка при ручной загрузке комплектации");
+      setManualPartsImportStatus({
+        type: "error",
+        message: getUploadErrorMessage(err) || "Ошибка при ручной загрузке комплектации",
+      });
     } finally {
       setUploadingType(null);
     }
@@ -373,6 +419,18 @@ export default function ImportPage() {
   };
 
   const partsImportStatistics = partsImportResult?.statistics;
+  const isManualPartsImportSubmitting = uploadingType === "manual-parts";
+
+  const handleManualPartsImportDialogChange = (open: boolean) => {
+    if (isManualPartsImportSubmitting) return;
+    setManualPartsImport(open);
+    setManualPartsImportStatus(null);
+  };
+
+  const handleManualPartsImportFormReset = () => {
+    setManualPartsImportForm(manualPartsImportInitialValues);
+    setManualPartsImportStatus(null);
+  };
 
   return (
     <div className="space-y-8 w-full">
@@ -510,7 +568,7 @@ export default function ImportPage() {
           </CardContent>
         </Card>
 
-      <Dialog open={manualPartsImport} onOpenChange={setManualPartsImport}>
+      <Dialog open={manualPartsImport} onOpenChange={handleManualPartsImportDialogChange}>
         <DialogContent className="max-h-[85vh] sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Ручная загрузка комплектации</DialogTitle>
@@ -665,25 +723,51 @@ export default function ImportPage() {
               </div>
             </ScrollArea>
 
-            <DialogFooter>
+            {manualPartsImportStatus ? (
+              <Alert
+                variant={manualPartsImportStatus.type === "error" ? "destructive" : "default"}
+                className={
+                  manualPartsImportStatus.type === "success"
+                    ? "border-green-200 text-green-700 dark:border-green-900 dark:text-green-400"
+                    : undefined
+                }
+              >
+                {manualPartsImportStatus.type === "loading" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                <AlertDescription>{manualPartsImportStatus.message}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            <DialogFooter className="gap-2 sm:justify-between">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setManualPartsImport(false)}
-                disabled={uploadingType !== null}
+                onClick={handleManualPartsImportFormReset}
+                disabled={isManualPartsImportSubmitting}
               >
-                Отмена
+                Очистить форму
               </Button>
-              <Button type="submit" disabled={uploadingType !== null}>
-                {uploadingType === "parts" ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Сохранение...
-                  </>
-                ) : (
-                  "Сохранить"
-                )}
-              </Button>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleManualPartsImportDialogChange(false)}
+                  disabled={isManualPartsImportSubmitting}
+                >
+                  Отмена
+                </Button>
+                <Button type="submit" disabled={uploadingType !== null}>
+                  {isManualPartsImportSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    "Сохранить"
+                  )}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>

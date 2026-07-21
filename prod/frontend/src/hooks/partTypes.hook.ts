@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { partTypesApi, convertToSelectOptions } from '@/api/directories';
+import { filterAllowedPartTypes } from '@/lib/parts/part-types';
 import type { SelectOption } from '@/types/directories';
 
 // Query keys
@@ -13,6 +14,7 @@ export const usePartTypes = () => {
   return useQuery({
     queryKey: partTypesKeys.all,
     queryFn: partTypesApi.getAll,
+    select: filterAllowedPartTypes,
   });
 };
 

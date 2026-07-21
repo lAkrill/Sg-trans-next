@@ -212,6 +212,7 @@ public static class PartFilterEndpoints
             .Include(p => p.Depot)
             .Include(p => p.RailwayCistern)
             .Include(p => p.Document)
+            .Where(p => !p.PartType.Name.ToLower().Contains("эластомер"))
             .AsQueryable();
 
         if (filters == null)

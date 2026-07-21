@@ -19,6 +19,7 @@ public static class PartTypeEndpoints
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {
             var types = await context.Set<PartType>()
+                .Where(t => !t.Name.ToLower().Contains("эластомер"))
                 .Select(t => new PartTypeDTO
                 {
                     Id = t.Id,
