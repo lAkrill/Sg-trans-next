@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { partsApi } from '@/api/directories';
 import type { 
+  CreatePartDTO,
+  UpdatePartDTO,
   UpdateWheelPairDTO, 
   UpdateSideFrameDTO, 
   UpdateBolsterDTO, 
@@ -31,6 +33,27 @@ export const usePartById = (id: string) => {
     enabled: !!id,
     staleTime: 0,
     refetchOnMount: true,
+  });
+};
+
+export const useCreatePart = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreatePartDTO) => partsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: partsKeys.all });
+    },
+  });
+};
+
+export const useUpdatePart = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdatePartDTO }) =>
+      partsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: partsKeys.all });
+    },
   });
 };
 

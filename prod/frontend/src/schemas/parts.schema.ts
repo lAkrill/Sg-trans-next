@@ -11,6 +11,27 @@ export const basePartSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const createPartSchema = basePartSchema.extend({
+  serialNumber: z.string().trim().min(1, "Введите заводской номер"),
+  manufactureYear: z.number().int().min(1900, "Год должен быть не ранее 1900").max(new Date().getFullYear(), "Год не может быть в будущем"),
+  currentLocation: z.string().optional(),
+  code: z.number().int("Код должен быть целым числом").min(0, "Код не может быть отрицательным").optional(),
+  documentId: z.string().optional(),
+  serviceLifeYears: z.number().int().positive("Срок службы должен быть положительным"),
+  extendedUntil: z.string().optional(),
+  model: z.string().optional(),
+}).refine(
+  (data) => {
+    const hasDepot = !!data.depotId;
+    const hasLocation = !!data.currentLocation;
+    return !hasDepot || !hasLocation;
+  },
+  {
+    message: "Выберите либо депо, либо текущее местоположение, но не оба одновременно",
+    path: ["depotId"],
+  }
+);
+
 // Wheel Pair schema (code: 1)
 export const wheelPairSchema = basePartSchema.extend({
   thicknessLeft: z.number().positive("Толщина должна быть положительной").optional(),
@@ -189,6 +210,7 @@ export const shockAbsorberUpdateSchema = z.object({
 );
 
 // Type inference
+export type CreatePartFormData = z.infer<typeof createPartSchema>;
 export type WheelPairFormData = z.infer<typeof wheelPairSchema>;
 export type SideFrameFormData = z.infer<typeof sideFrameSchema>;
 export type BolsterFormData = z.infer<typeof bolsterSchema>;

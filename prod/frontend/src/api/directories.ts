@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import { filterAllowedPartTypes } from '@/lib/parts/part-types';
 import type {
   AffiliationDTO,
   CreateAffiliationDTO,
@@ -53,6 +54,8 @@ import type {
   UpdateStampNumberDTO,
   PartDTO,
   PaginatedPartsResponse,
+  CreatePartDTO,
+  UpdatePartDTO,
   CreateWheelPairDTO,
   CreateSideFrameDTO,
   CreateBolsterDTO,
@@ -69,6 +72,7 @@ import type {
   PartFilterSortDTO,
   PartFilterSortWithoutPaginationDTO,
   PaginatedFilteredPartsResponse,
+  FitmentFilterSortWithoutPaginationDTO,
   DocumentDTO,
   CreateDocumentDTO,
   UpdateDocumentDTO,
@@ -270,7 +274,10 @@ export const convertToSelectOptions = {
     stampNumbers.map(s => ({ value: s.id, label: s.value })),
 
   partTypes: (partTypes: PartTypeDTO[]) =>
-    partTypes.map(pt => ({ value: pt.id, label: `${pt.name} [${pt.code}]` })),
+    filterAllowedPartTypes(partTypes).map(pt => ({
+      value: pt.id,
+      label: `${pt.name} [${pt.code}]`,
+    })),
 
   partStatuses: (partStatuses: PartStatusDTO[]) =>
     partStatuses.map(ps => ({ value: ps.id, label: ps.name })),
@@ -332,6 +339,15 @@ export const partsApi = {
   getById: async (id: string): Promise<PartDTO> => {
     const response = await api.get(`/api/parts/${id}`);
     return response.data;
+  },
+
+  create: async (data: CreatePartDTO): Promise<string> => {
+    const response = await api.post('/api/parts', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: UpdatePartDTO): Promise<void> => {
+    await api.put(`/api/parts/${id}`, data);
   },
 
   createWheelPair: async (data: CreateWheelPairDTO): Promise<string> => {
@@ -434,13 +450,21 @@ export const partsFilterApi = {
     return response.data;
   },
 
-  filterAll: async (request: PartFilterSortWithoutPaginationDTO): Promise<Record<string, unknown>[]> => {
+  filterAll: async (request: PartFilterSortWithoutPaginationDTO): Promise<PartDTO[]> => {
     const response = await api.post('/api/parts/filter/all', request);
     return response.data;
   },
 
   getBySavedFilter: async (filterId: string): Promise<Record<string, unknown>[]> => {
     const response = await api.get(`/api/parts/filter/saved/${filterId}`);
+    return response.data;
+  },
+};
+
+// Fitments Filter API
+export const fitmentsFilterApi = {
+  filterAll: async (request: FitmentFilterSortWithoutPaginationDTO): Promise<FitmentDTO[]> => {
+    const response = await api.post('/api/fitments/filter/all', request);
     return response.data;
   },
 };
@@ -453,6 +477,11 @@ export const documentsApi = {
       pageSize: pageSize.toString(),
     });
     const response = await api.get(`/api/documents?${params.toString()}`);
+    return response.data;
+  },
+
+  getAllWithoutPagination: async (): Promise<DocumentDTO[]> => {
+    const response = await api.get('/api/documents/all');
     return response.data;
   },
 

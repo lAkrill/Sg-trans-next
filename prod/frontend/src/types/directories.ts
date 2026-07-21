@@ -476,6 +476,7 @@ export interface PartDTO extends BaseEntity {
   currentLocation?: { id: string; number: string };
   status: PartStatusDTO;
   notes?: string;
+  model?: string | null;
   createdAt: string;
   updatedAt: string;
   wheelPair?: WheelPairDTO;
@@ -551,6 +552,37 @@ export interface ShockAbsorberDTO {
   manufacturerCode?: string;
   nextRepairDate?: string | { year: number; month: number; day: number }; // DateOnly может прийти как объект
   serviceLifeYears?: number;
+}
+
+export interface CreatePartDTO {
+  partTypeId: string;
+  depotId: string | null;
+  stampNumberId: string;
+  serialNumber: string;
+  manufactureYear: string | null;
+  currentLocation: string | null;
+  statusId: string;
+  notes: string;
+  code: number;
+  documentId: string | null;
+  serviceLifeYears: number | null;
+  extendedUntil: string | null;
+  model: string | null;
+}
+
+export interface UpdatePartDTO {
+  depotId: string | null;
+  stampNumberId: string;
+  serialNumber: string;
+  manufactureYear: string | null;
+  currentLocation: string | null;
+  statusId: string;
+  notes: string;
+  code: number;
+  documentId: string | null;
+  serviceLifeYears: number | null;
+  extendedUntil: string | null;
+  model: string | null;
 }
 
 export interface CreateWheelPairDTO {
@@ -823,23 +855,18 @@ export interface PartFilterCriteria {
   serialNumbers?: string[];
   manufactureYear?: DateRange;
   locations?: string[];
+  currentLocationIds?: string[];
   statusIds?: string[];
-  createdAt?: DateTimeRange;
-  updatedAt?: DateTimeRange;
-  
-  // Колесные пары
-  thicknessLeft?: DecimalRange;
-  thicknessRight?: DecimalRange;
-  wheelTypes?: string[];
-  
-  // Боковая рама и надрессорная балка
   serviceLifeYears?: IntRange;
   extendedUntil?: DateRange;
-  
-  // Поглощающий аппарат
   models?: string[];
-  manufacturerCodes?: string[];
-  nextRepairDate?: DateRange;
+  createdAt?: DateTimeRange;
+  updatedAt?: DateTimeRange;
+  code?: IntRange;
+  documentId?: string;
+  documentNumbers?: string[];
+  documentTypes?: number[];
+  documentDate?: DateRange;
 }
 
 // Filter and sort request DTOs
@@ -855,6 +882,26 @@ export interface PartFilterSortWithoutPaginationDTO {
   filters?: PartFilterCriteria;
   sortFields?: SortCriteria[];
   selectedColumns?: string[];
+}
+
+// Fitment filter criteria
+export interface FitmentFilterCriteria {
+  fitmentTypeIds?: string[];
+  serialNumbers?: string[];
+  passportNumbers?: string[];
+  buildDate?: DateRange;
+  lastRepairDate?: DateRange;
+  periodRep?: IntRange;
+  serviceLifeYears?: IntRange;
+  modelIds?: string[];
+  depotIds?: string[];
+  creatorIds?: string[];
+  updatedAt?: DateTimeRange;
+}
+
+export interface FitmentFilterSortWithoutPaginationDTO {
+  filters?: FitmentFilterCriteria;
+  sortFields?: SortCriteria[];
 }
 
 // Paginated response for filtered parts

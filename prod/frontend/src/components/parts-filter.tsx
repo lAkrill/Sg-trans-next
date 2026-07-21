@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle, 
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
   Button,
   Badge,
@@ -22,10 +22,22 @@ import {
   Tabs,
   TabsContent,
   TabsList,
-  TabsTrigger
+  TabsTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui';
 import { Filter, RotateCcw } from 'lucide-react';
-import { PartFilterCriteria } from '@/types/directories';
+import { usePartTypeOptions } from '@/hooks';
+import type { PartFilterCriteria } from '@/types/directories';
+
+const LOCATION_CODE_OPTIONS = [
+  { value: '0', label: 'Не установлено' },
+  { value: '1', label: 'Вагон' },
+  { value: '2', label: 'Депо' },
+] as const;
 
 interface PartsFilterProps {
   open: boolean;
@@ -40,31 +52,89 @@ interface PartsFilterProps {
   children?: React.ReactNode;
 }
 
-// Опции полей для сортировки и выбора столбцов
-const sortFieldOptions = [
+export const PART_COLUMN_OPTIONS = [
   { value: 'partType', label: 'Тип детали' },
-  { value: 'depot', label: 'Депо' },
-  { value: 'stampNumber', label: 'Номер клейма' },
-  { value: 'serialNumber', label: 'Серийный номер' },
-  { value: 'manufactureYear', label: 'Год изготовления' },
-  { value: 'currentLocation', label: 'Текущее местоположение' },
+  { value: 'stampNumber', label: 'Клеймо' },
+  { value: 'serialNumber', label: 'Заводской номер' },
+  { value: 'manufactureYear', label: 'Год производства' },
+  { value: 'location', label: 'Местоположение' },
+  { value: 'wagonDepot', label: 'Вагон/Депо' },
+  { value: 'serviceLife', label: 'Срок службы' },
+  { value: 'extendedDate', label: 'Дата окончания эксплуатации' },
   { value: 'status', label: 'Статус' },
   { value: 'notes', label: 'Примечания' },
-  { value: 'createdAt', label: 'Дата создания' },
-  { value: 'updatedAt', label: 'Дата обновления' }
-];
+  { value: 'model', label: 'Модель' },
+] as const;
+
+export const DEFAULT_PART_VISIBLE_COLUMNS = PART_COLUMN_OPTIONS.map((option) => option.value);
 
 const initialFilters: PartFilterCriteria = {
   partTypeIds: [],
   depotIds: [],
   stampNumbers: [],
   serialNumbers: [],
-  locations: [],
+  currentLocationIds: [],
   statusIds: [],
-  wheelTypes: [],
   models: [],
-  manufacturerCodes: []
+  documentNumbers: [],
+  documentTypes: [],
 };
+
+type ListDraftKey =
+  | 'stampNumbers'
+  | 'serialNumbers'
+  | 'models'
+  | 'statusIds'
+  | 'depotIds'
+  | 'currentLocationIds'
+  | 'documentNumbers'
+  | 'documentTypes';
+
+type ListDrafts = Record<ListDraftKey, string>;
+
+const initialListDrafts: ListDrafts = {
+  stampNumbers: '',
+  serialNumbers: '',
+  models: '',
+  statusIds: '',
+  depotIds: '',
+  currentLocationIds: '',
+  documentNumbers: '',
+  documentTypes: '',
+};
+
+const parseList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
+
+const parseNumberList = (value: string) =>
+  value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map(Number)
+    .filter((item) => !Number.isNaN(item));
+
+const filtersToListDrafts = (filters: PartFilterCriteria): ListDrafts => ({
+  stampNumbers: filters.stampNumbers?.join(', ') || '',
+  serialNumbers: filters.serialNumbers?.join(', ') || '',
+  models: filters.models?.join(', ') || '',
+  statusIds: filters.statusIds?.join(', ') || '',
+  depotIds: filters.depotIds?.join(', ') || '',
+  currentLocationIds: filters.currentLocationIds?.join(', ') || '',
+  documentNumbers: filters.documentNumbers?.join(', ') || '',
+  documentTypes: filters.documentTypes?.join(', ') || '',
+});
+
+const applyListDrafts = (filters: PartFilterCriteria, drafts: ListDrafts): PartFilterCriteria => ({
+  ...filters,
+  stampNumbers: parseList(drafts.stampNumbers),
+  serialNumbers: parseList(drafts.serialNumbers),
+  models: parseList(drafts.models),
+  statusIds: parseList(drafts.statusIds),
+  depotIds: parseList(drafts.depotIds),
+  currentLocationIds: parseList(drafts.currentLocationIds),
+  documentNumbers: parseList(drafts.documentNumbers),
+  documentTypes: parseNumberList(drafts.documentTypes),
+});
 
 export function PartsFilter({
   open,
@@ -76,34 +146,54 @@ export function PartsFilter({
   isLoading,
   filteredCount,
   totalCount,
-  children
+  children,
 }: PartsFilterProps) {
+  const { data: partTypeOptions = [], isLoading: isPartTypesLoading } = usePartTypeOptions();
   const [localFilters, setLocalFilters] = useState<PartFilterCriteria>(propFilters || initialFilters);
+  const [listDrafts, setListDrafts] = useState<ListDrafts>(
+    filtersToListDrafts(propFilters || initialFilters)
+  );
 
   const handleApplyFilters = () => {
-    onFiltersChange(localFilters);
+    onFiltersChange(applyListDrafts(localFilters, listDrafts));
   };
 
   const handleClearFilters = () => {
-    const emptyFilters = initialFilters;
-    setLocalFilters(emptyFilters);
-    onFiltersChange(emptyFilters);
+    setLocalFilters(initialFilters);
+    setListDrafts(initialListDrafts);
+    onFiltersChange(initialFilters);
   };
 
   const updateFilter = (key: keyof PartFilterCriteria, value: unknown) => {
-    setLocalFilters(prev => ({
+    setLocalFilters((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
   };
 
+  const updateListDraft = (key: ListDraftKey, value: string) => {
+    setListDrafts((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const togglePartTypeId = (partTypeId: string, checked: boolean) => {
+    const current = localFilters.partTypeIds || [];
+    updateFilter(
+      'partTypeIds',
+      checked ? [...current, partTypeId] : current.filter((id) => id !== partTypeId)
+    );
+  };
+
   const getActiveFiltersCount = () => {
-    return Object.entries(localFilters).filter(([, value]) => {
+    const filters = applyListDrafts(localFilters, listDrafts);
+    return Object.entries(filters).filter(([, value]) => {
       if (Array.isArray(value)) {
         return value.length > 0;
       }
       if (typeof value === 'object' && value !== null) {
-        return Object.values(value).some(v => v !== undefined && v !== null);
+        return Object.values(value).some((nestedValue) => nestedValue !== undefined && nestedValue !== null && nestedValue !== '');
       }
       return value !== '' && value !== undefined && value !== null;
     }).length;
@@ -137,18 +227,17 @@ export function PartsFilter({
           )}
         </SheetHeader>
 
-        {/* Кнопки действий */}
         <Separator className="my-4" />
         <div className="flex space-x-2">
-          <Button 
-            onClick={handleApplyFilters} 
+          <Button
+            onClick={handleApplyFilters}
             disabled={isLoading}
             className="flex-1"
           >
             {isLoading ? 'Применение...' : 'Применить фильтры'}
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleClearFilters}
             disabled={isLoading}
           >
@@ -167,7 +256,6 @@ export function PartsFilter({
           <TabsContent value="filters" className="flex-1 min-h-0">
             <ScrollArea className="h-full">
               <div className="space-y-4 pr-4">
-                {/* Базовые фильтры */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Основная информация</CardTitle>
@@ -175,148 +263,304 @@ export function PartsFilter({
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="stampNumbers">Номера клейм</Label>
+                        <Label htmlFor="stampNumbers">Клейма</Label>
                         <Input
                           id="stampNumbers"
                           placeholder="Введите номер клейма"
-                          value={localFilters.stampNumbers?.join(', ') || ''}
-                          onChange={(e) => updateFilter('stampNumbers', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                          value={listDrafts.stampNumbers}
+                          onChange={(e) => updateListDraft('stampNumbers', e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="serialNumbers">Серийные номера</Label>
+                        <Label htmlFor="serialNumbers">Заводские номера</Label>
                         <Input
                           id="serialNumbers"
-                          placeholder="Введите серийный номер"
-                          value={localFilters.serialNumbers?.join(', ') || ''}
-                          onChange={(e) => updateFilter('serialNumbers', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                          placeholder="Введите заводской номер"
+                          value={listDrafts.serialNumbers}
+                          onChange={(e) => updateListDraft('serialNumbers', e.target.value)}
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="locations">Местоположения</Label>
-                        <Input
-                          id="locations"
-                          placeholder="Введите местоположение"
-                          value={localFilters.locations?.join(', ') || ''}
-                          onChange={(e) => updateFilter('locations', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="wheelTypes">Типы колес</Label>
-                        <Input
-                          id="wheelTypes"
-                          placeholder="Введите тип колеса"
-                          value={localFilters.wheelTypes?.join(', ') || ''}
-                          onChange={(e) => updateFilter('wheelTypes', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-                        />
-                      </div>
-                    </div>
+                        <Label htmlFor="locationCode">Местоположение</Label>
+                        <Select
+                          value={
+                            localFilters.code?.from != null &&
+                            localFilters.code?.to != null &&
+                            localFilters.code.from === localFilters.code.to
+                              ? String(localFilters.code.from)
+                              : 'all'
+                          }
+                          onValueChange={(value) => {
+                            if (value === 'all') {
+                              updateFilter('code', undefined);
+                              return;
+                            }
 
-                    <div className="grid grid-cols-2 gap-4">
+                            const code = Number(value);
+                            updateFilter('code', { from: code, to: code });
+                          }}
+                        >
+                          <SelectTrigger id="locationCode" className="w-full">
+                            <SelectValue placeholder="Все местоположения" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Все местоположения</SelectItem>
+                            {LOCATION_CODE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-2">
                         <Label htmlFor="models">Модели</Label>
                         <Input
                           id="models"
                           placeholder="Введите модель"
-                          value={localFilters.models?.join(', ') || ''}
-                          onChange={(e) => updateFilter('models', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                          value={listDrafts.models}
+                          onChange={(e) => updateListDraft('models', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Типы деталей</Label>
+                      {isPartTypesLoading ? (
+                        <p className="text-sm text-muted-foreground">Загрузка типов...</p>
+                      ) : partTypeOptions.length ? (
+                        <div className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-2">
+                          {partTypeOptions.map((option) => (
+                            <div key={option.value} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`part-type-${option.value}`}
+                                checked={localFilters.partTypeIds?.includes(option.value) ?? false}
+                                onCheckedChange={(checked) =>
+                                  togglePartTypeId(option.value, checked === true)
+                                }
+                              />
+                              <Label
+                                htmlFor={`part-type-${option.value}`}
+                                className="text-sm font-normal"
+                              >
+                                {option.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Типы деталей не найдены</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="statusIds">ID статусов</Label>
+                      <Input
+                        id="statusIds"
+                        placeholder="Введите ID статусов"
+                        value={listDrafts.statusIds}
+                        onChange={(e) => updateListDraft('statusIds', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="depotIds">ID депо</Label>
+                        <Input
+                          id="depotIds"
+                          placeholder="Введите ID депо"
+                          value={listDrafts.depotIds}
+                          onChange={(e) => updateListDraft('depotIds', e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="manufacturerCodes">Коды производителя</Label>
+                        <Label htmlFor="currentLocationIds">ID вагонов</Label>
                         <Input
-                          id="manufacturerCodes"
-                          placeholder="Введите код производителя"
-                          value={localFilters.manufacturerCodes?.join(', ') || ''}
-                          onChange={(e) => updateFilter('manufacturerCodes', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                          id="currentLocationIds"
+                          placeholder="Введите ID вагонов"
+                          value={listDrafts.currentLocationIds}
+                          onChange={(e) => updateListDraft('currentLocationIds', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="documentNumbers">Номера документов</Label>
+                        <Input
+                          id="documentNumbers"
+                          placeholder="Введите номера документов"
+                          value={listDrafts.documentNumbers}
+                          onChange={(e) => updateListDraft('documentNumbers', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="documentTypes">Типы документов</Label>
+                        <Input
+                          id="documentTypes"
+                          placeholder="Введите типы документов"
+                          value={listDrafts.documentTypes}
+                          onChange={(e) => updateListDraft('documentTypes', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="documentId">ID документа</Label>
+                      <Input
+                        id="documentId"
+                        placeholder="Введите ID документа"
+                        value={localFilters.documentId || ''}
+                        onChange={(e) => updateFilter('documentId', e.target.value || undefined)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Даты</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Год производства</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          type="date"
+                          value={localFilters.manufactureYear?.from || ''}
+                          onChange={(e) => updateFilter('manufactureYear', {
+                            ...localFilters.manufactureYear,
+                            from: e.target.value || undefined,
+                          })}
+                        />
+                        <Input
+                          type="date"
+                          value={localFilters.manufactureYear?.to || ''}
+                          onChange={(e) => updateFilter('manufactureYear', {
+                            ...localFilters.manufactureYear,
+                            to: e.target.value || undefined,
+                          })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Продлено до</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          type="date"
+                          value={localFilters.extendedUntil?.from || ''}
+                          onChange={(e) => updateFilter('extendedUntil', {
+                            ...localFilters.extendedUntil,
+                            from: e.target.value || undefined,
+                          })}
+                        />
+                        <Input
+                          type="date"
+                          value={localFilters.extendedUntil?.to || ''}
+                          onChange={(e) => updateFilter('extendedUntil', {
+                            ...localFilters.extendedUntil,
+                            to: e.target.value || undefined,
+                          })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Дата документа</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          type="date"
+                          value={localFilters.documentDate?.from || ''}
+                          onChange={(e) => updateFilter('documentDate', {
+                            ...localFilters.documentDate,
+                            from: e.target.value || undefined,
+                          })}
+                        />
+                        <Input
+                          type="date"
+                          value={localFilters.documentDate?.to || ''}
+                          onChange={(e) => updateFilter('documentDate', {
+                            ...localFilters.documentDate,
+                            to: e.target.value || undefined,
+                          })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Дата создания</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          type="datetime-local"
+                          value={localFilters.createdAt?.from || ''}
+                          onChange={(e) => updateFilter('createdAt', {
+                            ...localFilters.createdAt,
+                            from: e.target.value || undefined,
+                          })}
+                        />
+                        <Input
+                          type="datetime-local"
+                          value={localFilters.createdAt?.to || ''}
+                          onChange={(e) => updateFilter('createdAt', {
+                            ...localFilters.createdAt,
+                            to: e.target.value || undefined,
+                          })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Дата обновления</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          type="datetime-local"
+                          value={localFilters.updatedAt?.from || ''}
+                          onChange={(e) => updateFilter('updatedAt', {
+                            ...localFilters.updatedAt,
+                            from: e.target.value || undefined,
+                          })}
+                        />
+                        <Input
+                          type="datetime-local"
+                          value={localFilters.updatedAt?.to || ''}
+                          onChange={(e) => updateFilter('updatedAt', {
+                            ...localFilters.updatedAt,
+                            to: e.target.value || undefined,
+                          })}
                         />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Числовые фильтры */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Диапазоны значений</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Толщина колес */}
-                    <div className="space-y-2">
-                      <Label>Толщина левого колеса (мм)</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="От"
-                          value={localFilters.thicknessLeft?.from || ''}
-                          onChange={(e) => updateFilter('thicknessLeft', { 
-                            ...localFilters.thicknessLeft, 
-                            from: e.target.value ? Number(e.target.value) : undefined 
-                          })}
-                        />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="До"
-                          value={localFilters.thicknessLeft?.to || ''}
-                          onChange={(e) => updateFilter('thicknessLeft', { 
-                            ...localFilters.thicknessLeft, 
-                            to: e.target.value ? Number(e.target.value) : undefined 
-                          })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Толщина правого колеса (мм)</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="От"
-                          value={localFilters.thicknessRight?.from || ''}
-                          onChange={(e) => updateFilter('thicknessRight', { 
-                            ...localFilters.thicknessRight, 
-                            from: e.target.value ? Number(e.target.value) : undefined 
-                          })}
-                        />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="До"
-                          value={localFilters.thicknessRight?.to || ''}
-                          onChange={(e) => updateFilter('thicknessRight', { 
-                            ...localFilters.thicknessRight, 
-                            to: e.target.value ? Number(e.target.value) : undefined 
-                          })}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Срок службы */}
                     <div className="space-y-2">
                       <Label>Срок службы (лет)</Label>
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           type="number"
                           placeholder="От"
-                          value={localFilters.serviceLifeYears?.from || ''}
-                          onChange={(e) => updateFilter('serviceLifeYears', { 
-                            ...localFilters.serviceLifeYears, 
-                            from: e.target.value ? Number(e.target.value) : undefined 
+                          value={localFilters.serviceLifeYears?.from ?? ''}
+                          onChange={(e) => updateFilter('serviceLifeYears', {
+                            ...localFilters.serviceLifeYears,
+                            from: e.target.value ? Number(e.target.value) : undefined,
                           })}
                         />
                         <Input
                           type="number"
                           placeholder="До"
-                          value={localFilters.serviceLifeYears?.to || ''}
-                          onChange={(e) => updateFilter('serviceLifeYears', { 
-                            ...localFilters.serviceLifeYears, 
-                            to: e.target.value ? Number(e.target.value) : undefined 
+                          value={localFilters.serviceLifeYears?.to ?? ''}
+                          onChange={(e) => updateFilter('serviceLifeYears', {
+                            ...localFilters.serviceLifeYears,
+                            to: e.target.value ? Number(e.target.value) : undefined,
                           })}
                         />
                       </div>
@@ -347,7 +591,7 @@ export function PartsFilter({
                   <CardTitle className="text-base">Видимые столбцы</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 space-y-2">
-                  {sortFieldOptions.map((option) => (
+                  {PART_COLUMN_OPTIONS.map((option) => (
                     <div key={option.value} className="flex items-center space-x-2">
                       <Checkbox
                         id={`column-${option.value}`}
@@ -355,8 +599,8 @@ export function PartsFilter({
                         onCheckedChange={(checked) => {
                           if (checked) {
                             onVisibleColumnsChange([...(visibleColumns || []), option.value]);
-                          } else {
-                            onVisibleColumnsChange((visibleColumns || []).filter((col: string) => col !== option.value));
+                          } else if ((visibleColumns || []).length > 1) {
+                            onVisibleColumnsChange((visibleColumns || []).filter((col) => col !== option.value));
                           }
                         }}
                       />

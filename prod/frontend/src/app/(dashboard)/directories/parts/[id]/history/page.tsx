@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Skeleton, Badge } from "@/components/ui";
 import { ArrowLeft, History, FileText, Wrench, Building2, Calendar, Truck } from "lucide-react";
@@ -10,7 +10,20 @@ import { ru } from "date-fns/locale";
 
 export default function PartHistoryPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const partId = params.id as string;
+  const returnPage = searchParams.get("returnPage");
+  const returnPageSize = searchParams.get("returnPageSize");
+  const returnType = searchParams.get("returnType");
+  const partsListParams = new URLSearchParams();
+
+  if (returnPage) partsListParams.set("page", returnPage);
+  if (returnPageSize) partsListParams.set("pageSize", returnPageSize);
+  if (returnType) partsListParams.set("type", returnType);
+
+  const partsListHref = partsListParams.size
+    ? `/directories/parts?${partsListParams.toString()}`
+    : "/directories/parts";
 
   const { data: part, isLoading: isLoadingPart } = usePartById(partId);
   const { data: equipments = [], isLoading: isLoadingHistory, error } = usePartInstallationHistory(partId);
@@ -91,7 +104,7 @@ export default function PartHistoryPage() {
         </CardHeader>
         <CardContent>
           <p>Произошла ошибка при загрузке истории комплектации</p>
-          <Link href="/directories/parts">
+          <Link href={partsListHref}>
             <Button className="mt-4" variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Назад к списку деталей
@@ -114,7 +127,7 @@ export default function PartHistoryPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/directories/parts">
+          <Link href={partsListHref}>
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Назад к списку

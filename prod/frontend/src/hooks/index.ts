@@ -19,7 +19,9 @@ export * from './stampNumbers.hook';
 export * from './parts.hook';
 export * from './partEquipment.hook';
 export * from './partsFilter.hook';
+export * from './fitmentsFilter.hook';
 export * from './part-installations.hook';
+export * from './documents.hook';
 export * from './vessels.hook';
 
 export * from './auth.hook';

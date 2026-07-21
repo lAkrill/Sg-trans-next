@@ -4,6 +4,7 @@ import { documentsApi } from '@/api/directories';
 // Query keys
 export const documentsKeys = {
   all: ['directories', 'documents'] as const,
+  allWithoutPagination: () => [...documentsKeys.all, 'all'] as const,
   list: (pageNumber: number, pageSize: number) => [...documentsKeys.all, 'list', pageNumber, pageSize] as const,
   byId: (id: string) => [...documentsKeys.all, id] as const,
 };
@@ -13,6 +14,13 @@ export const useDocuments = (pageNumber = 1, pageSize = 10) => {
   return useQuery({
     queryKey: documentsKeys.list(pageNumber, pageSize),
     queryFn: () => documentsApi.getAll(pageNumber, pageSize),
+  });
+};
+
+export const useAllDocuments = () => {
+  return useQuery({
+    queryKey: documentsKeys.allWithoutPagination(),
+    queryFn: documentsApi.getAllWithoutPagination,
   });
 };
 
