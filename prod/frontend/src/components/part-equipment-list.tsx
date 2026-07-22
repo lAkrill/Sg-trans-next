@@ -1,34 +1,88 @@
 "use client";
 
-import { useState } from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle, 
-  Button, 
-  Input, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow, 
-  Badge, 
-  Skeleton, 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import { useMemo, useState, type FormEvent } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Button,
+  Input,
+  Label,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Badge,
+  Checkbox,
+  Skeleton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
 } from "@/components/ui";
-import { Search, FileText, History, RefreshCw, Download, Calendar, Wrench, MapPin } from "lucide-react";
-import { usePartEquipmentsByCistern, useLastPartEquipmentsByCistern } from "@/hooks";
+import {
+  Search,
+  FileText,
+  History,
+  RefreshCw,
+  Download,
+  Calendar,
+  Wrench,
+  MapPin,
+  AlertTriangle,
+} from "lucide-react";
+import { usePartEquipmentsByCistern, useLastPartEquipmentsByCistern, useAllUsers } from "@/hooks";
 import { LastEquipmentDTO } from "@/types/directories";
 
 interface PartEquipmentListProps {
   cisternId: string;
 }
+
+type NonConformityMarks = Record<string, boolean>;
+
+interface NonConformityTableProps {
+  equipments: LastEquipmentDTO[];
+  nonConformityMarks: NonConformityMarks;
+  onToggleNonConformity: (equipmentTypeId: string, checked: boolean) => void;
+}
+
+interface SelectedNonConformityItem {
+  id: string;
+  category: string;
+  name: string;
+  details: string;
+}
+
+const CATEGORY_LABELS = {
+  wheels: "Колесные пары",
+  trucks: "Детали тележек",
+  couplers: "Автосцепное оборудование",
+  history: "История изменений",
+} as const;
+
+const getPartDetails = (equipment: LastEquipmentDTO) => {
+  const part = equipment.lastEquipment.part;
+  const stamp = part?.stampInfo?.value || "—";
+  const serial = part?.serialNumber || "—";
+  const year = part?.manufactureYear ? new Date(part.manufactureYear).getFullYear() : "—";
+  return `${stamp}; ${serial}; ${year}`;
+};
 
 // Функция для определения категории оборудования
 const getEquipmentCategory = (partTypeName?: string): "wheels" | "trucks" | "couplers" | "other" => {
@@ -69,13 +123,11 @@ const getEquipmentCategory = (partTypeName?: string): "wheels" | "trucks" | "cou
 };
 
 // Компонент таблицы для колесных пар
-const WheelPairsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "—";
-    const date = new Date(dateString);
-    return `${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}`;
-  };
-
+const WheelPairsTable = ({
+  equipments,
+  nonConformityMarks,
+  onToggleNonConformity,
+}: NonConformityTableProps) => {
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -89,51 +141,76 @@ const WheelPairsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
                 Наименование <br />
                 показателя
               </TableHead>
-              <TableHead>Код ЖД <br/>администр.</TableHead>
-                
-             
-              <TableHead>Деталь<br/>(код пред.; завод. номер; год) </TableHead>
-            
-              <TableHead>Код п-я работы <br/> с деталью</TableHead>
+              <TableHead>
+                Код ЖД <br />
+                администр.
+              </TableHead>
+              <TableHead>
+                Деталь
+                <br />
+                (код пред.; завод. номер; год){" "}
+              </TableHead>
+              <TableHead>
+                Код п-я работы <br /> с деталью
+              </TableHead>
               <TableHead>
                 Дата работ <br />с деталью
               </TableHead>
-              
               <TableHead>
                 Код вида <br />
                 работы
               </TableHead>
-              
               <TableHead>Толщина обода (Л/П)</TableHead>
-              <TableHead>Документ <br/>(договор, дата) </TableHead>
+              <TableHead>
+                Документ <br />
+                (договор, дата){" "}
+              </TableHead>
+              <TableHead className="text-center">
+                Отметка
+                <br />
+                несоответствия
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {equipments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   Колесные пары не установлены
                 </TableCell>
               </TableRow>
             ) : (
               equipments.map((equipment) => (
-                <TableRow key={equipment.equipmentTypeId}>
-                  <TableCell>{equipment.equipmentTypeName} 
-                              <br></br> <span className="text-xs text-gray-500">Код детали: {equipment.lastEquipment.equipmentType?.code} </span>
-                              {/* <br></br> <span className="text-xs text-gray-500">Код неиспр.: {equipment.lastEquipment.defectsId || "—"} </span> */}
-                  </TableCell>
-                 <TableCell>
-                        {equipment.lastEquipment.adminOwnerId || "—"}
-                 </TableCell>
-
-                  
+                <TableRow
+                  key={equipment.equipmentTypeId}
+                  className={
+                    nonConformityMarks[equipment.equipmentTypeId]
+                      ? "bg-pink-100 hover:bg-pink-100"
+                      : undefined
+                  }
+                >
                   <TableCell>
-                    <span>{equipment.lastEquipment.part?.stampInfo?.value || "—"}; {equipment.lastEquipment.part?.serialNumber || "—"}; {equipment.lastEquipment.part?.manufactureYear ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear() : "—"} </span>
+                    {equipment.equipmentTypeName}
+                    <br></br>{" "}
+                    <span className="text-xs text-gray-500">
+                      Код детали: {equipment.lastEquipment.equipmentType?.code}{" "}
+                    </span>
                   </TableCell>
-
+                  <TableCell>{equipment.lastEquipment.adminOwnerId || "—"}</TableCell>
+                  <TableCell>
+                    <span>
+                      {equipment.lastEquipment.part?.stampInfo?.value || "—"};{" "}
+                      {equipment.lastEquipment.part?.serialNumber || "—"};{" "}
+                      {equipment.lastEquipment.part?.manufactureYear
+                        ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear()
+                        : "—"}{" "}
+                    </span>
+                  </TableCell>
                   <TableCell>{equipment.lastEquipment.jobDepot?.code || "—"}</TableCell>
                   <TableCell>
-                    {equipment.lastEquipment.jobDate ? new Date(equipment.lastEquipment.jobDate).getFullYear() : "—"}
+                    {equipment.lastEquipment.jobDate
+                      ? new Date(equipment.lastEquipment.jobDate).getFullYear()
+                      : "—"}
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
                   <TableCell>
@@ -142,8 +219,22 @@ const WheelPairsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
                       : "—"}
                   </TableCell>
                   <TableCell>
-                     {equipment.lastEquipment.document?.number || "—"}; {equipment.lastEquipment.documentDate ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU") : "—"}
-                     <br/> Вид ремонта: {equipment.lastEquipment.repairType?.code || "—"}
+                    {equipment.lastEquipment.document?.number || "—"};{" "}
+                    {equipment.lastEquipment.documentDate
+                      ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU")
+                      : "—"}
+                    <br /> Вид ремонта: {equipment.lastEquipment.repairType?.code || "—"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex justify-center">
+                      <Checkbox
+                        checked={!!nonConformityMarks[equipment.equipmentTypeId]}
+                        onCheckedChange={(checked) =>
+                          onToggleNonConformity(equipment.equipmentTypeId, checked === true)
+                        }
+                        aria-label="Отметка несоответствия"
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -156,13 +247,11 @@ const WheelPairsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
 };
 
 // Компонент таблицы для деталей тележек
-const TruckPartsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "—";
-    const date = new Date(dateString);
-    return `${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}`;
-  };
-
+const TruckPartsTable = ({
+  equipments,
+  nonConformityMarks,
+  onToggleNonConformity,
+}: NonConformityTableProps) => {
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -181,55 +270,91 @@ const TruckPartsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
                 Код ЖД <br />
                 администр.
               </TableHead>
-              <TableHead>Деталь<br/>(код пред.; завод. номер; год) </TableHead>
-              
-              <TableHead>Код п-я работы <br/> с деталью</TableHead>
               <TableHead>
-               Дата работ <br />с деталью
+                Деталь
+                <br />
+                (код пред.; завод. номер; год){" "}
+              </TableHead>
+              <TableHead>
+                Код п-я работы <br /> с деталью
+              </TableHead>
+              <TableHead>
+                Дата работ <br />с деталью
               </TableHead>
               <TableHead>Код вида работы</TableHead>
               <TableHead>Код вида тележки</TableHead>
-               <TableHead>Документ <br/>(договор, дата) </TableHead>
+              <TableHead>
+                Документ <br />
+                (договор, дата){" "}
+              </TableHead>
+              <TableHead className="text-center">
+                Отметка
+                <br />
+                несоответствия
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {equipments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   Детали тележек не установлены
                 </TableCell>
               </TableRow>
             ) : (
               equipments.map((equipment) => (
-                <TableRow key={equipment.equipmentTypeId}>
-                  <TableCell>{equipment.equipmentTypeName}
-                                    
-                              <br></br> <span className="text-xs text-gray-500">Код детали: {equipment.lastEquipment.equipmentType?.code} </span>
-                              {/* <br></br> <span className="text-xs text-gray-500">Код неиспр.: {equipment.lastEquipment.defectsId || "—"} </span> */}
-               
+                <TableRow
+                  key={equipment.equipmentTypeId}
+                  className={
+                    nonConformityMarks[equipment.equipmentTypeId]
+                      ? "bg-pink-100 hover:bg-pink-100"
+                      : undefined
+                  }
+                >
+                  <TableCell>
+                    {equipment.equipmentTypeName}
+                    <br></br>{" "}
+                    <span className="text-xs text-gray-500">
+                      Код детали: {equipment.lastEquipment.equipmentType?.code}{" "}
+                    </span>
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.adminOwnerId || "—"}</TableCell>
                   <TableCell>
-                    <span>{equipment.lastEquipment.part?.stampInfo?.value || "—"}; {equipment.lastEquipment.part?.serialNumber || "—"}; {equipment.lastEquipment.part?.manufactureYear ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear() : "—"}  </span>
+                    <span>
+                      {equipment.lastEquipment.part?.stampInfo?.value || "—"};{" "}
+                      {equipment.lastEquipment.part?.serialNumber || "—"};{" "}
+                      {equipment.lastEquipment.part?.manufactureYear
+                        ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear()
+                        : "—"}{" "}
+                    </span>
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.jobDepot?.code || "—"}</TableCell>
                   <TableCell>
-                    {
-                      equipment.lastEquipment.jobDate 
-                        ? equipment.lastEquipment.jobDate != "0" 
-                          ? new Date(equipment.lastEquipment.jobDate).getFullYear() 
-                          : "—" 
+                    {equipment.lastEquipment.jobDate
+                      ? equipment.lastEquipment.jobDate != "0"
+                        ? new Date(equipment.lastEquipment.jobDate).getFullYear()
                         : "—"
-                    }
+                      : "—"}
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
-
-                  
-                
                   <TableCell>{equipment.lastEquipment.truckType || "—"}</TableCell>
                   <TableCell>
-                     {equipment.lastEquipment.document?.number || "—"}; {equipment.lastEquipment.documentDate ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU") : "—"}
-                     <br/> Вид ремонта: {equipment.lastEquipment.repairType?.code || "—"}
+                    {equipment.lastEquipment.document?.number || "—"};{" "}
+                    {equipment.lastEquipment.documentDate
+                      ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU")
+                      : "—"}
+                    <br /> Вид ремонта: {equipment.lastEquipment.repairType?.code || "—"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex justify-center">
+                      <Checkbox
+                        checked={!!nonConformityMarks[equipment.equipmentTypeId]}
+                        onCheckedChange={(checked) =>
+                          onToggleNonConformity(equipment.equipmentTypeId, checked === true)
+                        }
+                        aria-label="Отметка несоответствия"
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -242,7 +367,11 @@ const TruckPartsTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => 
 };
 
 // Компонент таблицы для автосцепного оборудования
-const CouplerEquipmentTable = ({ equipments }: { equipments: LastEquipmentDTO[] }) => {
+const CouplerEquipmentTable = ({
+  equipments,
+  nonConformityMarks,
+  onToggleNonConformity,
+}: NonConformityTableProps) => {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "—";
     const date = new Date(dateString);
@@ -288,18 +417,30 @@ const CouplerEquipmentTable = ({ equipments }: { equipments: LastEquipmentDTO[] 
                 ремонта (?)
               </TableHead>
               <TableHead>Примечание</TableHead>
+              <TableHead className="text-center">
+                Отметка
+                <br />
+                несоответствия
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {equipments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8">
+                <TableCell colSpan={12} className="text-center py-8">
                   Автосцепное оборудование не установлено
                 </TableCell>
               </TableRow>
             ) : (
               equipments.map((equipment) => (
-                <TableRow key={equipment.equipmentTypeId}>
+                <TableRow
+                  key={equipment.equipmentTypeId}
+                  className={
+                    nonConformityMarks[equipment.equipmentTypeId]
+                      ? "bg-pink-100 hover:bg-pink-100"
+                      : undefined
+                  }
+                >
                   <TableCell>{equipment.equipmentTypeName}</TableCell>
                   <TableCell>{equipment.lastEquipment.equipmentType?.code || "—"}</TableCell>
                   <TableCell>{equipment.lastEquipment.defectsId || "—"}</TableCell>
@@ -315,6 +456,17 @@ const CouplerEquipmentTable = ({ equipments }: { equipments: LastEquipmentDTO[] 
                   <TableCell>{formatDate(equipment.lastEquipment.documentDate)}</TableCell>
                   <TableCell>{equipment.lastEquipment.repairType?.code || "—"}</TableCell>
                   <TableCell className="max-w-xs truncate">{equipment.lastEquipment.notes || "—"}</TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex justify-center">
+                      <Checkbox
+                        checked={!!nonConformityMarks[equipment.equipmentTypeId]}
+                        onCheckedChange={(checked) =>
+                          onToggleNonConformity(equipment.equipmentTypeId, checked === true)
+                        }
+                        aria-label="Отметка несоответствия"
+                      />
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -328,14 +480,19 @@ const CouplerEquipmentTable = ({ equipments }: { equipments: LastEquipmentDTO[] 
 export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("current");
+  const [nonConformityMarks, setNonConformityMarks] = useState<NonConformityMarks>({});
+  const [historyNonConformityMarks, setHistoryNonConformityMarks] = useState<NonConformityMarks>({});
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportRecipientId, setReportRecipientId] = useState("");
+  const [reportComment, setReportComment] = useState("");
 
   const { data: allEquipments, isLoading: isLoadingAll, error: errorAll } = usePartEquipmentsByCistern(cisternId);
-
   const {
     data: lastEquipments,
     isLoading: isLoadingLast,
     error: errorLast,
   } = useLastPartEquipmentsByCistern(cisternId);
+  const { data: users, isLoading: isLoadingUsers } = useAllUsers();
 
   const getOperationText = (operation: number) => {
     switch (operation) {
@@ -351,6 +508,20 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "—";
     return new Date(dateString).toLocaleDateString("ru-RU");
+  };
+
+  const toggleNonConformity = (equipmentTypeId: string, checked: boolean) => {
+    setNonConformityMarks((prev) => ({
+      ...prev,
+      [equipmentTypeId]: checked,
+    }));
+  };
+
+  const toggleHistoryNonConformity = (equipmentId: string, checked: boolean) => {
+    setHistoryNonConformityMarks((prev) => ({
+      ...prev,
+      [equipmentId]: checked,
+    }));
   };
 
   // Группировка оборудования по категориям
@@ -379,6 +550,81 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
         equipment.notes?.toLowerCase().includes(search)
       );
     }) || [];
+
+  const selectedNonConformityItems = useMemo(() => {
+    const items: SelectedNonConformityItem[] = [];
+
+    (
+      [
+        ["wheels", groupedEquipments.wheels],
+        ["trucks", groupedEquipments.trucks],
+        ["couplers", groupedEquipments.couplers],
+      ] as const
+    ).forEach(([category, equipments]) => {
+      equipments.forEach((equipment) => {
+        if (!nonConformityMarks[equipment.equipmentTypeId]) return;
+        items.push({
+          id: equipment.equipmentTypeId,
+          category: CATEGORY_LABELS[category],
+          name: equipment.equipmentTypeName,
+          details: getPartDetails(equipment),
+        });
+      });
+    });
+
+    filteredAllEquipments.forEach((equipment) => {
+      if (!historyNonConformityMarks[equipment.id]) return;
+      items.push({
+        id: equipment.id,
+        category: CATEGORY_LABELS.history,
+        name: equipment.equipmentType?.name || "—",
+        details: [
+          equipment.equipmentType?.code ? `Код: ${equipment.equipmentType.code}` : null,
+          equipment.jobDepot?.shortName || equipment.jobDepot?.name || null,
+          formatDate(equipment.document?.date),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      });
+    });
+
+    return items;
+  }, [
+    filteredAllEquipments,
+    groupedEquipments.couplers,
+    groupedEquipments.trucks,
+    groupedEquipments.wheels,
+    historyNonConformityMarks,
+    nonConformityMarks,
+  ]);
+
+  const resetReportForm = () => {
+    setReportRecipientId("");
+    setReportComment("");
+  };
+
+  const handleReportDialogChange = (open: boolean) => {
+    setReportDialogOpen(open);
+    if (!open) {
+      resetReportForm();
+    }
+  };
+
+  const handleReportSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // Отправка пока только на уровне UI — API для сообщений о несоответствии не подключен
+    handleReportDialogChange(false);
+  };
+
+  const formatUserName = (user: {
+    firstName?: string;
+    lastName?: string;
+    patronymic?: string;
+    email: string;
+  }) => {
+    const fullName = [user.lastName, user.firstName, user.patronymic].filter(Boolean).join(" ");
+    return fullName ? `${fullName} (${user.email})` : user.email;
+  };
 
   if (errorAll || errorLast) {
     return (
@@ -425,8 +671,8 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
         </TabsList>
 
         {/* Поиск */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex w-full items-center justify-between gap-4">
+          <div className="relative w-full max-w-sm">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Поиск по типу оборудования, депо..."
@@ -435,6 +681,10 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
               className="pl-8"
             />
           </div>
+          <Button variant="outline" onClick={() => setReportDialogOpen(true)}>
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            Сообщить о несоответствии
+          </Button>
         </div>
 
         {/* Текущая комплектация */}
@@ -447,9 +697,21 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
             </div>
           ) : (
             <div className="space-y-6">
-              <WheelPairsTable equipments={groupedEquipments.wheels} />
-              <TruckPartsTable equipments={groupedEquipments.trucks} />
-              <CouplerEquipmentTable equipments={groupedEquipments.couplers} />
+              <WheelPairsTable
+                equipments={groupedEquipments.wheels}
+                nonConformityMarks={nonConformityMarks}
+                onToggleNonConformity={toggleNonConformity}
+              />
+              <TruckPartsTable
+                equipments={groupedEquipments.trucks}
+                nonConformityMarks={nonConformityMarks}
+                onToggleNonConformity={toggleNonConformity}
+              />
+              <CouplerEquipmentTable
+                equipments={groupedEquipments.couplers}
+                nonConformityMarks={nonConformityMarks}
+                onToggleNonConformity={toggleNonConformity}
+              />
             </div>
           )}
         </TabsContent>
@@ -484,6 +746,11 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                       <TableHead>Толщина колес (мм)</TableHead>
                       <TableHead>Тип тележки</TableHead>
                       <TableHead>Примечания</TableHead>
+                      <TableHead className="text-center">
+                        Отметка
+                        <br />
+                        несоответствия
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -496,7 +763,14 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                       .map((equipment) => {
                         const operation = getOperationText(equipment.operation);
                         return (
-                          <TableRow key={equipment.id}>
+                          <TableRow
+                            key={equipment.id}
+                            className={
+                              historyNonConformityMarks[equipment.id]
+                                ? "bg-pink-100 hover:bg-pink-100"
+                                : undefined
+                            }
+                          >
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4 text-gray-400" />
@@ -510,7 +784,9 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                               <div>
                                 <div>{equipment.equipmentType?.name || "—"}</div>
                                 {equipment.equipmentType?.code && (
-                                  <div className="text-xs text-gray-500">Код: {equipment.equipmentType.code}</div>
+                                  <div className="text-xs text-gray-500">
+                                    Код: {equipment.equipmentType.code}
+                                  </div>
                                 )}
                               </div>
                             </TableCell>
@@ -532,15 +808,32 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                                 ? `${equipment.thicknessLeft}/${equipment.thicknessRight}`
                                 : "—"}
                             </TableCell>
-                            <TableCell>{equipment.truckType ? `Тип ${equipment.truckType}` : "—"}</TableCell>
-                            <TableCell className="max-w-xs truncate">{equipment.notes || "—"}</TableCell>
+                            <TableCell>
+                              {equipment.truckType ? `Тип ${equipment.truckType}` : "—"}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {equipment.notes || "—"}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={!!historyNonConformityMarks[equipment.id]}
+                                  onCheckedChange={(checked) =>
+                                    toggleHistoryNonConformity(equipment.id, checked === true)
+                                  }
+                                  aria-label="Отметка несоответствия"
+                                />
+                              </div>
+                            </TableCell>
                           </TableRow>
                         );
                       })}
                     {filteredAllEquipments.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8">
-                          {allEquipments?.length === 0 ? "История изменений пуста" : "Записи не найдены"}
+                        <TableCell colSpan={10} className="text-center py-8">
+                          {allEquipments?.length === 0
+                            ? "История изменений пуста"
+                            : "Записи не найдены"}
                         </TableCell>
                       </TableRow>
                     )}
@@ -551,6 +844,80 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={reportDialogOpen} onOpenChange={handleReportDialogChange}>
+        <DialogContent className="max-h-[85vh] sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Сообщить о несоответствии</DialogTitle>
+            <DialogDescription>
+              Укажите получателя, проверьте отмеченные детали и добавьте комментарий.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleReportSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nonconformity-recipient">Кому отправлять</Label>
+              <Select value={reportRecipientId} onValueChange={setReportRecipientId} required>
+                <SelectTrigger id="nonconformity-recipient" className="w-full">
+                  <SelectValue
+                    placeholder={isLoadingUsers ? "Загрузка пользователей..." : "Выберите получателя"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {(users || []).map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {formatUserName(user)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Отмеченные детали</Label>
+              {selectedNonConformityItems.length === 0 ? (
+                <div className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                  Нет отмеченных деталей. Отметьте чекбоксы в таблицах.
+                </div>
+              ) : (
+                <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
+                  {selectedNonConformityItems.map((item) => (
+                    <div key={`${item.category}-${item.id}`} className="rounded-md bg-pink-50 px-3 py-2">
+                      <div className="text-xs text-muted-foreground">{item.category}</div>
+                      <div className="text-sm font-medium">{item.name}</div>
+                      <div className="text-xs text-muted-foreground">{item.details}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nonconformity-comment">Комментарий</Label>
+              <Textarea
+                id="nonconformity-comment"
+                value={reportComment}
+                onChange={(e) => setReportComment(e.target.value)}
+                placeholder="Опишите несоответствие..."
+                rows={4}
+                required
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => handleReportDialogChange(false)}>
+                Отмена
+              </Button>
+              <Button
+                type="submit"
+                disabled={!reportRecipientId || !reportComment.trim() || selectedNonConformityItems.length === 0}
+              >
+                Отправить
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
