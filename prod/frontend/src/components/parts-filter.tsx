@@ -61,7 +61,7 @@ export const PART_COLUMN_OPTIONS = [
   { value: 'wagonDepot', label: 'Вагон/Депо' },
   { value: 'serviceLife', label: 'Срок службы' },
   { value: 'extendedDate', label: 'Дата окончания эксплуатации' },
-  { value: 'nonConformity', label: 'Отметка несоответствия' },
+  { value: 'extendedUntil', label: 'Дата продления эксплуатации' },
   { value: 'status', label: 'Статус' },
   { value: 'notes', label: 'Примечания' },
   { value: 'model', label: 'Модель' },

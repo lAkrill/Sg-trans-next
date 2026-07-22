@@ -18,6 +18,9 @@ export default function DashboardPage() {
       {/* Quick actions */}
       <QuickActions />
 
+      {/* User info card */}
+      <UserMessageCard />
+      
       {/* Settings shortcut */}
       <Card>
         <CardContent className="p-6">
@@ -40,8 +43,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* User info card */}
-      <UserMessageCard />
+
     </div>
   );
 }

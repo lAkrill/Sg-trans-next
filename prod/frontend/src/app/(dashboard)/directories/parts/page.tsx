@@ -23,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
   Badge,
-  Checkbox,
   Skeleton,
 } from "@/components/ui";
 import {
@@ -42,6 +41,7 @@ import { useParts, useDeletePart, useFilterAllParts } from "@/hooks";
 import { usePartTypeOptions } from "@/hooks";
 import { DEFAULT_PART_VISIBLE_COLUMNS, PART_COLUMN_OPTIONS, PartsFilter } from "@/components/parts-filter";
 import { api } from "@/lib/api";
+import { formatDate } from "@/lib/formatDate";
 import type {
   PartDTO,
   PartFilterSortWithoutPaginationDTO,
@@ -72,7 +72,6 @@ export default function PartsPage() {
     documentTypes: [],
   });
   const [visibleColumns, setVisibleColumns] = useState<string[]>([...DEFAULT_PART_VISIBLE_COLUMNS]);
-  const [nonConformityMarks, setNonConformityMarks] = useState<Record<string, boolean>>({});
   const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
 
   const { data: partsData, isLoading, error } = useParts(
@@ -343,11 +342,7 @@ export default function PartsPage() {
 
   const getServiceLifeYearsValue = (part: PartDTO): number | null => {
     const flatPart = part as PartDTO & { serviceLifeYears?: number | null };
-    const value =
-      flatPart.serviceLifeYears ??
-      part.sideFrame?.serviceLifeYears ??
-      part.bolster?.serviceLifeYears ??
-      part.shockAbsorber?.serviceLifeYears;
+    const value = flatPart.serviceLifeYears;
 
     if (value == null || value === 0 || Number.isNaN(value)) {
       return null;
@@ -408,6 +403,10 @@ export default function PartsPage() {
     return String(endDate.getFullYear());
   };
 
+  const getExtendedUntilDisplay = (part: PartDTO): string => {
+    return formatDate(part.extendedUntil, "ru-RU", "—");
+  };
+
   const formatYear = (yearData?: string | { year: number; month: number; day: number }) => {
     if (!yearData) return "—";
     if (typeof yearData === "string") {
@@ -442,7 +441,7 @@ export default function PartsPage() {
           wagonDepot: getWagonDepotDisplay(part),
           serviceLife: String(getServiceLifeDisplay(part)),
           extendedDate: getExtendedDateDisplay(part),
-          nonConformity: nonConformityMarks[part.id] ? "Да" : "Нет",
+          extendedUntil: getExtendedUntilDisplay(part),
           status: part.status?.name ?? "—",
           notes: part.notes || "—",
           model: part.model || "—",
@@ -500,7 +499,7 @@ export default function PartsPage() {
         setExportingType(null);
       }
     },
-    [allParts, visibleColumns, nonConformityMarks]
+    [allParts, visibleColumns]
   );
 
   if (error) {
@@ -680,11 +679,12 @@ export default function PartsPage() {
                         Дата окончания <br />эксплуатации
                       </TableHead>
                     )}
-                    {isColumnVisible("nonConformity") && (
-                      <TableHead className="text-center">
-                        Отметка <br />несоответствия
+                    {isColumnVisible("extendedUntil") && (
+                      <TableHead>
+                        Дата продления <br />эксплуатации
                       </TableHead>
                     )}
+
                     {isColumnVisible("status") && <TableHead>Статус</TableHead>}
                     {isColumnVisible("notes") && <TableHead>Примечания</TableHead>}
                     {isColumnVisible("model") && <TableHead>Модель</TableHead>}
@@ -693,10 +693,7 @@ export default function PartsPage() {
                 </TableHeader>
                 <TableBody>
                   {displayParts.map((part) => (
-                    <TableRow
-                      key={part.id}
-                      className={nonConformityMarks[part.id] ? "bg-pink-100 hover:bg-pink-100" : undefined}
-                    >
+                    <TableRow key={part.id}>
                       {isColumnVisible("partType") && (
                         <TableCell className="font-medium">
                           {getPartTypeDisplay(part)}
@@ -723,21 +720,8 @@ export default function PartsPage() {
                       {isColumnVisible("extendedDate") && (
                         <TableCell>{getExtendedDateDisplay(part)}</TableCell>
                       )}
-                      {isColumnVisible("nonConformity") && (
-                        <TableCell className="text-center">
-                          <div className="flex justify-center">
-                            <Checkbox
-                              checked={!!nonConformityMarks[part.id]}
-                              onCheckedChange={(checked) =>
-                                setNonConformityMarks((prev) => ({
-                                  ...prev,
-                                  [part.id]: checked === true,
-                                }))
-                              }
-                              aria-label="Отметка несоответствия"
-                            />
-                          </div>
-                        </TableCell>
+                      {isColumnVisible("extendedUntil") && (
+                        <TableCell>{getExtendedUntilDisplay(part)}</TableCell>
                       )}
                       {isColumnVisible("status") && (
                         <TableCell>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   Card,
   CardContent,
@@ -46,8 +46,20 @@ import {
   Wrench,
   MapPin,
   AlertTriangle,
+  Loader2,
+  Paperclip,
+  X,
 } from "lucide-react";
-import { usePartEquipmentsByCistern, useLastPartEquipmentsByCistern, useAllUsers } from "@/hooks";
+import {
+  usePartEquipmentsByCistern,
+  useLastPartEquipmentsByCistern,
+  useAllUsers,
+  useCurrentUser,
+  useCreateMessage,
+  useCistern,
+} from "@/hooks";
+import { filesApi } from "@/api/files";
+import { MessagePriority } from "@/types/messages";
 import { LastEquipmentDTO } from "@/types/directories";
 
 interface PartEquipmentListProps {
@@ -69,11 +81,19 @@ interface SelectedNonConformityItem {
   details: string;
 }
 
+const ALLOWED_REPORT_FILE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".pdf"] as const;
+const ALLOWED_REPORT_FILE_ACCEPT = ".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf";
+const MAX_REPORT_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+const isAllowedReportFile = (file: File) => {
+  const lowerName = file.name.toLowerCase();
+  return ALLOWED_REPORT_FILE_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+};
+
 const CATEGORY_LABELS = {
   wheels: "Колесные пары",
   trucks: "Детали тележек",
   couplers: "Автосцепное оборудование",
-  history: "История изменений",
 } as const;
 
 const getPartDetails = (equipment: LastEquipmentDTO) => {
@@ -481,10 +501,11 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("current");
   const [nonConformityMarks, setNonConformityMarks] = useState<NonConformityMarks>({});
-  const [historyNonConformityMarks, setHistoryNonConformityMarks] = useState<NonConformityMarks>({});
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportRecipientId, setReportRecipientId] = useState("");
   const [reportComment, setReportComment] = useState("");
+  const [reportFile, setReportFile] = useState<File | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const { data: allEquipments, isLoading: isLoadingAll, error: errorAll } = usePartEquipmentsByCistern(cisternId);
   const {
@@ -492,7 +513,10 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
     isLoading: isLoadingLast,
     error: errorLast,
   } = useLastPartEquipmentsByCistern(cisternId);
+  const { data: cistern } = useCistern(cisternId);
   const { data: users, isLoading: isLoadingUsers } = useAllUsers();
+  const { data: currentUser } = useCurrentUser();
+  const createMessageMutation = useCreateMessage();
 
   const getOperationText = (operation: number) => {
     switch (operation) {
@@ -514,13 +538,6 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
     setNonConformityMarks((prev) => ({
       ...prev,
       [equipmentTypeId]: checked,
-    }));
-  };
-
-  const toggleHistoryNonConformity = (equipmentId: string, checked: boolean) => {
-    setHistoryNonConformityMarks((prev) => ({
-      ...prev,
-      [equipmentId]: checked,
     }));
   };
 
@@ -572,35 +589,19 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
       });
     });
 
-    filteredAllEquipments.forEach((equipment) => {
-      if (!historyNonConformityMarks[equipment.id]) return;
-      items.push({
-        id: equipment.id,
-        category: CATEGORY_LABELS.history,
-        name: equipment.equipmentType?.name || "—",
-        details: [
-          equipment.equipmentType?.code ? `Код: ${equipment.equipmentType.code}` : null,
-          equipment.jobDepot?.shortName || equipment.jobDepot?.name || null,
-          formatDate(equipment.document?.date),
-        ]
-          .filter(Boolean)
-          .join(" · "),
-      });
-    });
-
     return items;
   }, [
-    filteredAllEquipments,
     groupedEquipments.couplers,
     groupedEquipments.trucks,
     groupedEquipments.wheels,
-    historyNonConformityMarks,
     nonConformityMarks,
   ]);
 
   const resetReportForm = () => {
     setReportRecipientId("");
     setReportComment("");
+    setReportFile(null);
+    setReportError(null);
   };
 
   const handleReportDialogChange = (open: boolean) => {
@@ -610,10 +611,84 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
     }
   };
 
-  const handleReportSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleReportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+
+    if (!file) {
+      setReportFile(null);
+      return;
+    }
+
+    if (!isAllowedReportFile(file)) {
+      setReportError("Допустимые форматы файла: PNG, JPG, JPEG, PDF");
+      setReportFile(null);
+      return;
+    }
+
+    if (file.size > MAX_REPORT_FILE_SIZE_BYTES) {
+      setReportError("Размер файла не должен превышать 10 МБ");
+      setReportFile(null);
+      return;
+    }
+
+    setReportError(null);
+    setReportFile(file);
+  };
+
+  const buildNonConformityMessageText = () => {
+    const detailsBlock = selectedNonConformityItems
+      .map((item) => `${item.name}: ${item.details}`)
+      .join("\n");
+    const wagonNumber = cistern?.number ? `Номер вагона: ${cistern.number}` : "Номер вагона: —";
+
+    return `${wagonNumber}\n\n${detailsBlock}\n\n${reportComment.trim()}`;
+  };
+
+  const handleReportSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Отправка пока только на уровне UI — API для сообщений о несоответствии не подключен
-    handleReportDialogChange(false);
+    setReportError(null);
+
+    if (!currentUser?.userId) {
+      setReportError("Не удалось определить текущего пользователя");
+      return;
+    }
+
+    if (!reportRecipientId || !reportComment.trim() || selectedNonConformityItems.length === 0) {
+      return;
+    }
+
+    try {
+      let fileName: string | null = null;
+      let filePath: string | null = null;
+
+      if (reportFile) {
+        const extension = reportFile.name.includes(".")
+          ? reportFile.name.slice(reportFile.name.lastIndexOf(".")).toLowerCase()
+          : "";
+        const uniqueFileName = `${crypto.randomUUID()}${extension}`;
+        const uploaded = await filesApi.upload(reportFile, {
+          directory: "Message",
+          fileName: uniqueFileName,
+        });
+        fileName = uploaded.fileName;
+        filePath = "Message";
+      }
+
+      await createMessageMutation.mutateAsync({
+        text: buildNonConformityMessageText(),
+        fromUserId: currentUser.userId,
+        toUserId: reportRecipientId,
+        priority: MessagePriority.Normal,
+        fileName,
+        filePath,
+      });
+
+      setNonConformityMarks({});
+      handleReportDialogChange(false);
+    } catch {
+      setReportError("Не удалось отправить сообщение. Попробуйте ещё раз.");
+    }
   };
 
   const formatUserName = (user: {
@@ -746,11 +821,6 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                       <TableHead>Толщина колес (мм)</TableHead>
                       <TableHead>Тип тележки</TableHead>
                       <TableHead>Примечания</TableHead>
-                      <TableHead className="text-center">
-                        Отметка
-                        <br />
-                        несоответствия
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -763,14 +833,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                       .map((equipment) => {
                         const operation = getOperationText(equipment.operation);
                         return (
-                          <TableRow
-                            key={equipment.id}
-                            className={
-                              historyNonConformityMarks[equipment.id]
-                                ? "bg-pink-100 hover:bg-pink-100"
-                                : undefined
-                            }
-                          >
+                          <TableRow key={equipment.id}>
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4 text-gray-400" />
@@ -814,23 +877,12 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                             <TableCell className="max-w-xs truncate">
                               {equipment.notes || "—"}
                             </TableCell>
-                            <TableCell className="text-center">
-                              <div className="flex justify-center">
-                                <Checkbox
-                                  checked={!!historyNonConformityMarks[equipment.id]}
-                                  onCheckedChange={(checked) =>
-                                    toggleHistoryNonConformity(equipment.id, checked === true)
-                                  }
-                                  aria-label="Отметка несоответствия"
-                                />
-                              </div>
-                            </TableCell>
                           </TableRow>
                         );
                       })}
                     {filteredAllEquipments.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8">
+                        <TableCell colSpan={9} className="text-center py-8">
                           {allEquipments?.length === 0
                             ? "История изменений пуста"
                             : "Записи не найдены"}
@@ -904,15 +956,70 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="nonconformity-file">Файл</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" asChild>
+                  <label htmlFor="nonconformity-file" className="cursor-pointer">
+                    <Paperclip className="mr-2 h-4 w-4" />
+                    {reportFile ? "Заменить файл" : "Загрузить файл"}
+                  </label>
+                </Button>
+                <Input
+                  id="nonconformity-file"
+                  type="file"
+                  accept={ALLOWED_REPORT_FILE_ACCEPT}
+                  className="hidden"
+                  onChange={handleReportFileChange}
+                />
+                <span className="text-xs text-muted-foreground">PNG, JPG, JPEG, PDF до 10 МБ</span>
+              </div>
+              {reportFile && (
+                <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                  <span className="truncate">{reportFile.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setReportFile(null)}
+                    disabled={createMessageMutation.isPending}
+                    aria-label="Удалить файл"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {reportError && <p className="text-sm text-red-600">{reportError}</p>}
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => handleReportDialogChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleReportDialogChange(false)}
+                disabled={createMessageMutation.isPending}
+              >
                 Отмена
               </Button>
               <Button
                 type="submit"
-                disabled={!reportRecipientId || !reportComment.trim() || selectedNonConformityItems.length === 0}
+                disabled={
+                  createMessageMutation.isPending ||
+                  !currentUser?.userId ||
+                  !reportRecipientId ||
+                  !reportComment.trim() ||
+                  selectedNonConformityItems.length === 0
+                }
               >
-                Отправить
+                {createMessageMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Отправка...
+                  </>
+                ) : (
+                  "Отправить"
+                )}
               </Button>
             </DialogFooter>
           </form>

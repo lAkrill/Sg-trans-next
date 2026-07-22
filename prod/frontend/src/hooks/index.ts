@@ -26,7 +26,9 @@ export * from './vessels.hook';
 
 export * from './auth.hook';
 export * from './cisterns.hook';
+export * from './history-actions.hook';
 export * from './repairs.hook';
 export * from './debounce.hook';
+export * from './messages.hook';
 
 export * from './version.hook';

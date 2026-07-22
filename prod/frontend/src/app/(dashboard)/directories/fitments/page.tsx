@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
   Card, 
   CardContent, 
@@ -22,17 +23,21 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Edit,
   Plus,
   Settings,
+  Trash2,
 } from "lucide-react";
-import { useFilterAllFitments, useFitments } from "@/hooks";
+import { useDeleteFitment, useFilterAllFitments, useFitments } from "@/hooks";
 import { FitmentsFilter } from "@/components/fitments-filter";
 import { formatDate } from "@/lib/formatDate";
 import type { FitmentFilterCriteria, FitmentFilterSortWithoutPaginationDTO } from "@/types/directories";
 
 export default function FitmentsPage() {
+  const router = useRouter();
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const deleteMutation = useDeleteFitment();
   const [isFiltered, setIsFiltered] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [currentFilters, setCurrentFilters] = useState<FitmentFilterCriteria>({
@@ -124,6 +129,21 @@ export default function FitmentsPage() {
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setPageNumber(1);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Вы уверены, что хотите удалить эту арматуру?")) {
+      await deleteMutation.mutateAsync(id);
+    }
+  };
+
+  const handleEdit = (fitmentId: string) => {
+    const params = new URLSearchParams({
+      returnPage: String(currentPage),
+      returnPageSize: String(pageSize),
+    });
+
+    router.push(`/directories/fitments/${fitmentId}/edit?${params.toString()}`);
   };
 
   const isColumnVisible = (column: string) => visibleColumns.includes(column);
@@ -332,7 +352,7 @@ export default function FitmentsPage() {
                     {isColumnVisible("manufacturer") && <TableHead>Производитель</TableHead>}
                     {isColumnVisible("updatedAt") && <TableHead>Дата <br />обновления</TableHead>}
                     {isColumnVisible("createdId") && <TableHead>Пользователь</TableHead>}
-                    <TableHead>Действия</TableHead>
+                    <TableHead className="w-[1%] whitespace-nowrap text-right">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -350,11 +370,29 @@ export default function FitmentsPage() {
                       {isColumnVisible("lastRepairDate") && <TableCell>{formatDate(fitment.lastRepairDate, "ru-RU", "—")}</TableCell>}
                       {isColumnVisible("periodRep") && <TableCell>{fitment.periodRep}</TableCell>}
                       {isColumnVisible("serviceLifeYears") && <TableCell>{fitment.serviceLifeYears}</TableCell>}
-                      {isColumnVisible("manufacturer") && <TableCell>{fitment.manufacturer?.name || "—"}</TableCell>}
+                      {isColumnVisible("manufacturer") && <TableCell>{fitment.depot?.shortName || "—"}</TableCell>}
                       {isColumnVisible("updatedAt") && <TableCell>{formatDate(fitment.updatedAt, "ru-RU", "—")}</TableCell>}
                       {isColumnVisible("createdId") && <TableCell>{fitment.createdId || "—"}</TableCell>}
-                      <TableCell>
-                        —
+                      <TableCell className="w-[1%] whitespace-nowrap">
+                        <div className="flex w-max justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(fitment.id)}
+                            title="Редактировать"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(fitment.id)}
+                            disabled={deleteMutation.isPending}
+                            title="Удалить"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

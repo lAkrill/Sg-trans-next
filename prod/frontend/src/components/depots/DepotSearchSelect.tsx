@@ -6,7 +6,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
   Input,
   Button,
 } from "@/components/ui";
@@ -18,6 +17,8 @@ interface DepotSearchSelectProps {
   onValueChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  /** Label to show when selected depot is not present in current search results */
+  selectedLabel?: string;
 }
 
 export function DepotSearchSelect({
@@ -25,6 +26,7 @@ export function DepotSearchSelect({
   onValueChange,
   placeholder = "Выберите депо",
   disabled = false,
+  selectedLabel,
 }: DepotSearchSelectProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,13 +54,26 @@ export function DepotSearchSelect({
 
   // Find selected depot name
   const selectedDepot = searchResults?.find((d) => d.id === value);
+  const displayLabel =
+    selectedDepot?.shortName || selectedLabel || (value ? "…" : placeholder);
+  const resultsWithSelected = useMemo(() => {
+    if (!value || !selectedLabel) return paginatedResults;
+    if (paginatedResults.some((depot) => depot.id === value)) return paginatedResults;
+    if (searchResults?.some((depot) => depot.id === value)) return paginatedResults;
+
+    return [
+      { id: value, shortName: selectedLabel, name: selectedLabel },
+      ...paginatedResults,
+    ];
+  }, [paginatedResults, searchResults, selectedLabel, value]);
 
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+    <Select value={value || undefined} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger>
-        <SelectValue placeholder={placeholder}>
-          {selectedDepot?.shortName || placeholder}
-        </SelectValue>
+        {/* Render label explicitly: SelectValue stays empty when SelectItem is not mounted */}
+        <span className={value || selectedLabel ? "truncate" : "truncate text-muted-foreground"}>
+          {displayLabel}
+        </span>
       </SelectTrigger>
       <SelectContent>
         {/* Search input */}
@@ -81,12 +96,12 @@ export function DepotSearchSelect({
             <div className="p-4 text-center text-sm text-gray-500">
               Загрузка...
             </div>
-          ) : paginatedResults.length === 0 ? (
+          ) : resultsWithSelected.length === 0 ? (
             <div className="p-4 text-center text-sm text-gray-500">
               {searchTerm ? "Депо не найдено" : "Нет доступных депо"}
             </div>
           ) : (
-            paginatedResults.map((depot) => (
+            resultsWithSelected.map((depot) => (
               <SelectItem key={depot.id} value={depot.id}>
                 {depot.shortName}
               </SelectItem>

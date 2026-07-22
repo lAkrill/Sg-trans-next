@@ -370,10 +370,19 @@ export interface FitmentDTO extends BaseEntity {
   periodRep: number;
   serviceLifeYears: number;
   modelId: string;
-  manufacturerId: string;
+  manufacturerId?: string;
+  depotId?: string | null;
+  code?: number;
+  locationDepoId?: string | null;
+  locationCisternId?: string | null;
   fitmentType: FitmentTypeDTO;
   model: FitmentModelDTO;
-  manufacturer?: ManufacturerDTO;
+  depot?: DepotDTO;
+  locationDepo?: DepotDTO;
+  locationCistern?: {
+    id: string;
+    number: string;
+  };
 }
 
 export interface CreateFitmentDTO {
@@ -381,11 +390,14 @@ export interface CreateFitmentDTO {
   serialNumber: string;
   passportNumber: string;
   buildDate: string;
-  lastRepairDate?: string;
+  lastRepairDate?: string | null;
   periodRep: number;
   serviceLifeYears: number;
   modelId: string;
-  manufacturerId: string;
+  depotId: string | null;
+  code: number;
+  locationDepoId: string | null;
+  locationCisternId: string | null;
 }
 
 export interface UpdateFitmentDTO {
@@ -393,11 +405,14 @@ export interface UpdateFitmentDTO {
   serialNumber: string;
   passportNumber: string;
   buildDate: string;
-  lastRepairDate?: string;
+  lastRepairDate?: string | null;
   periodRep: number;
   serviceLifeYears: number;
   modelId: string;
-  manufacturerId: string;
+  depotId: string | null;
+  code: number;
+  locationDepoId: string | null;
+  locationCisternId: string | null;
 }
 
 export interface UpdateWagonModelDTO {
@@ -479,14 +494,15 @@ export interface PartDTO extends BaseEntity {
   model?: string | null;
   createdAt: string;
   updatedAt: string;
-  wheelPair?: WheelPairDTO;
-  sideFrame?: SideFrameDTO;
-  bolster?: BolsterDTO;
-  coupler?: CouplerDTO;
-  shockAbsorber?: ShockAbsorberDTO;
+  // wheelPair?: WheelPairDTO;
+  // sideFrame?: SideFrameDTO;
+  // bolster?: BolsterDTO;
+  // coupler?: CouplerDTO;
+  // shockAbsorber?: ShockAbsorberDTO;
   code?: number;
   documentId?: string;
   document?: DocumentDTO;
+  extendedUntil?: string;
 }
 
 // Fitments (Арматура)

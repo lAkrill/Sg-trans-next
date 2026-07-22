@@ -22,6 +22,8 @@ export function GeneralInfoTab({ cistern }: GeneralInfoTabProps) {
         buildDate={cistern.buildDate}
         commissioningDate={cistern.commissioningDate}
         railwayCisternStatusName={cistern.railwayCisternStatus?.name}
+        serviceLifeYears={cistern.serviceLifeYears}
+        extensionServiceLifeDate={cistern.extensionServiceLifeDate}
       />
 
       <TechnicalSpecsCard

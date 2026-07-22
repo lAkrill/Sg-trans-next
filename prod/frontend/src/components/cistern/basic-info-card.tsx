@@ -7,9 +7,45 @@ interface BasicInfoCardProps {
   buildDate: string;
   commissioningDate?: string;
   railwayCisternStatusName?: string;
+  serviceLifeYears?: number;
+  extensionServiceLifeDate?: string;
 }
 
-export function BasicInfoCard({ number, serialNumber, buildDate, commissioningDate, railwayCisternStatusName }: BasicInfoCardProps) {
+function formatServiceEndDate(
+  buildDate: string,
+  serviceLifeYears?: number,
+  extensionServiceLifeDate?: string
+): string {
+  if (extensionServiceLifeDate) {
+    const extensionDate = new Date(extensionServiceLifeDate);
+    if (!Number.isNaN(extensionDate.getTime())) {
+      return extensionDate.toLocaleDateString('ru-RU');
+    }
+  }
+
+  if (serviceLifeYears == null || Number.isNaN(serviceLifeYears)) {
+    return 'Не указана';
+  }
+
+  const start = new Date(buildDate);
+  if (Number.isNaN(start.getTime())) {
+    return 'Не указана';
+  }
+
+  const end = new Date(start);
+  end.setFullYear(end.getFullYear() + serviceLifeYears);
+  return end.toLocaleDateString('ru-RU');
+}
+
+export function BasicInfoCard({
+  number,
+  serialNumber,
+  buildDate,
+  commissioningDate,
+  railwayCisternStatusName,
+  serviceLifeYears,
+  extensionServiceLifeDate,
+}: BasicInfoCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -41,12 +77,17 @@ export function BasicInfoCard({ number, serialNumber, buildDate, commissioningDa
               }
             </div>
           </div>
-
-        </div>
-        <div>
+          <div>
             <div className="text-sm font-medium text-gray-500">Статус вагон-цистерны</div>
             <div className="text-lg">{railwayCisternStatusName || 'Не указан'}</div>
-         </div>
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">Дата конца срока эксплуатации</div>
+            <div className="text-lg">
+              {formatServiceEndDate(buildDate, serviceLifeYears, extensionServiceLifeDate)}
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

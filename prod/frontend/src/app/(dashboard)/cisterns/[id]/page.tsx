@@ -157,7 +157,7 @@ export default function CisternPassportPage() {
 
         {/* History Tab */}
         <TabsContent value="history">
-          <HistoryTab />
+          <HistoryTab cisternId={cisternId} />
         </TabsContent>
 
         {/* Components Tab */}

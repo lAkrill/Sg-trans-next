@@ -85,6 +85,7 @@ export interface RailwayCisternDetailDTO {
     value: string;
   };
   serviceLifeYears: number;
+  extensionServiceLifeDate?: string;
   periodMajorRepair?: string;
   periodPeriodicTest?: string;
   periodIntermediateTest?: string;

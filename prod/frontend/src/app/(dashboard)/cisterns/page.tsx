@@ -53,8 +53,102 @@ import type {
 // Type for display in table - can be either detailed or list DTO
 type DisplayCistern = RailwayCisternDetailDTO | RailwayCisternListDTO;
 
+const SERVICE_END_DATE_COLUMN = "serviceenddate";
+const SERVICE_END_DATE_SOURCE_COLUMNS = [
+  "builddate",
+  "servicelifeyears",
+  "extensionservicelifedate",
+] as const;
+
+/** Computed columns → source fields required from filter API */
+const toApiSelectedColumns = (columns: string[]): string[] => {
+  const result = new Set<string>();
+  for (const column of columns) {
+    if (column === SERVICE_END_DATE_COLUMN) {
+      SERVICE_END_DATE_SOURCE_COLUMNS.forEach((source) => result.add(source));
+    } else {
+      result.add(column);
+    }
+  }
+  return Array.from(result);
+};
+
+const parseLocalDate = (value: string | undefined): Date | null => {
+  if (!value) return null;
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const startOfLocalDay = (date: Date): Date =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const getServiceEndDate = (cistern: DisplayCistern): Date | null => {
+  const record = cistern as unknown as Record<string, unknown>;
+  const extensionServiceLifeDate =
+    (record.extensionServiceLifeDate as string | undefined) ||
+    (record.extensionservicelifedate as string | undefined);
+
+  const extensionDate = parseLocalDate(extensionServiceLifeDate);
+  if (extensionDate) {
+    return startOfLocalDay(extensionDate);
+  }
+
+  const buildDate =
+    (record.buildDate as string | undefined) ||
+    (record.builddate as string | undefined);
+  const serviceLifeYearsRaw = record.serviceLifeYears ?? record.servicelifeyears;
+  const serviceLifeYears =
+    serviceLifeYearsRaw == null || serviceLifeYearsRaw === ""
+      ? NaN
+      : Number(serviceLifeYearsRaw);
+
+  const start = parseLocalDate(buildDate);
+  if (!start || Number.isNaN(serviceLifeYears)) {
+    return null;
+  }
+
+  const end = startOfLocalDay(start);
+  end.setFullYear(end.getFullYear() + serviceLifeYears);
+  return end;
+};
+
+const formatServiceEndDate = (cistern: DisplayCistern): string => {
+  const endDate = getServiceEndDate(cistern);
+  return endDate ? endDate.toLocaleDateString("ru-RU") : "";
+};
+
+/** Красный — срок истёк; розовый — истекает в течение года */
+const getServiceEndDateRowClass = (cistern: DisplayCistern): string | undefined => {
+  const endDate = getServiceEndDate(cistern);
+  if (!endDate) return undefined;
+
+  const today = startOfLocalDay(new Date());
+  if (endDate < today) {
+    return "bg-red-100 hover:bg-red-100";
+  }
+
+  const inOneYear = new Date(today);
+  inOneYear.setFullYear(inOneYear.getFullYear() + 1);
+  if (endDate <= inOneYear) {
+    return "bg-pink-100 hover:bg-pink-100";
+  }
+
+  return undefined;
+};
+
 // Helper function to safely get display values
 const getDisplayValue = (cistern: DisplayCistern, field: string): string => {
+  if (field === SERVICE_END_DATE_COLUMN) {
+    return formatServiceEndDate(cistern);
+  }
+
   // Convert field name to camelCase property name
   const toCamelCase = (str: string) => {
     return str
@@ -141,17 +235,20 @@ export default function CisternsPage() {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearchMode, setIsSearchMode] = useState(false);
-  const [isFilterMode, setIsFilterMode] = useState(false);
+  const [isFilterMode, setIsFilterMode] = useState(true);
   // Client-side pagination for search results
   const [searchPage, setSearchPage] = useState(1);
   const [searchPageSize, setSearchPageSize] = useState(10);
   // Advanced filters state
   const [advancedFilters, setAdvancedFilters] = useState<FilterCriteria>({});
-  const [sortFields, setSortFields] = useState<SortCriteria[]>([]);
+  const [sortFields, setSortFields] = useState<SortCriteria[]>([
+    { fieldName: "railwaycisternstatus.name", descending: true },
+  ]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     "number",
     "manufacturer.name",
     "builddate",
+    "serviceenddate",
     "type.name",
     "model.name",
     "owner.name",
@@ -167,7 +264,7 @@ export default function CisternsPage() {
     () => ({
       filters: advancedFilters,
       sortFields: sortFields,
-      selectedColumns: visibleColumns,
+      selectedColumns: toApiSelectedColumns(visibleColumns),
       page: filter.page,
       pageSize: filter.pageSize,
     }),
@@ -351,11 +448,12 @@ export default function CisternsPage() {
 
   const handleClearFilters = useCallback(() => {
     setAdvancedFilters({});
-    setSortFields([]);
+    setSortFields([{ fieldName: "railwaycisternstatus.name", descending: true }]);
     setVisibleColumns([
       "number",
       "manufacturer.name",
       "builddate",
+      "serviceenddate",
       "type.name",
       "model.name",
       "owner.name",
@@ -643,7 +741,9 @@ export default function CisternsPage() {
                           : column === "manufacturer.name"
                           ? "Производитель"
                           : column === "builddate"
-                          ? "Дата постройки"
+                          ? <>Дата <br />постройки</>
+                          : column === "serviceenddate"
+                          ? <>Конец срока<br />эксплуатации</>
                           : column === "type.name"
                           ? "Тип"
                           : column === "model.name"
@@ -659,7 +759,7 @@ export default function CisternsPage() {
                           : column === "volume"
                           ? "Объем"
                           : column === "fillingvolume"
-                          ? "Объем заполнения"
+                          ? <>Объем<br />заполнения</>
                           : column === "loadcapacity"
                           ? "Грузоподъемность"
                           : column === "tareweight"
@@ -669,23 +769,23 @@ export default function CisternsPage() {
                           : column === "serialnumber"
                           ? "Серийный номер"
                           : column === "registrationnumber"
-                          ? "Регистрационный номер"
+                          ? <>Регистрационный<br />номер</>
                           : column === "dangerclass"
-                          ? "Класс опасности"
+                          ? <>Класс<br />опасности</>
                           : column === "servicelife"
-                          ? "Срок службы"
+                          ? <>Срок службы<br />(лет)</>
                           : column === "length"
                           ? "Длина"
                           : column === "commissioningdate"
-                          ? "Дата ввода в эксплуатацию"
+                          ? <>Дата ввода<br />в эксплуатацию</>
                           : column === "registrationdate"
-                          ? "Дата регистрации"
+                          ? <>Дата <br />регистрации</>
                           : column === "createdat"
-                          ? "Дата создания"
+                          ? <>Дата <br />создания</>
                           : column === "updatedat"
-                          ? "Дата обновления"
+                          ? <>Дата <br />обновления</>
                           : column === "servicelifeyears"
-                          ? "Срок службы (лет)"
+                          ? <>Срок службы<br />(лет)</>
                           : column === "notes"
                           ? "Заметки"
                           : column}
@@ -696,7 +796,10 @@ export default function CisternsPage() {
                 </TableHeader>
                 <TableBody>
                   {displayData.map((cistern, index) => (
-                    <TableRow key={`${cistern.id}-${index}`}>
+                    <TableRow
+                      key={`${cistern.id}-${index}`}
+                      className={getServiceEndDateRowClass(cistern)}
+                    >
                       {visibleColumns.map((column) => (
                         <TableCell key={`${cistern.id}-${column}`} className={column === "number" ? "font-medium" : ""}>
                           {column === "number" ? (

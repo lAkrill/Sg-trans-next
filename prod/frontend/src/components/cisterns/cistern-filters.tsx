@@ -437,6 +437,7 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
     { value: "number", label: "Номер" },
     { value: "manufacturer.name", label: "Производитель" },
     { value: "builddate", label: "Дата постройки" },
+    { value: "serviceenddate", label: "Конец срока эксплуатации" },
     { value: "tareweight", label: "Тара" },
     { value: "loadcapacity", label: "Грузоподъемность" },
     { value: "length", label: "Длина" },
@@ -473,6 +474,10 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
     { value: "createdat", label: "Дата создания" },
     { value: "updatedat", label: "Дата обновления" },
   ];
+
+  const sortableFieldOptions = sortFieldOptions.filter(
+    (option) => option.value !== "serviceenddate"
+  );
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -743,7 +748,7 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                               <SelectValue className="truncate" />
                             </SelectTrigger>
                             <SelectContent>
-                              {sortFieldOptions.map((option) => (
+                              {sortableFieldOptions.map((option) => (
                                 <SelectItem key={option.value} value={option.value}>
                                   <div className="truncate" title={option.label}>
                                     {option.label}

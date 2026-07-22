@@ -16,7 +16,6 @@ import type { DirectoryConfig } from "@/components/directory-manager";
 import { DirectoryConfig as BaseDirectoryConfig } from "./types";
 import { FitmentTypeSelect } from "@/components/fitment-type-select";
 import { FitmentModelSelect } from "@/components/fitment-model-select";
-import { ManufacturerSelect } from "@/components/manufacturer-select";
 
 export const fitmentsBaseConfig: BaseDirectoryConfig = {
   name: "fitments",
@@ -83,11 +82,33 @@ export const fitmentsBaseConfig: BaseDirectoryConfig = {
       customComponent: FitmentModelSelect,
     },
     {
-      key: "manufacturerId",
-      label: "Производитель",
-      type: "custom",
-      required: true,
-      customComponent: ManufacturerSelect,
+      key: "depotId",
+      label: "Производитель (депо)",
+      type: "text",
+      required: false,
+      placeholder: "ID депо-производителя",
+    },
+    {
+      key: "code",
+      label: "Местоположение (код)",
+      type: "number",
+      required: false,
+      placeholder: "0 — не установлена, 1 — вагон, 2 — депо",
+      validation: { min: 0 },
+    },
+    {
+      key: "locationDepoId",
+      label: "Депо (местоположение)",
+      type: "text",
+      required: false,
+      placeholder: "ID депо",
+    },
+    {
+      key: "locationCisternId",
+      label: "Вагон (местоположение)",
+      type: "text",
+      required: false,
+      placeholder: "ID вагона-цистерны",
     },
   ],
 };
@@ -134,9 +155,9 @@ export const fitmentsConfig: DirectoryConfig<FitmentDTO, CreateFitmentDTO, Updat
       render: (_, item) => item.model?.name ?? "-",
     },
     {
-      key: "manufacturerId",
+      key: "depotId",
       label: "Производитель",
-      render: (_, item) => item.manufacturer?.name ?? "-",
+      render: (_, item) => item.depot?.shortName ?? "-",
     },
   ],
   createInitialData: () => ({
@@ -148,7 +169,10 @@ export const fitmentsConfig: DirectoryConfig<FitmentDTO, CreateFitmentDTO, Updat
     periodRep: 0,
     serviceLifeYears: 0,
     modelId: "",
-    manufacturerId: "",
+    depotId: null,
+    code: 0,
+    locationDepoId: null,
+    locationCisternId: null,
   }),
   mapToFormData: (item: FitmentDTO) => ({
     fitmentTypeId: item.fitmentTypeId,
@@ -159,6 +183,9 @@ export const fitmentsConfig: DirectoryConfig<FitmentDTO, CreateFitmentDTO, Updat
     periodRep: item.periodRep,
     serviceLifeYears: item.serviceLifeYears,
     modelId: item.modelId,
-    manufacturerId: item.manufacturerId,
+    depotId: item.depot?.id ?? null,
+    code: 0,
+    locationDepoId: null,
+    locationCisternId: null,
   }),
 };
