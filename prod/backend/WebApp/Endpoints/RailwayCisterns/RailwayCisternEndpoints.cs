@@ -674,9 +674,17 @@ public static class RailwayCisternEndpoints
                     cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, IntermediateTest);
                     cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, PPRRepair);
                     cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, MajorRep);
-                    cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                    if (cistern.PeriodDepotRepair < cistern.PeriodMajorRepair)
+                    {
+                        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                        cistern.PlanPeriodDepotRepairStatus += "  (от капитального)";
+                    }
+                    else
+                    {
+                        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                    }
 
-                     //???????????????????????????????????
+                    //???????????????????????????????????
                     if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
                     {
                         cistern.PlanPeriodDepotRepair = milage.RepairDate;
@@ -942,7 +950,15 @@ public static class RailwayCisternEndpoints
         cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, intermediateTest);
         cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, pprRepair);
         cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, majorRep);
-        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep);
+        if (cistern.PeriodDepotRepair < cistern.PeriodMajorRepair)
+        {
+            cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep);
+        }
+        else
+        {
+            cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep);
+        }
+
 
         if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
         {
