@@ -629,6 +629,112 @@ public static class FitmentEquipmentEndpoints
             .Produces<List<FitmentEquipmentDTO>>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
 
+        group.MapGet("/last-by-fitment/{fitmentId}", async ([FromServices] ApplicationDbContext context, Guid fitmentId) =>
+            {
+                var lastEquipment = await context.Set<FitmentEquipment>()
+                    .AsNoTracking()
+                    .Include(fe => fe.Fitment)
+                    .ThenInclude(f => f.FitmentType)
+                    .Include(fe => fe.JobUser)
+                    .Include(fe => fe.TestUser)
+                    .Include(fe => fe.Depot)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Manufacturer)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Type)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Model)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Owner)
+                    .Include(fe => fe.Document)
+                    .Where(fe => fe.FitmentId == fitmentId)
+                    .OrderByDescending(fe => fe.Date)
+                    .ThenByDescending(fe => fe.Id)
+                    .FirstOrDefaultAsync();
+
+                if (lastEquipment is null)
+                {
+                    return Results.NotFound();
+                }
+
+                var dto = new FitmentEquipmentDTO
+                {
+                    Id = lastEquipment.Id,
+                    RailwayCisternsId = lastEquipment.RailwayCisternsId,
+                    Operation = lastEquipment.Operation,
+                    FitmentId = lastEquipment.FitmentId,
+                    JobUserId = lastEquipment.JobUserId,
+                    TestUserId = lastEquipment.TestUserId,
+                    DepoId = lastEquipment.DepoId,
+                    Date = lastEquipment.Date,
+                    DocumentId = lastEquipment.DocumentId,
+                    RailwayCistern = lastEquipment.RailwayCistern != null
+                        ? new RailwayCisternDTO
+                        {
+                            Id = lastEquipment.RailwayCistern.Id,
+                            Number = lastEquipment.RailwayCistern.Number,
+                            Model = lastEquipment.RailwayCistern.Model.Name,
+                            Owner = lastEquipment.RailwayCistern.Owner.UNP,
+                        }
+                        : null,
+                    Fitment = lastEquipment.Fitment != null
+                        ? new FitmentInfoDTO
+                        {
+                            Id = lastEquipment.Fitment.Id,
+                            SerialNumber = lastEquipment.Fitment.SerialNumber,
+                            PassportNumber = lastEquipment.Fitment.PassportNumber,
+                            FitmentTypeName = lastEquipment.Fitment.FitmentType.Name
+                        }
+                        : null,
+                    JobUser = lastEquipment.JobUser != null
+                        ? new UserInfoDTO
+                        {
+                            Id = lastEquipment.JobUser.Id,
+                            Email = lastEquipment.JobUser.Email,
+                            FirstName = lastEquipment.JobUser.FirstName,
+                            LastName = lastEquipment.JobUser.LastName
+                        }
+                        : null,
+                    TestUser = lastEquipment.TestUser != null
+                        ? new UserInfoDTO
+                        {
+                            Id = lastEquipment.TestUser.Id,
+                            Email = lastEquipment.TestUser.Email,
+                            FirstName = lastEquipment.TestUser.FirstName,
+                            LastName = lastEquipment.TestUser.LastName
+                        }
+                        : null,
+                    Depot = lastEquipment.Depot != null
+                        ? new DepotDTO
+                        {
+                            Id = lastEquipment.Depot.Id,
+                            Name = lastEquipment.Depot.Name,
+                            Code = lastEquipment.Depot.Code,
+                            Location = lastEquipment.Depot.Location,
+                            ShortName = lastEquipment.Depot.ShortName
+                        }
+                        : null,
+                    Document = lastEquipment.Document != null
+                        ? new DocumentDTO
+                        {
+                            Id = lastEquipment.Document.Id,
+                            Number = lastEquipment.Document.Number,
+                            Type = lastEquipment.Document.Type,
+                            Date = lastEquipment.Document.Date,
+                            Author = lastEquipment.Document.Author,
+                            Price = lastEquipment.Document.Price,
+                            Note = lastEquipment.Document.Note
+                        }
+                        : null
+                };
+
+                return Results.Ok(dto);
+            })
+            .WithName("GetLastFitmentEquipmentByFitment")
+            .Produces<FitmentEquipmentDTO>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .RequirePermissions(Permission.Read);
+
         group.MapPost("/", async (
                 [FromServices] ApplicationDbContext context,
                 [FromBody] CreateFitmentEquipmentDTO dto) =>

@@ -113,6 +113,9 @@ public static class FitmentFilterEndpoints
             LastRepairDate = f.LastRepairDate,
             PeriodRep = f.PeriodRep,
             ServiceLifeYears = f.ServiceLifeYears,
+            Code = f.Code,
+            LocationDepoId = f.LocationDepoId,
+            LocationCisternId = f.LocationCisternId,
             ModelId = f.ModelId,
             DepotId = f.DepotId,
             UpdatedAt = f.UpdatedAt,
@@ -139,6 +142,20 @@ public static class FitmentFilterEndpoints
                 Code = f.Depot.Code,
                 ShortName = f.Depot.ShortName,
                 Location = f.Depot.Location
+            },
+            LocationDepo = f.LocationDepo == null ? null : new DepotDTO
+            {
+                Id = f.LocationDepo.Id,
+                Name = f.LocationDepo.Name,
+                Code = f.LocationDepo.Code,
+                ShortName = f.LocationDepo.ShortName,
+                Location = f.LocationDepo.Location,
+                CreatedAt = f.LocationDepo.CreatedAt
+            },
+            LocationCistern = f.LocationCistern == null ? null : new RailwayCisternIdAndNumberDTO
+            {
+                Id = f.LocationCistern.Id,
+                Number = f.LocationCistern.Number
             }
         };
     }
@@ -149,6 +166,8 @@ public static class FitmentFilterEndpoints
             .Include(f => f.FitmentType)
             .Include(f => f.Model)
             .Include(f => f.Depot)
+            .Include(f => f.LocationDepo)
+            .Include(f => f.LocationCistern)
             .AsQueryable();
 
         if (filters == null)
@@ -195,6 +214,20 @@ public static class FitmentFilterEndpoints
                 query = query.Where(f => f.ServiceLifeYears <= filters.ServiceLifeYears.To);
         }
 
+        if (filters.Code != null)
+        {
+            if (filters.Code.From.HasValue)
+                query = query.Where(f => f.Code >= filters.Code.From);
+            if (filters.Code.To.HasValue)
+                query = query.Where(f => f.Code <= filters.Code.To);
+        }
+
+        if (filters.LocationDepoIds != null && filters.LocationDepoIds.Any())
+            query = query.Where(f => f.LocationDepoId.HasValue && filters.LocationDepoIds.Contains(f.LocationDepoId.Value));
+
+        if (filters.LocationCisternIds != null && filters.LocationCisternIds.Any())
+            query = query.Where(f => f.LocationCisternId.HasValue && filters.LocationCisternIds.Contains(f.LocationCisternId.Value));
+
         if (filters.ModelIds != null && filters.ModelIds.Any())
             query = query.Where(f => filters.ModelIds.Contains(f.ModelId));
 
@@ -232,6 +265,9 @@ public static class FitmentFilterEndpoints
             "depot" or "depotname" => sort.Descending ? query.OrderByDescending(f => f.Depot.Name) : query.OrderBy(f => f.Depot.Name),
             "updatedat" => sort.Descending ? query.OrderByDescending(f => f.UpdatedAt) : query.OrderBy(f => f.UpdatedAt),
             "creatorid" => sort.Descending ? query.OrderByDescending(f => f.CreatorId) : query.OrderBy(f => f.CreatorId),
+            "code" => sort.Descending ? query.OrderByDescending(f => f.Code) : query.OrderBy(f => f.Code),
+            "locationdepoid" => sort.Descending ? query.OrderByDescending(f => f.LocationDepoId) : query.OrderBy(f => f.LocationDepoId),
+            "locationcisternid" => sort.Descending ? query.OrderByDescending(f => f.LocationCisternId) : query.OrderBy(f => f.LocationCisternId),
             _ => query.OrderByDescending(f => f.UpdatedAt)
         };
     }
@@ -253,6 +289,9 @@ public static class FitmentFilterEndpoints
             "depot" or "depotname" => sort.Descending ? query.ThenByDescending(f => f.Depot.Name) : query.ThenBy(f => f.Depot.Name),
             "updatedat" => sort.Descending ? query.ThenByDescending(f => f.UpdatedAt) : query.ThenBy(f => f.UpdatedAt),
             "creatorid" => sort.Descending ? query.ThenByDescending(f => f.CreatorId) : query.ThenBy(f => f.CreatorId),
+            "code" => sort.Descending ? query.ThenByDescending(f => f.Code) : query.ThenBy(f => f.Code),
+            "locationdepoid" => sort.Descending ? query.ThenByDescending(f => f.LocationDepoId) : query.ThenBy(f => f.LocationDepoId),
+            "locationcisternid" => sort.Descending ? query.ThenByDescending(f => f.LocationCisternId) : query.ThenBy(f => f.LocationCisternId),
             _ => query
         };
     }

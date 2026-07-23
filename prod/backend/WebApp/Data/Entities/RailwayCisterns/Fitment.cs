@@ -21,6 +21,12 @@ public class Fitment
     
     public int ServiceLifeYears { get; set; } = 30;
     
+    public int Code { get; set; } = 0;
+    public Guid? LocationDepoId { get; set; }
+    public Depot? LocationDepo { get; set; }
+    public Guid? LocationCisternId { get; set; }
+    public RailwayCistern? LocationCistern { get; set; }
+
     public Guid ModelId { get; set; }
     public FitmentModel Model { get; set; }
 

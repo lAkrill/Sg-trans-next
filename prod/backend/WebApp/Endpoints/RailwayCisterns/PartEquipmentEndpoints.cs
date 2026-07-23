@@ -783,6 +783,140 @@ public static class PartEquipmentEndpoints
             .Produces<List<PartEquipmentDTO>>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
 
+        // Получение последней операции по детали
+        group.MapGet("/last-by-part/{partId}", async (
+                [FromServices] ApplicationDbContext context,
+                Guid partId) =>
+            {
+                var lastEquipment = await context.PartEquipments
+                    .AsNoTracking()
+                    .Include(pe => pe.EquipmentType)
+                    .ThenInclude(et => et.PartType)
+                    .Include(pe => pe.JobDepot)
+                    .Include(pe => pe.Depot)
+                    .Include(pe => pe.RepairType)
+                    .Include(pe => pe.RailwayCistern)
+                    .ThenInclude(rc => rc.Manufacturer)
+                    .Include(pe => pe.RailwayCistern)
+                    .ThenInclude(rc => rc.Type)
+                    .Include(pe => pe.RailwayCistern)
+                    .ThenInclude(rc => rc.Model)
+                    .Include(pe => pe.RailwayCistern)
+                    .ThenInclude(rc => rc.Owner)
+                    .Include(pe => pe.Part)
+                    .ThenInclude(p => p.StampNumber)
+                    .Include(pe => pe.Document)
+                    .Where(pe => pe.PartsId == partId)
+                    .OrderByDescending(pe => pe.DocumentDate)
+                    .ThenByDescending(pe => pe.Id)
+                    .FirstOrDefaultAsync();
+
+                if (lastEquipment is null)
+                {
+                    return Results.NotFound();
+                }
+
+                var dto = new PartEquipmentDTO
+                {
+                    Id = lastEquipment.Id,
+                    RailwayCisternsId = lastEquipment.RailwayCisternsId,
+                    Operation = lastEquipment.Operation,
+                    DefectsId = lastEquipment.DefectsId,
+                    AdminOwnerId = lastEquipment.AdminOwnerId,
+                    PartsId = lastEquipment.PartsId,
+                    JobDepotsId = lastEquipment.JobDepotsId,
+                    JobDate = lastEquipment.JobDate,
+                    JobTypeId = lastEquipment.JobTypeId,
+                    ThicknessLeft = lastEquipment.ThicknessLeft,
+                    ThicknessRight = lastEquipment.ThicknessRight,
+                    TruckType = lastEquipment.TruckType,
+                    Notes = lastEquipment.Notes,
+                    DocumentId = lastEquipment.DocumentId,
+                    DocumentDate = lastEquipment.DocumentDate,
+                    Document = lastEquipment.Document != null ? new DocumentDTO
+                    {
+                        Id = lastEquipment.Document.Id,
+                        Number = lastEquipment.Document.Number,
+                        Type = lastEquipment.Document.Type,
+                        Date = lastEquipment.Document.Date,
+                        Author = lastEquipment.Document.Author,
+                        Price = lastEquipment.Document.Price,
+                        Note = lastEquipment.Document.Note
+                    } : null,
+                    RailwayCistern = lastEquipment.RailwayCistern != null
+                        ? new RailwayCisternDTO
+                        {
+                            Id = lastEquipment.RailwayCistern.Id,
+                            Number = lastEquipment.RailwayCistern.Number,
+                            Model = lastEquipment.RailwayCistern.Model.Name,
+                            Owner = lastEquipment.RailwayCistern.Owner.UNP,
+                        }
+                        : null,
+                    EquipmentType = lastEquipment.EquipmentType != null
+                        ? new EquipmentTypeDTO
+                        {
+                            Id = lastEquipment.EquipmentType.Id,
+                            Name = lastEquipment.EquipmentType.Name,
+                            Code = lastEquipment.EquipmentType.Code,
+                            PartTypeId = lastEquipment.EquipmentType.PartTypeId,
+                            PartTypeName = lastEquipment.EquipmentType.PartType.Name
+                        }
+                        : null,
+                    JobDepot = lastEquipment.JobDepot != null
+                        ? new DepotDTO
+                        {
+                            Id = lastEquipment.JobDepot.Id,
+                            Name = lastEquipment.JobDepot.Name,
+                            Code = lastEquipment.JobDepot.Code,
+                            Location = lastEquipment.JobDepot.Location,
+                            ShortName = lastEquipment.JobDepot.ShortName
+                        }
+                        : null,
+                    Depot = lastEquipment.Depot != null
+                        ? new DepotDTO
+                        {
+                            Id = lastEquipment.Depot.Id,
+                            Name = lastEquipment.Depot.Name,
+                            Code = lastEquipment.Depot.Code,
+                            Location = lastEquipment.Depot.Location,
+                            ShortName = lastEquipment.Depot.ShortName
+                        }
+                        : null,
+                    RepairType = lastEquipment.RepairType != null
+                        ? new RepairTypeDTO
+                        {
+                            Id = lastEquipment.RepairType.Id,
+                            Name = lastEquipment.RepairType.Name,
+                            Code = lastEquipment.RepairType.Code,
+                            Description = lastEquipment.RepairType.Description
+                        }
+                        : null,
+                    Part = lastEquipment.Part != null
+                        ? new PartInfoDTO
+                        {
+                            PartId = lastEquipment.Part.Id,
+                            SerialNumber = lastEquipment.Part.SerialNumber,
+                            ManufactureYear = lastEquipment.Part.ManufactureYear,
+                            StampInfo = lastEquipment.Part.StampNumber != null
+                                ? new StampInfoDTO
+                                {
+                                    Value = lastEquipment.Part.StampNumber.Value
+                                }
+                                : null
+                        }
+                        : null,
+                    DepotsId = lastEquipment.DepotsId,
+                    EquipmentTypeId = lastEquipment.EquipmentTypeId,
+                    RepairTypesId = lastEquipment.RepairTypesId
+                };
+
+                return Results.Ok(dto);
+            })
+            .WithName("GetLastPartEquipmentByPart")
+            .Produces<PartEquipmentDTO>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .RequirePermissions(Permission.Read);
+
         // Создание новой записи
         group.MapPost("/", async (
                 [FromServices] ApplicationDbContext context,

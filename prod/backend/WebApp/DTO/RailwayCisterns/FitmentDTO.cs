@@ -12,6 +12,9 @@ public class FitmentDTO
     public DateTime? LastRepairDate { get; set; }
     public int PeriodRep { get; set; }
     public int ServiceLifeYears { get; set; }
+    public int Code { get; set; }
+    public Guid? LocationDepoId { get; set; }
+    public Guid? LocationCisternId { get; set; }
     public Guid ModelId { get; set; }
     public Guid DepotId { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -20,6 +23,8 @@ public class FitmentDTO
     public FitmentTypeDTO FitmentType { get; set; } = null!;
     public FitmentModelDTO Model { get; set; } = null!;
     public DepotDTO Depot { get; set; } = null!;
+    public DepotDTO? LocationDepo { get; set; }
+    public RailwayCisternIdAndNumberDTO? LocationCistern { get; set; }
 }
 
 public class CreateFitmentDTO
@@ -31,6 +36,9 @@ public class CreateFitmentDTO
     public DateTime? LastRepairDate { get; set; }
     public int PeriodRep { get; set; } = 1;
     public int ServiceLifeYears { get; set; } = 30;
+    public int Code { get; set; } = 0;
+    public Guid? LocationDepoId { get; set; }
+    public Guid? LocationCisternId { get; set; }
     public Guid ModelId { get; set; }
     public Guid DepotId { get; set; }
 }
@@ -44,6 +52,9 @@ public class UpdateFitmentDTO
     public DateTime? LastRepairDate { get; set; }
     public int PeriodRep { get; set; }
     public int ServiceLifeYears { get; set; }
+    public int Code { get; set; }
+    public Guid? LocationDepoId { get; set; }
+    public Guid? LocationCisternId { get; set; }
     public Guid ModelId { get; set; }
     public Guid DepotId { get; set; }
 }
@@ -101,6 +112,9 @@ public static class FitmentDTOMapper
             LastRepairDate = fitment.LastRepairDate,
             PeriodRep = fitment.PeriodRep,
             ServiceLifeYears = fitment.ServiceLifeYears,
+            Code = fitment.Code,
+            LocationDepoId = fitment.LocationDepoId,
+            LocationCisternId = fitment.LocationCisternId,
             ModelId = fitment.ModelId,
             DepotId = fitment.DepotId,
             UpdatedAt = fitment.UpdatedAt,
@@ -115,6 +129,20 @@ public static class FitmentDTOMapper
                 Location = fitment.Depot.Location,
                 ShortName = fitment.Depot.ShortName,
                 CreatedAt = fitment.Depot.CreatedAt
+            },
+            LocationDepo = fitment.LocationDepo == null ? null : new DepotDTO
+            {
+                Id = fitment.LocationDepo.Id,
+                Name = fitment.LocationDepo.Name,
+                Code = fitment.LocationDepo.Code,
+                Location = fitment.LocationDepo.Location,
+                ShortName = fitment.LocationDepo.ShortName,
+                CreatedAt = fitment.LocationDepo.CreatedAt
+            },
+            LocationCistern = fitment.LocationCistern == null ? null : new RailwayCisternIdAndNumberDTO
+            {
+                Id = fitment.LocationCistern.Id,
+                Number = fitment.LocationCistern.Number
             }
         };
     }
@@ -131,6 +159,9 @@ public static class FitmentDTOMapper
             LastRepairDate = createFitmentDTO.LastRepairDate,
             PeriodRep = createFitmentDTO.PeriodRep,
             ServiceLifeYears = createFitmentDTO.ServiceLifeYears,
+            Code = createFitmentDTO.Code,
+            LocationDepoId = createFitmentDTO.LocationDepoId,
+            LocationCisternId = createFitmentDTO.LocationCisternId,
             ModelId = createFitmentDTO.ModelId,
             DepotId = createFitmentDTO.DepotId,
             CreatorId = creatorId,
@@ -147,6 +178,9 @@ public static class FitmentDTOMapper
         fitment.LastRepairDate = updateFitmentDTO.LastRepairDate;
         fitment.PeriodRep = updateFitmentDTO.PeriodRep;
         fitment.ServiceLifeYears = updateFitmentDTO.ServiceLifeYears;
+        fitment.Code = updateFitmentDTO.Code;
+        fitment.LocationDepoId = updateFitmentDTO.LocationDepoId;
+        fitment.LocationCisternId = updateFitmentDTO.LocationCisternId;
         fitment.ModelId = updateFitmentDTO.ModelId;
         fitment.DepotId = updateFitmentDTO.DepotId;
         fitment.UpdatedAt = DateTime.Now;

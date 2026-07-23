@@ -31,6 +31,16 @@ public class FitmentConfiguration : IEntityTypeConfiguration<Fitment>
             .IsRequired()
             .HasDefaultValue(30);
 
+        builder.Property(f => f.Code)
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(f => f.LocationDepoId)
+            .IsRequired(false);
+
+        builder.Property(f => f.LocationCisternId)
+            .IsRequired(false);
+
         builder.Property(f => f.UpdatedAt)
             .HasColumnType("timestamp without time zone")
             .IsRequired();
@@ -53,6 +63,16 @@ public class FitmentConfiguration : IEntityTypeConfiguration<Fitment>
         builder.HasOne(f => f.Depot)
             .WithMany()
             .HasForeignKey(f => f.DepotId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(f => f.LocationDepo)
+            .WithMany()
+            .HasForeignKey(f => f.LocationDepoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(f => f.LocationCistern)
+            .WithMany()
+            .HasForeignKey(f => f.LocationCisternId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(f => f.Creator)

@@ -25,6 +25,9 @@ public class FitmentFilterCriteria
     public DateRange? LastRepairDate { get; set; }
     public IntRange? PeriodRep { get; set; }
     public IntRange? ServiceLifeYears { get; set; }
+    public IntRange? Code { get; set; }
+    public List<Guid>? LocationDepoIds { get; set; }
+    public List<Guid>? LocationCisternIds { get; set; }
     public List<Guid>? ModelIds { get; set; }
     public List<Guid>? DepotIds { get; set; }
     public List<Guid>? CreatorIds { get; set; }
