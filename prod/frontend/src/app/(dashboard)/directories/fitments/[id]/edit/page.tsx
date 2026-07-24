@@ -104,8 +104,9 @@ function mergeCurrentOption(
 
 function getLocationCode(fitment: FitmentDTO): number {
   if (typeof fitment.code === "number") return fitment.code;
-  if (fitment.locationCisternId || fitment.locationCistern?.id) return 1;
-  if (fitment.locationDepoId || fitment.locationDepo?.id) return 2;
+  // 1 — депо (снятие), 2 — вагон (установка)
+  if (fitment.locationDepoId || fitment.locationDepo?.id) return 1;
+  if (fitment.locationCisternId || fitment.locationCistern?.id) return 2;
   return 0;
 }
 
@@ -243,12 +244,12 @@ export default function EditFitmentPage() {
     }
 
     if (locationCode === 1) {
-      form.setValue("locationDepoId", "");
+      form.setValue("locationCisternId", "");
       return;
     }
 
     if (locationCode === 2) {
-      form.setValue("locationCisternId", "");
+      form.setValue("locationDepoId", "");
     }
   }, [resolvedFitment, form, locationCode]);
 
@@ -533,8 +534,8 @@ export default function EditFitmentPage() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="0">Не установлена</SelectItem>
-                          <SelectItem value="1">Вагон</SelectItem>
-                          <SelectItem value="2">Депо</SelectItem>
+                          <SelectItem value="1">Депо</SelectItem>
+                          <SelectItem value="2">Вагон</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -553,18 +554,16 @@ export default function EditFitmentPage() {
                   <>
                     <FormField
                       control={form.control}
-                      name="locationCisternId"
+                      name="locationDepoId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Номер вагона-цистерны</FormLabel>
+                          <FormLabel>Депо</FormLabel>
                           <FormControl>
-                            <SearchableSelect
+                            <DepotSearchSelect
                               value={field.value}
-                              onChange={field.onChange}
-                              options={mergedCisternOptions}
-                              placeholder="Выберите вагон-цистерну"
-                              searchPlaceholder="Введите номер вагона"
-                              isLoading={cisternsLoading}
+                              onValueChange={field.onChange}
+                              placeholder="Выберите депо"
+                              selectedLabel={locationDepotLabel}
                             />
                           </FormControl>
                           <FormMessage />
@@ -580,16 +579,18 @@ export default function EditFitmentPage() {
                   <>
                     <FormField
                       control={form.control}
-                      name="locationDepoId"
+                      name="locationCisternId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Депо</FormLabel>
+                          <FormLabel>Номер вагона-цистерны</FormLabel>
                           <FormControl>
-                            <DepotSearchSelect
+                            <SearchableSelect
                               value={field.value}
-                              onValueChange={field.onChange}
-                              placeholder="Выберите депо"
-                              selectedLabel={locationDepotLabel}
+                              onChange={field.onChange}
+                              options={mergedCisternOptions}
+                              placeholder="Выберите вагон-цистерну"
+                              searchPlaceholder="Введите номер вагона"
+                              isLoading={cisternsLoading}
                             />
                           </FormControl>
                           <FormMessage />

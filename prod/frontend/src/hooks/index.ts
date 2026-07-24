@@ -18,6 +18,7 @@ export * from './personalWagonDateReps.hook';
 export * from './stampNumbers.hook';
 export * from './parts.hook';
 export * from './partEquipment.hook';
+export * from './fitmentEquipment.hook';
 export * from './partsFilter.hook';
 export * from './fitmentsFilter.hook';
 export * from './part-installations.hook';

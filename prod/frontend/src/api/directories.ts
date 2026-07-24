@@ -69,6 +69,9 @@ import type {
   PartEquipmentDTO,
   LastEquipmentDTO,
   PaginatedPartEquipmentResponse,
+  FitmentEquipmentDTO,
+  CreateFitmentEquipmentDTO,
+  PaginatedFitmentEquipmentResponse,
   PartFilterSortDTO,
   PartFilterSortWithoutPaginationDTO,
   PaginatedFilteredPartsResponse,
@@ -439,6 +442,51 @@ export const partEquipmentApi = {
 
   getLastByCistern: async (cisternId: string): Promise<LastEquipmentDTO[]> => {
     const response = await api.get(`/api/part-equipments/last-by-cistern/${cisternId}`);
+    return response.data;
+  },
+};
+
+// Fitment Equipment API (Привязка арматуры)
+export const fitmentEquipmentApi = {
+  getAll: async (pageNumber = 1, pageSize = 10): Promise<PaginatedFitmentEquipmentResponse> => {
+    const params = new URLSearchParams({
+      pageNumber: pageNumber.toString(),
+      pageSize: pageSize.toString(),
+    });
+    const response = await api.get(`/api/fitment-equipments?${params.toString()}`);
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<FitmentEquipmentDTO> => {
+    const response = await api.get(`/api/fitment-equipments/${id}`);
+    return response.data;
+  },
+
+  create: async (data: CreateFitmentEquipmentDTO): Promise<void> => {
+    await api.post('/api/fitment-equipments', data);
+  },
+
+  getLastByFitment: async (fitmentId: string): Promise<FitmentEquipmentDTO | null> => {
+    try {
+      const response = await api.get(`/api/fitment-equipments/last-by-fitment/${fitmentId}`);
+      return response.data ?? null;
+    } catch (err: unknown) {
+      const status =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { status?: number } }).response?.status
+          : undefined;
+      if (status === 404) return null;
+      throw err;
+    }
+  },
+
+  getByCistern: async (cisternId: string): Promise<FitmentEquipmentDTO[]> => {
+    const response = await api.get(`/api/fitment-equipments/by-cistern/${cisternId}`);
+    return response.data;
+  },
+
+  getLastByCistern: async (cisternId: string): Promise<FitmentEquipmentDTO[]> => {
+    const response = await api.get(`/api/fitment-equipments/last-by-cistern/${cisternId}`);
     return response.data;
   },
 };

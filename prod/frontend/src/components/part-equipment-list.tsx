@@ -53,6 +53,8 @@ import {
 import {
   usePartEquipmentsByCistern,
   useLastPartEquipmentsByCistern,
+  useFitmentEquipmentsByCistern,
+  useLastFitmentEquipmentsByCistern,
   useAllUsers,
   useCurrentUser,
   useCreateMessage,
@@ -60,7 +62,8 @@ import {
 } from "@/hooks";
 import { filesApi } from "@/api/files";
 import { MessagePriority } from "@/types/messages";
-import { LastEquipmentDTO } from "@/types/directories";
+import { FitmentEquipmentDTO, FitmentEquipmentUserDTO, LastEquipmentDTO } from "@/types/directories";
+import { formatDate as formatDateValue } from "@/lib/formatDate";
 
 interface PartEquipmentListProps {
   cisternId: string;
@@ -70,6 +73,12 @@ type NonConformityMarks = Record<string, boolean>;
 
 interface NonConformityTableProps {
   equipments: LastEquipmentDTO[];
+  nonConformityMarks: NonConformityMarks;
+  onToggleNonConformity: (equipmentTypeId: string, checked: boolean) => void;
+}
+
+interface FitmentEquipmentTableProps {
+  equipments: FitmentEquipmentDTO[];
   nonConformityMarks: NonConformityMarks;
   onToggleNonConformity: (equipmentTypeId: string, checked: boolean) => void;
 }
@@ -94,6 +103,7 @@ const CATEGORY_LABELS = {
   wheels: "Колесные пары",
   trucks: "Детали тележек",
   couplers: "Автосцепное оборудование",
+  fitments: "Арматура",
 } as const;
 
 const getPartDetails = (equipment: LastEquipmentDTO) => {
@@ -102,6 +112,54 @@ const getPartDetails = (equipment: LastEquipmentDTO) => {
   const serial = part?.serialNumber || "—";
   const year = part?.manufactureYear ? new Date(part.manufactureYear).getFullYear() : "—";
   return `${stamp}; ${serial}; ${year}`;
+};
+
+const getFitmentNonConformityId = (equipment: FitmentEquipmentDTO) =>
+  `fitment:${equipment.fitmentId || equipment.id}`;
+
+const getFitmentDetails = (equipment: FitmentEquipmentDTO) => {
+  const serial = equipment.fitment?.serialNumber || "—";
+  const passport = equipment.fitment?.passportNumber || "—";
+  return `${serial}; ${passport}`;
+};
+
+const formatFitmentUserName = (user?: FitmentEquipmentUserDTO | null) => {
+  if (!user) return "—";
+  const name = [user.lastName, user.firstName].filter(Boolean).join(" ").trim();
+  return name || "—";
+};
+
+const formatFitmentLabel = (item: FitmentEquipmentDTO) => {
+  if (!item.fitment) return "—";
+  const serial = item.fitment.serialNumber || "—";
+  const passport = item.fitment.passportNumber || "—";
+  return `(${serial}; ${passport})`;
+};
+
+const formatFitmentDepot = (item: FitmentEquipmentDTO) => {
+  if (!item.depot) return "—";
+  const shortName = item.depot.shortName || "—";
+  const code = item.depot.code || "—";
+  return `${shortName} (${code})`;
+};
+
+const formatFitmentDocument = (item: FitmentEquipmentDTO) => {
+  if (!item.document) return "—";
+  const number = item.document.number || "—";
+  const author = item.document.author || "—";
+  const date = formatDateValue(item.document.date, "ru-RU", "—");
+  return `${number} (${author}; ${date})`;
+};
+
+const getFitmentOperationText = (operation: number) => {
+  switch (operation) {
+    case 1:
+      return { text: "Снятие", variant: "destructive" as const };
+    case 2:
+      return { text: "Установка", variant: "default" as const };
+    default:
+      return { text: "Не указана", variant: "secondary" as const };
+  }
 };
 
 // Функция для определения категории оборудования
@@ -180,7 +238,7 @@ const WheelPairsTable = ({
                 Код вида <br />
                 работы
               </TableHead>
-              <TableHead>Толщина обода (Л/П)</TableHead>
+              <TableHead>Толщина обода <br /> (Л/П)</TableHead>
               <TableHead>
                 Документ <br />
                 (договор, дата){" "}
@@ -243,7 +301,7 @@ const WheelPairsTable = ({
                     {equipment.lastEquipment.documentDate
                       ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU")
                       : "—"}
-                    <br /> Вид ремонта: {equipment.lastEquipment.repairType?.code || "—"}
+                    <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center">
@@ -283,8 +341,7 @@ const TruckPartsTable = ({
           <TableHeader>
             <TableRow>
               <TableHead>
-                Наименование <br />
-                показателя
+              Тип детали
               </TableHead>
               <TableHead>
                 Код ЖД <br />
@@ -301,8 +358,9 @@ const TruckPartsTable = ({
               <TableHead>
                 Дата работ <br />с деталью
               </TableHead>
-              <TableHead>Код вида работы</TableHead>
-              <TableHead>Код вида тележки</TableHead>
+              <TableHead>                Код вида <br />
+              работы</TableHead>
+              <TableHead>Код вида <br />тележки</TableHead>
               <TableHead>
                 Документ <br />
                 (договор, дата){" "}
@@ -363,7 +421,7 @@ const TruckPartsTable = ({
                     {equipment.lastEquipment.documentDate
                       ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU")
                       : "—"}
-                    <br /> Вид ремонта: {equipment.lastEquipment.repairType?.code || "—"}
+                    <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center">
@@ -402,41 +460,38 @@ const CouplerEquipmentTable = ({
     <Card className="mb-6">
       <CardHeader>
         <CardTitle>Автосцепное оборудование</CardTitle>
-        <CardDescription>Автосцепка, поглощающие аппараты, тяговые хомуты</CardDescription>
+        <CardDescription>Автосцепка, поглощающие аппараты</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>
-                Наименование <br />
-                показателя
-              </TableHead>
-              <TableHead>Код детали</TableHead>
-              <TableHead>
-                Код неиспр. <br />
-                детали
+                Тип детали
               </TableHead>
               <TableHead>
                 Код ЖД <br />
                 администр.
               </TableHead>
-              <TableHead>Код предпр-изг.</TableHead>
               <TableHead>
-                Номер детали <br />
-                (клейма)
+                Деталь
+                <br />
+                (код пред.; завод. номер; год){" "}
               </TableHead>
-              <TableHead>Год изготовления</TableHead>
+              <TableHead>
+                Код п-я работы <br /> с деталью
+              </TableHead>
+              <TableHead>
+                Дата работ <br />с деталью
+              </TableHead>
               <TableHead>
                 Код вида <br />
                 работы
               </TableHead>
-              <TableHead>Дата работы</TableHead>
               <TableHead>
-                Код вида <br />
-                ремонта (?)
+                Документ <br />
+                (договор, дата){" "}
               </TableHead>
-              <TableHead>Примечание</TableHead>
               <TableHead className="text-center">
                 Отметка
                 <br />
@@ -447,7 +502,7 @@ const CouplerEquipmentTable = ({
           <TableBody>
             {equipments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   Автосцепное оборудование не установлено
                 </TableCell>
               </TableRow>
@@ -461,21 +516,33 @@ const CouplerEquipmentTable = ({
                       : undefined
                   }
                 >
-                  <TableCell>{equipment.equipmentTypeName}</TableCell>
-                  <TableCell>{equipment.lastEquipment.equipmentType?.code || "—"}</TableCell>
-                  <TableCell>{equipment.lastEquipment.defectsId || "—"}</TableCell>
-                  <TableCell>{equipment.lastEquipment.adminOwnerId || "—"}</TableCell>
-                  <TableCell>{equipment.lastEquipment.jobDepot?.code || "—"}</TableCell>
                   <TableCell>
-                    {equipment.lastEquipment.part?.stampInfo?.value ||
-                      equipment.lastEquipment.part?.serialNumber ||
-                      "—"}
+                    {equipment.equipmentTypeName}
+                    <br></br>{" "}
+                    <span className="text-xs text-gray-500">
+                      Код детали: {equipment.lastEquipment.equipmentType?.code}{" "}
+                    </span>
                   </TableCell>
-                  <TableCell>{equipment.lastEquipment.part?.manufactureYear || "—"}</TableCell>
-                  <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
+                  <TableCell>{equipment.lastEquipment.adminOwnerId || "—"}</TableCell>
+                  <TableCell>
+                    <span>
+                      {equipment.lastEquipment.part?.stampInfo?.value || "—"};{" "}
+                      {equipment.lastEquipment.part?.serialNumber || "—"};{" "}
+                      {equipment.lastEquipment.part?.manufactureYear
+                        ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear()
+                        : "—"}{" "}
+                    </span>
+                  </TableCell>
+                  <TableCell>{equipment.lastEquipment.jobDepot?.code || "—"}</TableCell>
                   <TableCell>{formatDate(equipment.lastEquipment.documentDate)}</TableCell>
-                  <TableCell>{equipment.lastEquipment.repairType?.code || "—"}</TableCell>
-                  <TableCell className="max-w-xs truncate">{equipment.lastEquipment.notes || "—"}</TableCell>
+                  <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
+                  <TableCell>
+                    {equipment.lastEquipment.document?.number || "—"};{" "}
+                    {equipment.lastEquipment.documentDate
+                      ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU")
+                      : "—"}
+                    <br /> {equipment.lastEquipment.repairType?.name || "—"}
+                  </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center">
                       <Checkbox
@@ -489,6 +556,75 @@ const CouplerEquipmentTable = ({
                   </TableCell>
                 </TableRow>
               ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+};
+
+const FitmentEquipmentTable = ({
+  equipments,
+  nonConformityMarks,
+  onToggleNonConformity,
+}: FitmentEquipmentTableProps) => {
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle>Арматура</CardTitle>
+        <CardDescription>Последние привязки арматуры к вагону</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Тип арматуры</TableHead>
+              <TableHead>Арматура</TableHead>
+              <TableHead>Место работы</TableHead>
+              <TableHead>Документ</TableHead>
+              <TableHead>Дата привязки</TableHead>
+              <TableHead className="text-center">
+                Отметка
+                <br />
+                несоответствия
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {equipments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  Арматура не привязана
+                </TableCell>
+              </TableRow>
+            ) : (
+              equipments.map((equipment) => {
+                const markId = getFitmentNonConformityId(equipment);
+                return (
+                  <TableRow
+                    key={equipment.id}
+                    className={nonConformityMarks[markId] ? "bg-pink-100 hover:bg-pink-100" : undefined}
+                  >
+                    <TableCell>{equipment.fitment?.fitmentTypeName || "—"}</TableCell>
+                    <TableCell>{formatFitmentLabel(equipment)}</TableCell>
+                    <TableCell>{formatFitmentDepot(equipment)}</TableCell>
+                    <TableCell>{formatFitmentDocument(equipment)}</TableCell>
+                    <TableCell>{formatDateValue(equipment.date, "ru-RU", "—")}</TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex justify-center">
+                        <Checkbox
+                          checked={!!nonConformityMarks[markId]}
+                          onCheckedChange={(checked) =>
+                            onToggleNonConformity(markId, checked === true)
+                          }
+                          aria-label="Отметка несоответствия"
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -513,6 +649,16 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
     isLoading: isLoadingLast,
     error: errorLast,
   } = useLastPartEquipmentsByCistern(cisternId);
+  const {
+    data: allFitmentEquipments,
+    isLoading: isLoadingAllFitments,
+    error: errorAllFitments,
+  } = useFitmentEquipmentsByCistern(cisternId);
+  const {
+    data: lastFitmentEquipments,
+    isLoading: isLoadingLastFitments,
+    error: errorLastFitments,
+  } = useLastFitmentEquipmentsByCistern(cisternId);
   const { data: cistern } = useCistern(cisternId);
   const { data: users, isLoading: isLoadingUsers } = useAllUsers();
   const { data: currentUser } = useCurrentUser();
@@ -568,6 +714,22 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
       );
     }) || [];
 
+  const filteredAllFitmentEquipments =
+    allFitmentEquipments?.filter((equipment) => {
+      if (!searchTerm) return true;
+      const search = searchTerm.toLowerCase();
+      return (
+        equipment.fitment?.fitmentTypeName?.toLowerCase().includes(search) ||
+        equipment.fitment?.serialNumber?.toLowerCase().includes(search) ||
+        equipment.fitment?.passportNumber?.toLowerCase().includes(search) ||
+        equipment.depot?.name?.toLowerCase().includes(search) ||
+        equipment.depot?.shortName?.toLowerCase().includes(search) ||
+        equipment.jobUser?.lastName?.toLowerCase().includes(search) ||
+        equipment.testUser?.lastName?.toLowerCase().includes(search) ||
+        equipment.document?.number?.toLowerCase().includes(search)
+      );
+    }) || [];
+
   const selectedNonConformityItems = useMemo(() => {
     const items: SelectedNonConformityItem[] = [];
 
@@ -589,11 +751,23 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
       });
     });
 
+    (lastFitmentEquipments || []).forEach((equipment) => {
+      const markId = getFitmentNonConformityId(equipment);
+      if (!nonConformityMarks[markId]) return;
+      items.push({
+        id: markId,
+        category: CATEGORY_LABELS.fitments,
+        name: equipment.fitment?.fitmentTypeName || "Арматура",
+        details: getFitmentDetails(equipment),
+      });
+    });
+
     return items;
   }, [
     groupedEquipments.couplers,
     groupedEquipments.trucks,
     groupedEquipments.wheels,
+    lastFitmentEquipments,
     nonConformityMarks,
   ]);
 
@@ -701,7 +875,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
     return fullName ? `${fullName} (${user.email})` : user.email;
   };
 
-  if (errorAll || errorLast) {
+  if (errorAll || errorLast || errorAllFitments || errorLastFitments) {
     return (
       <Card>
         <CardHeader>
@@ -764,7 +938,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
 
         {/* Текущая комплектация */}
         <TabsContent value="current">
-          {isLoadingLast ? (
+          {isLoadingLast || isLoadingLastFitments ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-16 w-full" />
@@ -787,113 +961,193 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
                 nonConformityMarks={nonConformityMarks}
                 onToggleNonConformity={toggleNonConformity}
               />
+              <FitmentEquipmentTable
+                equipments={lastFitmentEquipments || []}
+                nonConformityMarks={nonConformityMarks}
+                onToggleNonConformity={toggleNonConformity}
+              />
             </div>
           )}
         </TabsContent>
 
         {/* Полная история */}
         <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5" />
-                История изменений оборудования
-              </CardTitle>
-              <CardDescription>Полная история установки и демонтажа оборудования</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingAll ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Дата операции</TableHead>
-                      <TableHead>Операция</TableHead>
-                      <TableHead>Тип оборудования</TableHead>
-                      <TableHead>Рабочее депо</TableHead>
-                      <TableHead>Депо</TableHead>
-                      <TableHead>Тип ремонта</TableHead>
-                      <TableHead>Толщина колес (мм)</TableHead>
-                      <TableHead>Тип тележки</TableHead>
-                      <TableHead>Примечания</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAllEquipments
-                      .sort((a, b) => {
-                        const dateA = new Date(a.documentDate || 0);
-                        const dateB = new Date(b.documentDate || 0);
-                        return dateB.getTime() - dateA.getTime();
-                      })
-                      .map((equipment) => {
-                        const operation = getOperationText(equipment.operation);
-                        return (
-                          <TableRow key={equipment.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4 text-gray-400" />
-                                {formatDate(equipment.document?.date)}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={operation.variant}>{operation.text}</Badge>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              <div>
-                                <div>{equipment.equipmentType?.name || "—"}</div>
-                                {equipment.equipmentType?.code && (
-                                  <div className="text-xs text-gray-500">
-                                    Код: {equipment.equipmentType.code}
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Wrench className="h-4 w-4 text-gray-400" />
-                                {equipment.jobDepot?.shortName || equipment.jobDepot?.name || "—"}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-4 w-4 text-gray-400" />
-                                {equipment.depot?.shortName || equipment.depot?.name || "—"}
-                              </div>
-                            </TableCell>
-                            <TableCell>{equipment.repairType?.name || "—"}</TableCell>
-                            <TableCell>
-                              {equipment.thicknessLeft && equipment.thicknessRight
-                                ? `${equipment.thicknessLeft}/${equipment.thicknessRight}`
-                                : "—"}
-                            </TableCell>
-                            <TableCell>
-                              {equipment.truckType ? `Тип ${equipment.truckType}` : "—"}
-                            </TableCell>
-                            <TableCell className="max-w-xs truncate">
-                              {equipment.notes || "—"}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    {filteredAllEquipments.length === 0 && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  История изменений оборудования
+                </CardTitle>
+                <CardDescription>Полная история установки и демонтажа оборудования</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingAll ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8">
-                          {allEquipments?.length === 0
-                            ? "История изменений пуста"
-                            : "Записи не найдены"}
-                        </TableCell>
+                        <TableHead>Дата операции</TableHead>
+                        <TableHead>Операция</TableHead>
+                        <TableHead>Тип оборудования</TableHead>
+                        <TableHead>Рабочее депо</TableHead>
+                        <TableHead>Депо</TableHead>
+                        <TableHead>Тип ремонта</TableHead>
+                        <TableHead>Толщина колес (мм)</TableHead>
+                        <TableHead>Тип тележки</TableHead>
+                        <TableHead>Примечания</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAllEquipments
+                        .sort((a, b) => {
+                          const dateA = new Date(a.documentDate || 0);
+                          const dateB = new Date(b.documentDate || 0);
+                          return dateB.getTime() - dateA.getTime();
+                        })
+                        .map((equipment) => {
+                          const operation = getOperationText(equipment.operation);
+                          return (
+                            <TableRow key={equipment.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4 text-gray-400" />
+                                  {formatDate(equipment.document?.date)}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={operation.variant}>{operation.text}</Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div>
+                                  <div>{equipment.equipmentType?.name || "—"}</div>
+                                  {equipment.equipmentType?.code && (
+                                    <div className="text-xs text-gray-500">
+                                      Код: {equipment.equipmentType.code}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Wrench className="h-4 w-4 text-gray-400" />
+                                  {equipment.jobDepot?.shortName || equipment.jobDepot?.name || "—"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="h-4 w-4 text-gray-400" />
+                                  {equipment.depot?.shortName || equipment.depot?.name || "—"}
+                                </div>
+                              </TableCell>
+                              <TableCell>{equipment.repairType?.name || "—"}</TableCell>
+                              <TableCell>
+                                {equipment.thicknessLeft && equipment.thicknessRight
+                                  ? `${equipment.thicknessLeft}/${equipment.thicknessRight}`
+                                  : "—"}
+                              </TableCell>
+                              <TableCell>
+                                {equipment.truckType ? `Тип ${equipment.truckType}` : "—"}
+                              </TableCell>
+                              <TableCell className="max-w-xs truncate">
+                                {equipment.notes || "—"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      {filteredAllEquipments.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-8">
+                            {allEquipments?.length === 0
+                              ? "История изменений пуста"
+                              : "Записи не найдены"}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  История привязок арматуры
+                </CardTitle>
+                <CardDescription>Полная история установки и снятия арматуры</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingAllFitments ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Дата привязки</TableHead>
+                        <TableHead>Операция</TableHead>
+                        <TableHead>Арматура</TableHead>
+                        <TableHead>Тип арматуры</TableHead>
+                        <TableHead>Работу произвёл</TableHead>
+                        <TableHead>Испытание провёл</TableHead>
+                        <TableHead>Место работы</TableHead>
+                        <TableHead>Документ</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAllFitmentEquipments
+                        .sort((a, b) => {
+                          const dateA = new Date(a.date || 0);
+                          const dateB = new Date(b.date || 0);
+                          return dateB.getTime() - dateA.getTime();
+                        })
+                        .map((equipment) => {
+                          const operation = getFitmentOperationText(equipment.operation);
+                          return (
+                            <TableRow key={equipment.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4 text-gray-400" />
+                                  {formatDateValue(equipment.date, "ru-RU", "—")}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={operation.variant}>{operation.text}</Badge>
+                              </TableCell>
+                              <TableCell>{formatFitmentLabel(equipment)}</TableCell>
+                              <TableCell>{equipment.fitment?.fitmentTypeName || "—"}</TableCell>
+                              <TableCell>{formatFitmentUserName(equipment.jobUser)}</TableCell>
+                              <TableCell>{formatFitmentUserName(equipment.testUser)}</TableCell>
+                              <TableCell>{formatFitmentDepot(equipment)}</TableCell>
+                              <TableCell>{formatFitmentDocument(equipment)}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      {filteredAllFitmentEquipments.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8">
+                            {allFitmentEquipments?.length === 0
+                              ? "История привязок арматуры пуста"
+                              : "Записи не найдены"}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 

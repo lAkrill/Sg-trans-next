@@ -16,7 +16,11 @@ import {
   TableHead, 
   TableHeader, 
   TableRow, 
-  Skeleton 
+  Skeleton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from "@/components/ui";
 import {
   ChevronLeft,
@@ -30,8 +34,14 @@ import {
 } from "lucide-react";
 import { useDeleteFitment, useFilterAllFitments, useFitments } from "@/hooks";
 import { FitmentsFilter } from "@/components/fitments-filter";
+import { FitmentEquipmentsTable } from "@/components/fitment-equipments-table";
+import { BindFitmentDialog } from "@/components/bind-fitment-dialog";
 import { formatDate } from "@/lib/formatDate";
-import type { FitmentFilterCriteria, FitmentFilterSortWithoutPaginationDTO } from "@/types/directories";
+import type {
+  FitmentDTO,
+  FitmentFilterCriteria,
+  FitmentFilterSortWithoutPaginationDTO,
+} from "@/types/directories";
 
 export default function FitmentsPage() {
   const router = useRouter();
@@ -40,6 +50,7 @@ export default function FitmentsPage() {
   const deleteMutation = useDeleteFitment();
   const [isFiltered, setIsFiltered] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [bindFitmentOpen, setBindFitmentOpen] = useState(false);
   const [currentFilters, setCurrentFilters] = useState<FitmentFilterCriteria>({
     fitmentTypeIds: [],
     serialNumbers: [],
@@ -47,6 +58,8 @@ export default function FitmentsPage() {
     modelIds: [],
     depotIds: [],
     creatorIds: [],
+    locationCisternIds: [],
+    locationDepoIds: [],
   });
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     "fitmentType",
@@ -57,10 +70,35 @@ export default function FitmentsPage() {
     "lastRepairDate",
     "periodRep",
     "serviceLifeYears",
+    "code",
+    "locationFitment",
     "manufacturer",
     "updatedAt",
     "createdId",
   ]);
+
+  const getLocationLabel = (code?: number) => {
+    switch (code) {
+      case 1:
+        return "Депо";
+      case 2:
+        return "Вагон";
+      default:
+        return "Не установлен";
+    }
+  };
+
+  const getLocationPlace = (fitment: FitmentDTO) => {
+    if (fitment.code === 2) {
+      return fitment.locationCistern?.number || "—";
+    }
+    if (fitment.code === 1) {
+      const shortName = fitment.locationDepo?.shortName || "—";
+      const depotCode = fitment.locationDepo?.code;
+      return depotCode ? `${shortName} (${depotCode})` : shortName;
+    }
+    return "—";
+  };
 
   // Обычная загрузка арматуры (без фильтров)
   const { data: fitmentsData, isLoading, error } = useFitments();
@@ -265,147 +303,182 @@ export default function FitmentsPage() {
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="flex gap-3 max-lg:flex-col">
+      <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
           <Settings className="h-8 w-8" />
           Арматура
         </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Справочник арматуры
-          {isFiltered && (
-            <span className="ml-2 text-blue-600">
-              (применены фильтры)
-            </span>
-          )}
-        </p>
       </div>
 
-      {/* Controls */}
-      <div className="flex justify-end items-center gap-4">
-        <div className="flex gap-2">
-          <FitmentsFilter
-            open={filterOpen}
-            onOpenChange={setFilterOpen}
-            onFiltersChange={handleFilterApply}
-            onVisibleColumnsChange={setVisibleColumns}
-            filters={currentFilters}
-            visibleColumns={visibleColumns}
-            isLoading={isCurrentLoading}
-            filteredCount={totalCount}
-            totalCount={isFiltered ? allCount : totalCount}
-          />
-          <Link href="/directories/fitments/create">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Добавить арматуру
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <Tabs defaultValue="fitments" className="space-y-3">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="fitments">
+            Арматура
+            </TabsTrigger>
+          <TabsTrigger value="bindings">Привязка арматуры</TabsTrigger>
+        </TabsList>
 
-      {/* Content */}
-      <Card>
-        <CardHeader>
-          <div className="flex gap-2 items-center">
-            <CardTitle>
-              {isFiltered ? "Результаты фильтрации" : "Список арматуры"}
-            </CardTitle>
-            <CardDescription>
-              {isFiltered
-                ? `Отфильтровано: ${totalCount}`
-                : `Всего записей: ${allCount}`}
-            </CardDescription>
+        <TabsContent value="fitments" className="space-y-3">
+          <div className="flex flex-col gap-1 ml-2">
+             Справочник арматуры
+             {isFiltered && ( <span className="ml-2 text-blue-600"> (применены фильтры)  </span> )}
           </div>
-        </CardHeader>
-        <CardContent className="-mt-4">
-          {/* Таблица */}
-          {isCurrentLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
+          {/* Controls */}
+          <div className="flex justify-end items-center gap-4">
+            <div className="flex gap-2">
+              <FitmentsFilter
+                open={filterOpen}
+                onOpenChange={setFilterOpen}
+                onFiltersChange={handleFilterApply}
+                onVisibleColumnsChange={setVisibleColumns}
+                filters={currentFilters}
+                visibleColumns={visibleColumns}
+                isLoading={isCurrentLoading}
+                filteredCount={totalCount}
+                totalCount={isFiltered ? allCount : totalCount}
+              />
+              <Link href="/directories/fitments/create">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Добавить арматуру
+                </Button>
+              </Link>
             </div>
-          ) : !currentFitments.length ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center">
-                <Settings className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">
-                  {isFiltered
-                    ? "По заданным фильтрам арматура не найдена"
-                    : "Нет данных для отображения"}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {isColumnVisible("fitmentType") && <TableHead>Тип</TableHead>}
-                    {isColumnVisible("model") && <TableHead>Модель</TableHead>}
-                    {isColumnVisible("serialNumber") && <TableHead>Номер</TableHead>}
-                    {isColumnVisible("passportNumber") && <TableHead>Паспорт</TableHead>}
-                    {isColumnVisible("buildDate") && <TableHead>Дата <br />постройки</TableHead>}
-                    {isColumnVisible("lastRepairDate") && <TableHead>Дата <br />последнего ТО</TableHead>}
-                    {isColumnVisible("periodRep") && <TableHead>Период <br />ремонта</TableHead>}
-                    {isColumnVisible("serviceLifeYears") && <TableHead>Срок <br />службы</TableHead>}
-                    {isColumnVisible("manufacturer") && <TableHead>Производитель</TableHead>}
-                    {isColumnVisible("updatedAt") && <TableHead>Дата <br />обновления</TableHead>}
-                    {isColumnVisible("createdId") && <TableHead>Пользователь</TableHead>}
-                    <TableHead className="w-[1%] whitespace-nowrap text-right">Действия</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedFitments.map((fitment) => (
-                    <TableRow key={fitment.id}>
-                      {isColumnVisible("fitmentType") && (
-                        <TableCell className="font-medium">
-                          {fitment.fitmentType.name}
-                        </TableCell>
-                      )}
-                      {isColumnVisible("model") && <TableCell>{fitment.model.name}</TableCell>}
-                      {isColumnVisible("serialNumber") && <TableCell>{fitment.serialNumber}</TableCell>}
-                      {isColumnVisible("passportNumber") && <TableCell>{fitment.passportNumber}</TableCell>}
-                      {isColumnVisible("buildDate") && <TableCell>{formatDate(fitment.buildDate, "ru-RU", "—")}</TableCell>}
-                      {isColumnVisible("lastRepairDate") && <TableCell>{formatDate(fitment.lastRepairDate, "ru-RU", "—")}</TableCell>}
-                      {isColumnVisible("periodRep") && <TableCell>{fitment.periodRep}</TableCell>}
-                      {isColumnVisible("serviceLifeYears") && <TableCell>{fitment.serviceLifeYears}</TableCell>}
-                      {isColumnVisible("manufacturer") && <TableCell>{fitment.depot?.shortName || "—"}</TableCell>}
-                      {isColumnVisible("updatedAt") && <TableCell>{formatDate(fitment.updatedAt, "ru-RU", "—")}</TableCell>}
-                      {isColumnVisible("createdId") && <TableCell>{fitment.createdId || "—"}</TableCell>}
-                      <TableCell className="w-[1%] whitespace-nowrap">
-                        <div className="flex w-max justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(fitment.id)}
-                            title="Редактировать"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(fitment.id)}
-                            disabled={deleteMutation.isPending}
-                            title="Удалить"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          </div>
 
-              <div className="mt-4">
-                <Pagination />
+          {/* Content */}
+          <Card>
+            <CardHeader>
+              <div className="flex gap-2 items-center">
+                <CardTitle>
+                  {isFiltered ? "Результаты фильтрации" : "Список арматуры"}
+                </CardTitle>
+                <CardDescription>
+                  {isFiltered
+                    ? `Отфильтровано: ${totalCount}`
+                    : `Всего записей: ${allCount}`}
+                </CardDescription>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent className="-mt-4">
+              {/* Таблица */}
+              {isCurrentLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : !currentFitments.length ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <Settings className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {isFiltered
+                        ? "По заданным фильтрам арматура не найдена"
+                        : "Нет данных для отображения"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {isColumnVisible("fitmentType") && <TableHead>Тип</TableHead>}
+                        {isColumnVisible("model") && <TableHead>Модель</TableHead>}
+                        {isColumnVisible("serialNumber") && <TableHead>Номер</TableHead>}
+                        {isColumnVisible("passportNumber") && <TableHead>Паспорт</TableHead>}
+                        {isColumnVisible("buildDate") && <TableHead>Дата <br />постройки</TableHead>}
+                        {isColumnVisible("lastRepairDate") && <TableHead>Дата <br />последнего ТО</TableHead>}
+                        {isColumnVisible("periodRep") && <TableHead>Период <br />ремонта</TableHead>}
+                        {isColumnVisible("serviceLifeYears") && <TableHead>Срок <br />службы</TableHead>}
+                        {isColumnVisible("code") && <TableHead>Местоположение</TableHead>}  
+                        {isColumnVisible("locationFitment") && <TableHead>Вагон/Депо</TableHead>}
+                        {isColumnVisible("manufacturer") && <TableHead>Производитель</TableHead>}
+                        {isColumnVisible("updatedAt") && <TableHead>Дата <br />обновления</TableHead>}
+                        {isColumnVisible("createdId") && <TableHead>Пользователь</TableHead>}
+                        <TableHead className="w-[1%] whitespace-nowrap text-right">Действия</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedFitments.map((fitment) => (
+                        <TableRow key={fitment.id}>
+                          {isColumnVisible("fitmentType") && (
+                            <TableCell className="font-medium">
+                              {fitment.fitmentType.name}
+                            </TableCell>
+                          )}
+                          {isColumnVisible("model") && <TableCell>{fitment.model.name}</TableCell>}
+                          {isColumnVisible("serialNumber") && <TableCell>{fitment.serialNumber}</TableCell>}
+                          {isColumnVisible("passportNumber") && <TableCell>{fitment.passportNumber}</TableCell>}
+                          {isColumnVisible("buildDate") && <TableCell>{formatDate(fitment.buildDate, "ru-RU", "—")}</TableCell>}
+                          {isColumnVisible("lastRepairDate") && <TableCell>{formatDate(fitment.lastRepairDate, "ru-RU", "—")}</TableCell>}
+                          {isColumnVisible("periodRep") && <TableCell>{fitment.periodRep}</TableCell>}
+                          {isColumnVisible("serviceLifeYears") && <TableCell>{fitment.serviceLifeYears}</TableCell>}
+                          {isColumnVisible("code") && (
+                            <TableCell>{getLocationLabel(fitment.code)}</TableCell>
+                          )}
+                          {isColumnVisible("locationFitment") && (
+                            <TableCell>{getLocationPlace(fitment)}</TableCell>
+                          )}
+                          {isColumnVisible("manufacturer") && <TableCell>{fitment.depot?.shortName || "—"}</TableCell>}
+                          {isColumnVisible("updatedAt") && <TableCell>{formatDate(fitment.updatedAt, "ru-RU", "—")}</TableCell>}
+                          {isColumnVisible("createdId") && <TableCell>{fitment.createdId || "—"}</TableCell>}
+                          <TableCell className="w-[1%] whitespace-nowrap">
+                            <div className="flex w-max justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(fitment.id)}
+                                title="Редактировать"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(fitment.id)}
+                                disabled={deleteMutation.isPending}
+                                title="Удалить"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <div className="mt-4">
+                    <Pagination />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bindings" className="space-y-3">
+          <div className="flex flex-col gap-1 ml-2">
+            Справочник привязок арматуры
+          </div>
+
+          <div className="flex justify-end items-center gap-4">
+            <Button onClick={() => setBindFitmentOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Привязать арматуру
+            </Button>
+          </div>
+
+          <FitmentEquipmentsTable />
+
+          <BindFitmentDialog
+            open={bindFitmentOpen}
+            onOpenChange={setBindFitmentOpen}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

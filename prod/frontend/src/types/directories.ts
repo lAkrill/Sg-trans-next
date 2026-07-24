@@ -54,11 +54,11 @@ export interface DocumentDTO {
 
 export interface CreateDocumentDTO {
   number: string;
-  type: string;
+  type: string | number;
   date: string;
-  author?: string;
-  price?: number;
-  note?: string;
+  author?: string | null;
+  price?: number | null;
+  note?: string | null;
 }
 
 export interface UpdateDocumentDTO {
@@ -812,6 +812,86 @@ export interface PaginatedPartEquipmentResponse {
   pageSize: number;
 }
 
+// FitmentEquipment (Привязка арматуры)
+export interface FitmentEquipmentRailwayCisternDTO {
+  id: string;
+  number: string;
+  model: string;
+  owner: string;
+}
+
+export interface FitmentEquipmentFitmentInfoDTO {
+  id: string;
+  serialNumber: string;
+  passportNumber: string;
+  fitmentTypeName: string;
+}
+
+export interface FitmentEquipmentUserDTO {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface FitmentEquipmentDepotDTO {
+  id: string;
+  name: string;
+  code: string;
+  location: string;
+  shortName: string;
+  createdAt: string;
+}
+
+export interface FitmentEquipmentDocumentDTO {
+  id: string;
+  number: string;
+  type: number;
+  date: string;
+  author: string;
+  price: number;
+  note: string;
+}
+
+export interface FitmentEquipmentDTO {
+  id: string;
+  railwayCisternsId: string;
+  operation: number;
+  fitmentId: string;
+  jobUserId: string;
+  testUserId: string;
+  depoId: string;
+  date: string;
+  documentId: string;
+  railwayCistern?: FitmentEquipmentRailwayCisternDTO | null;
+  fitment?: FitmentEquipmentFitmentInfoDTO | null;
+  jobUser?: FitmentEquipmentUserDTO | null;
+  testUser?: FitmentEquipmentUserDTO | null;
+  depot?: FitmentEquipmentDepotDTO | null;
+  document?: FitmentEquipmentDocumentDTO | null;
+}
+
+export interface CreateFitmentEquipmentDTO {
+  railwayCisternsId?: string;
+  operation: number;
+  fitmentId: string;
+  jobUserId?: string;
+  testUserId?: string;
+  depoId?: string;
+  date?: string;
+  documentId?: string;
+}
+
+export interface PaginatedFitmentEquipmentResponse {
+  items: FitmentEquipmentDTO[];
+  pageNumber: number;
+  totalPages: number;
+  totalCount: number;
+  pageSize: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
 // Paginated response for Documents
 export interface PaginatedDocumentsResponse {
   items: DocumentDTO[];
@@ -913,6 +993,9 @@ export interface FitmentFilterCriteria {
   depotIds?: string[];
   creatorIds?: string[];
   updatedAt?: DateTimeRange;
+  code?: IntRange;
+  locationCisternIds?: string[];
+  locationDepoIds?: string[];
 }
 
 export interface FitmentFilterSortWithoutPaginationDTO {

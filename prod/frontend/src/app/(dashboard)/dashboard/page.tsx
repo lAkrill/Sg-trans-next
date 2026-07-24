@@ -22,7 +22,7 @@ export default function DashboardPage() {
       <UserMessageCard />
       
       {/* Settings shortcut */}
-      <Card>
+      {/* <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between max-lg:flex-col">
             <div className="flex items-center space-x-4">
@@ -41,7 +41,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
 
     </div>
