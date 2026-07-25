@@ -64,6 +64,7 @@ import { filesApi } from "@/api/files";
 import { MessagePriority } from "@/types/messages";
 import { FitmentEquipmentDTO, FitmentEquipmentUserDTO, LastEquipmentDTO } from "@/types/directories";
 import { formatDate as formatDateValue } from "@/lib/formatDate";
+import { v4 as uuidv4 } from "uuid";
 
 interface PartEquipmentListProps {
   cisternId: string;
@@ -886,7 +887,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
         const extension = reportFile.name.includes(".")
           ? reportFile.name.slice(reportFile.name.lastIndexOf(".")).toLowerCase()
           : "";
-        const uniqueFileName = `${crypto.randomUUID()}${extension}`;
+        const uniqueFileName = `${uuidv4()}${extension}`;
         const uploaded = await filesApi.upload(reportFile, {
           directory: "Message",
           fileName: uniqueFileName,
