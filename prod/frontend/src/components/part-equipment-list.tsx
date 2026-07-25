@@ -99,6 +99,49 @@ const isAllowedReportFile = (file: File) => {
   return ALLOWED_REPORT_FILE_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
 };
 
+const getReportErrorMessage = (err: unknown, fallback: string) => {
+  if (!err || typeof err !== "object") return fallback;
+
+  const axiosError = err as {
+    message?: string;
+    code?: string;
+    response?: {
+      status?: number;
+      statusText?: string;
+      data?: {
+        message?: string;
+        Message?: string;
+        details?: string;
+        Details?: string;
+        title?: string;
+        Title?: string;
+      };
+    };
+  };
+
+  const data = axiosError.response?.data;
+  const serverMessage =
+    data?.message || data?.Message || data?.details || data?.Details || data?.title || data?.Title;
+
+  if (serverMessage) return serverMessage;
+
+  const status = axiosError.response?.status;
+  if (status) {
+    const statusText = axiosError.response?.statusText;
+    return statusText ? `Ошибка сервера (${status}: ${statusText})` : `Ошибка сервера (${status})`;
+  }
+
+  if (axiosError.code === "ERR_NETWORK" || axiosError.message === "Network Error") {
+    return "Нет связи с сервером";
+  }
+
+  if (axiosError.message && axiosError.message !== "Network Error") {
+    return axiosError.message;
+  }
+
+  return fallback;
+};
+
 const CATEGORY_LABELS = {
   wheels: "Колесные пары",
   trucks: "Детали тележек",
@@ -832,11 +875,14 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
       return;
     }
 
+    let step: "upload" | "message" = "message";
+
     try {
       let fileName: string | null = null;
       let filePath: string | null = null;
 
       if (reportFile) {
+        step = "upload";
         const extension = reportFile.name.includes(".")
           ? reportFile.name.slice(reportFile.name.lastIndexOf(".")).toLowerCase()
           : "";
@@ -849,6 +895,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
         filePath = "Message";
       }
 
+      step = "message";
       await createMessageMutation.mutateAsync({
         text: buildNonConformityMessageText(),
         fromUserId: currentUser.userId,
@@ -860,8 +907,17 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
 
       setNonConformityMarks({});
       handleReportDialogChange(false);
-    } catch {
-      setReportError("Не удалось отправить сообщение. Попробуйте ещё раз.");
+    } catch (err) {
+      const fallback =
+        step === "upload"
+          ? "Не удалось загрузить файл. Попробуйте ещё раз."
+          : "Не удалось отправить сообщение. Попробуйте ещё раз.";
+      const details = getReportErrorMessage(err, fallback);
+      setReportError(
+        details === fallback
+          ? fallback
+          : `${step === "upload" ? "Ошибка загрузки файла" : "Ошибка отправки сообщения"}: ${details}`
+      );
     }
   };
 
