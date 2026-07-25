@@ -35,8 +35,8 @@ import type { PartFilterCriteria } from '@/types/directories';
 
 const LOCATION_CODE_OPTIONS = [
   { value: '0', label: 'Не установлено' },
-  { value: '1', label: 'Вагон' },
-  { value: '2', label: 'Депо' },
+  { value: '2', label: 'Вагон' },
+  { value: '1', label: 'Депо' },
 ] as const;
 
 interface PartsFilterProps {

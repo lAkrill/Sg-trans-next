@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { cookieUtils, COOKIE_NAMES } from './cookies';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = 'http://vagon.sgtrans.by:5000' || 'http://localhost:5000';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

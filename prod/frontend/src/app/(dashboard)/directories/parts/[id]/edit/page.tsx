@@ -125,8 +125,8 @@ function manufactureYearDate(value: unknown): string | null {
 
 function getLocationCode(part: PartDTO): number {
   if (typeof part.code === "number") return part.code;
-  if (part.currentLocation?.id) return 1;
-  if (part.depot?.id) return 2;
+  if (part.currentLocation?.id) return 2;
+  if (part.depot?.id) return 1;
   return 0;
 }
 
@@ -266,12 +266,12 @@ export default function EditPartPage() {
       return;
     }
 
-    if (locationCode === 1) {
+    if (locationCode === 2) {
       form.setValue("depotId", "");
       return;
     }
 
-    if (locationCode === 2) {
+    if (locationCode === 1) {
       form.setValue("currentLocation", "");
     }
   }, [form, locationCode]);
@@ -513,8 +513,8 @@ export default function EditPartPage() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="0">Не установлена</SelectItem>
-                          <SelectItem value="1">Вагон</SelectItem>
-                          <SelectItem value="2">Депо</SelectItem>
+                          <SelectItem value="2">Вагон</SelectItem>
+                          <SelectItem value="1">Депо</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -529,7 +529,7 @@ export default function EditPartPage() {
                   </>
                 )}
 
-                {locationCode === 1 && (
+                {locationCode === 2 && (
                   <>
                     <FormField
                       control={form.control}
@@ -556,7 +556,7 @@ export default function EditPartPage() {
                   </>
                 )}
 
-                {locationCode === 2 && (
+                {locationCode === 1 && (
                   <>
                     <div className="hidden md:block" />
 

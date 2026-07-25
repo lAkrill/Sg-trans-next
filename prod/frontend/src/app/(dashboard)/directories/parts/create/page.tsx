@@ -134,12 +134,12 @@ export default function CreatePartPage() {
       return;
     }
 
-    if (locationCode === 1) {
+    if (locationCode === 2) {
       form.setValue("depotId", "");
       return;
     }
 
-    if (locationCode === 2) {
+    if (locationCode === 1) {
       form.setValue("currentLocation", "");
     }
   }, [form, locationCode]);
@@ -341,8 +341,8 @@ export default function CreatePartPage() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="0">Не установлена</SelectItem>
-                          <SelectItem value="1">Вагон</SelectItem>
-                          <SelectItem value="2">Депо</SelectItem>
+                          <SelectItem value="2">Вагон</SelectItem>
+                          <SelectItem value="1">Депо</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -357,7 +357,7 @@ export default function CreatePartPage() {
                   </>
                 )}
 
-                {locationCode === 1 && (
+                {locationCode === 2 && (
                   <>
                     <FormField
                       control={form.control}
@@ -384,7 +384,7 @@ export default function CreatePartPage() {
                   </>
                 )}
 
-                {locationCode === 2 && (
+                {locationCode === 1 && (
                   <>
                     <div className="hidden md:block" />
 
