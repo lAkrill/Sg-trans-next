@@ -875,6 +875,11 @@ export default function RepairsPage() {
           type: "date",
         },
         {
+          key: "extensionServiceLifeDate",
+          label: "Дата продления срока эксплуатации",
+          type: "date",
+        },
+        {
           key: "reRegistrationDate",
           label: "Перерегистрация — последняя",
           type: "date",
@@ -912,6 +917,7 @@ export default function RepairsPage() {
         mileage: row.milage != null ? String(row.milage) : "—",
         paintingLast: formatRuDate(row.periodPaintRepair),
         serviceEndDate: formatPlanningServiceEndDate(row.buildDate, row.serviceLifeYears),
+        extensionServiceLifeDate: formatRuDate(row.extensionServiceLifeDate),
         periodDetachRepair: formatRuDate(row.periodDetachRepair),
         reRegistrationDate: formatRuDate(row.reRegistrationDate),
         reRegistrationNextDate: formatRuDate(row.reRegistrationNextDate),

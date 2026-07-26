@@ -130,6 +130,11 @@ export function PlanningRepairsTable({
               Дата окончания <br /> эксплуатации
             </TableHead>
           )}
+          {vis("extensionServiceLifeDate") && (
+            <TableHead rowSpan={2} className="whitespace-nowrap w-0 align-middle text-center">
+              Дата продления <br /> срока эксплуатации
+            </TableHead>
+          )}
           {vis("reRegistration") && (
             <TableHead colSpan={2} className="whitespace-normal align-middle text-center">
               Перерегистрация
@@ -296,6 +301,11 @@ export function PlanningRepairsTable({
               {vis("commissioningEndDate") && (
                 <TableCell className="whitespace-nowrap text-center">
                   {formatPlanningServiceEndDate(row.buildDate, row.serviceLifeYears)}
+                </TableCell>
+              )}
+              {vis("extensionServiceLifeDate") && (
+                <TableCell className="whitespace-nowrap text-center">
+                  {formatRuDate(row.extensionServiceLifeDate)}
                 </TableCell>
               )}
               {vis("reRegistration") && (

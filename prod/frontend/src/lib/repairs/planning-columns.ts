@@ -12,6 +12,7 @@ export const PLANNING_COLUMN_OPTIONS = [
   { value: "milage", label: "Пробег" },
   { value: "periodPaintRepair", label: "Покраска" },
   { value: "commissioningEndDate", label: "Дата окончания эксплуатации" },
+  { value: "extensionServiceLifeDate", label: "Дата продления срока эксплуатации" },
   { value: "reRegistration", label: "Перерегистрация" },
   { value: "periodDetachRepair", label: "Текущий отцепочный ремонт" },
 ] as const;
@@ -62,6 +63,7 @@ const EXPORT_KEYS_BY_VISIBLE: Record<PlanningColumnKey, string[]> = {
   milage: ["mileage"],
   periodPaintRepair: ["paintingLast"],
   commissioningEndDate: ["serviceEndDate"],
+  extensionServiceLifeDate: ["extensionServiceLifeDate"],
   reRegistration: ["reRegistrationDate", "reRegistrationNextDate"],
   periodDetachRepair: ["periodDetachRepair"],
 };
