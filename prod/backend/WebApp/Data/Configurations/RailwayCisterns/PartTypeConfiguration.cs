@@ -13,5 +13,6 @@ public partial class PartTypeConfiguration : IEntityTypeConfiguration<PartType>
         entity.Property(e => e.Id).HasColumnName("Id").IsRequired();
         entity.Property(e => e.Name).HasColumnName("Name").IsRequired().HasColumnType("text");
         entity.Property(e => e.Code).HasColumnName("Code").IsRequired().HasDefaultValue(0);
+        entity.Property(e => e.Weight).HasColumnName("Weight").IsRequired().HasColumnType("numeric").HasDefaultValue(0);
     }
 }

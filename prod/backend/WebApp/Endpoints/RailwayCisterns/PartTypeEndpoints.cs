@@ -24,7 +24,8 @@ public static class PartTypeEndpoints
                 {
                     Id = t.Id,
                     Name = t.Name,
-                    Code = t.Code
+                    Code = t.Code,
+                    Weight = t.Weight
                 })
                 .ToListAsync();
             return Results.Ok(types);
@@ -41,7 +42,8 @@ public static class PartTypeEndpoints
                 {
                     Id = t.Id,
                     Name = t.Name,
-                    Code = t.Code
+                    Code = t.Code,
+                    Weight = t.Weight
                 })
                 .FirstOrDefaultAsync();
             return type is null ? Results.NotFound() : Results.Ok(type);
@@ -56,7 +58,8 @@ public static class PartTypeEndpoints
             var type = new PartType
             {
                 Name = dto.Name,
-                Code = dto.Code
+                Code = dto.Code,
+                Weight = dto.Weight
             };
 
             context.Add(type);
@@ -66,7 +69,8 @@ public static class PartTypeEndpoints
             {
                 Id = type.Id,
                 Name = type.Name,
-                Code = type.Code
+                Code = type.Code,
+                Weight = type.Weight
             });
         })
         .WithName("CreatePartType")
@@ -82,6 +86,7 @@ public static class PartTypeEndpoints
 
             type.Name = dto.Name;
             type.Code = dto.Code;
+            type.Weight = dto.Weight;
 
             await context.SaveChangesAsync();
             return Results.NoContent();

@@ -11,6 +11,10 @@ public class WagonModel
     public int? IntermediateTest {get; set;}
     public int? PeriodicTest {get; set;}
     public int? PPRRep {get; set;}
+    public decimal Weight { get; set; }
+    public string? FileImage { get; set; }
+    public string? FileTU { get; set; }
+    public string? FileRE { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public Guid? CreatorId { get; set; }
 

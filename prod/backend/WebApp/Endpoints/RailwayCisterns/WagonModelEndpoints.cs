@@ -43,13 +43,18 @@ public static class WagonModelEndpoints
 
         group.MapPost("/", async ([FromServices] ApplicationDbContext context, [FromBody] CreateWagonModelDTO dto, HttpContext httpContext) =>
         {
-            Guid creator = Guid.Parse(httpContext.User.FindFirstValue("userId"));
+            var userId = httpContext.User.FindFirstValue("userId");
+            if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var creator))
+            {
+                return Results.Unauthorized();
+            }
+
             var model = dto.ToWagonModel(creator);
 
             context.Add(model);
             await context.SaveChangesAsync();
 
-            return Results.Created($"/api/wagon-models/{model.Id}", model.ToWagonModelDTO);
+            return Results.Created($"/api/wagon-models/{model.Id}", model.ToWagonModelDTO());
         })
         .WithName("CreateWagonModel")
         .Produces<WagonModelDTO>(StatusCodes.Status201Created)

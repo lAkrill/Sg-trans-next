@@ -11,6 +11,10 @@ public class WagonModelDTO
     public int? IntermediateTest {get; set;}
     public int? PeriodicTest {get; set;}
     public int? PPRRep {get; set;}
+    public decimal Weight { get; set; }
+    public string? FileImage { get; set; }
+    public string? FileTU { get; set; }
+    public string? FileRE { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public string? Email { get; set; } = string.Empty;
     
@@ -27,6 +31,10 @@ public class CreateWagonModelDTO
     public int? IntermediateTest {get; set;}
     public int? PeriodicTest {get; set;}
     public int? PPRRep {get; set;}
+    public decimal Weight { get; set; }
+    public string? FileImage { get; set; }
+    public string? FileTU { get; set; }
+    public string? FileRE { get; set; }
     public Guid? CreatorId { get; set; }
 }
 
@@ -38,6 +46,10 @@ public class UpdateWagonModelDTO
     public int? IntermediateTest {get; set;}
     public int? PeriodicTest {get; set;}
     public int? PPRRep {get; set;}
+    public decimal Weight { get; set; }
+    public string? FileImage { get; set; }
+    public string? FileTU { get; set; }
+    public string? FileRE { get; set; }
 }
 
 public static class WagonModelDTOMapper
@@ -53,6 +65,10 @@ public static class WagonModelDTOMapper
             IntermediateTest = wagonModel.IntermediateTest,
             PeriodicTest = wagonModel.PeriodicTest,
             PPRRep = wagonModel.PPRRep,
+            Weight = wagonModel.Weight,
+            FileImage = wagonModel.FileImage,
+            FileTU = wagonModel.FileTU,
+            FileRE = wagonModel.FileRE,
             UpdatedAt = wagonModel.UpdatedAt,
             Email = wagonModel.Creator?.Email,
             FirstName = wagonModel.Creator?.FirstName,
@@ -71,6 +87,10 @@ public static class WagonModelDTOMapper
             IntermediateTest = createDto.IntermediateTest,
             PeriodicTest = createDto.PeriodicTest,
             PPRRep = createDto.PPRRep,
+            Weight = createDto.Weight,
+            FileImage = createDto.FileImage,
+            FileTU = createDto.FileTU,
+            FileRE = createDto.FileRE,
             UpdatedAt = DateTime.Now,
             CreatorId = creatorId
         };
@@ -84,6 +104,10 @@ public static class WagonModelDTOMapper
         wagonModel.IntermediateTest = updateDto.IntermediateTest;
         wagonModel.PeriodicTest = updateDto.PeriodicTest;
         wagonModel.PPRRep = updateDto.PPRRep;
+        wagonModel.Weight = updateDto.Weight;
+        wagonModel.FileImage = updateDto.FileImage;
+        wagonModel.FileTU = updateDto.FileTU;
+        wagonModel.FileRE = updateDto.FileRE;
         wagonModel.UpdatedAt = DateTime.Now;
     }
 }

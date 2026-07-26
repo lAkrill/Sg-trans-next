@@ -17,6 +17,10 @@ public partial class WagonModelConfiguration : IEntityTypeConfiguration<WagonMod
         entity.Property(e => e.IntermediateTest).HasColumnName("IntermediateTest").HasColumnType("integer");
         entity.Property(e => e.PeriodicTest).HasColumnName("PeriodicTest").HasColumnType("integer");
         entity.Property(e => e.PPRRep).HasColumnName("PPRRep").HasColumnType("integer");
+        entity.Property(e => e.Weight).HasColumnName("Weight").IsRequired().HasColumnType("numeric");
+        entity.Property(e => e.FileImage).HasColumnName("FileImage").HasColumnType("text");
+        entity.Property(e => e.FileTU).HasColumnName("FileTU").HasColumnType("text");
+        entity.Property(e => e.FileRE).HasColumnName("FileRE").HasColumnType("text");
         entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt").HasColumnType("timestamp without time zone");
         entity.Property(e => e.CreatorId).HasColumnName("CreatorId");
 
