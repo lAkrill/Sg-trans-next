@@ -1024,17 +1024,16 @@ public static class RailwayCisternEndpoints
             date = repairDate.Value;
         date = date.AddYears(years);
 
+        var serviceDate = CommissioningDate.AddYears(serviceLifeYears);
+
         if (extensionServiceLifeDate.HasValue)
         {
-            if (date > extensionServiceLifeDate.Value)
-                return extensionServiceLifeDate.Value;
-
-            return date;
+           serviceDate =  extensionServiceLifeDate.Value;
         }
 
-        var serviceDate = CommissioningDate.AddYears(serviceLifeYears);
         if (serviceDate <= date)
             date = serviceDate;
+            
         return date;
     }
 

@@ -242,6 +242,7 @@ public static class FitmentEndpoints
                     AddChange("Depot", oldDepot?.Name ?? fitment.DepotId.ToString(), newDepot?.Name ?? dto.DepotId.ToString());
                     AddChange("SerialNumber", fitment.SerialNumber, dto.SerialNumber);
                     AddChange("BuildDate", fitment.BuildDate, dto.BuildDate);
+                    AddChange("ServiceLifeYears", fitment.ServiceLifeYears, dto.ServiceLifeYears);
                     AddChange("LastRepairDate", fitment.LastRepairDate, dto.LastRepairDate);
 
                     // apply changes

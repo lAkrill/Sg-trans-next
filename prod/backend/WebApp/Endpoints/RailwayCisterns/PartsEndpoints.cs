@@ -376,6 +376,22 @@ public static class PartsEndpoints
                 throw new ApiException("Деталь с таким типом, номером клейма, серийным номером и годом изготовления уже существует.", 409);
             }
 
+            var oldDepotId = part.DepotId;
+            var oldStampNumberId = part.StampNumberId;
+            var oldSerialNumber = part.SerialNumber;
+            var oldManufactureYear = part.ManufactureYear;
+            var oldCurrentLocation = part.CurrentLocation;
+            var oldStatusId = part.StatusId;
+            var oldNotes = part.Notes;
+            var oldServiceLifeYears = part.ServiceLifeYears;
+            var oldExtendedUntil = part.ExtendedUntil;
+            var oldModel = part.Model;
+            var oldCode = part.Code;
+            var oldDocumentId = part.DocumentId;
+
+            var oldStamp = await context.StampNumbers.FindAsync(oldStampNumberId);
+            var newStamp = await context.StampNumbers.FindAsync(dto.StampNumberId);
+
             // Обновляем основную часть
             part.DepotId = dto.DepotId;
             part.StampNumberId = dto.StampNumberId;
@@ -396,8 +412,7 @@ public static class PartsEndpoints
             var userIdStringUpd = httpContext.User.FindFirstValue("userId");
             if (Guid.TryParse(userIdStringUpd, out var creatorIdUpd))
             {
-                var partType = await context.PartTypes.FindAsync(part.PartTypeId);
-                var stamp = await context.StampNumbers.FindAsync(part.StampNumberId);
+                
                 var changes = new List<string>();
                 void AddChange(string field, object? oldV, object? newV)
                 {
@@ -405,13 +420,18 @@ public static class PartsEndpoints
                     if (oldV != null && oldV.Equals(newV)) return;
                     changes.Add($"{field}: {oldV} -> {newV}");
                 }
-                AddChange("DepotId", null, part.DepotId);
-                AddChange("StampNumber", stamp?.Value ?? part.StampNumberId.ToString(), dto.StampNumberId);
-                AddChange("SerialNumber", part.SerialNumber, dto.SerialNumber);
-                AddChange("ManufactureYear", part.ManufactureYear, dto.ManufactureYear);
-                AddChange("CurrentLocation", part.CurrentLocation, dto.CurrentLocation);
-                AddChange("Status", part.StatusId, dto.StatusId);
-                AddChange("Notes", part.Notes, dto.Notes);
+                AddChange("DepotId", oldDepotId, part.DepotId);
+                AddChange("StampNumber", oldStamp?.Value ?? oldStampNumberId.ToString(), newStamp?.Value ?? dto.StampNumberId.ToString());
+                AddChange("SerialNumber", oldSerialNumber, part.SerialNumber);
+                AddChange("ManufactureYear", oldManufactureYear, part.ManufactureYear);
+                AddChange("CurrentLocation", oldCurrentLocation, part.CurrentLocation);
+                AddChange("Status", oldStatusId, part.StatusId);
+                AddChange("Notes", oldNotes, part.Notes);
+                AddChange("ServiceLifeYears", oldServiceLifeYears, part.ServiceLifeYears);
+                AddChange("ExtendedUntil", oldExtendedUntil, part.ExtendedUntil);
+                AddChange("Model", oldModel, part.Model);
+                AddChange("Code", oldCode, part.Code);
+                AddChange("DocumentId", oldDocumentId, part.DocumentId);
 
                 var note = changes.Count == 0 ? string.Empty : string.Join("; ", changes);
                 if (!string.IsNullOrEmpty(note))
