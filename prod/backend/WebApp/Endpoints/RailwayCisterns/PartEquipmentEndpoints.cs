@@ -924,6 +924,21 @@ public static class PartEquipmentEndpoints
             {
                 try
                 {
+                    // Предпроверка при создании: уникальность по (RailwayCisternsId, PartsId, DocumentDate, Operation)
+                    var duplicateOnCreate = await context.PartEquipments.AnyAsync(pe =>
+                        pe.RailwayCisternsId == dto.RailwayCisternsId &&
+                        pe.PartsId == dto.PartsId &&
+                        pe.DocumentDate == dto.DocumentDate &&
+                        pe.Operation == dto.Operation);
+
+                    if (duplicateOnCreate)
+                    {
+                        throw new ApiException(
+                            "Запись с такой комбинацией цистерны, детали, даты документа и операции уже существует. " +
+                            "Нарушено уникальное ограничение (RailwayCisternsId, PartsId, DocumentDate, Operation).",
+                            409);
+                    }
+
                     var partEquipment = new PartEquipment
                     {
                         Id = Guid.NewGuid(),

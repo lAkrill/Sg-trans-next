@@ -4,6 +4,7 @@ using WebApp.Data;
 using WebApp.Data.Entities.RailwayCisterns;
 using WebApp.Data.Enums;
 using WebApp.DTO.RailwayCisterns;
+using WebApp.Exceptions;
 using WebApp.Extensions;
 
 namespace WebApp.Endpoints.RailwayCisterns;
@@ -150,6 +151,18 @@ public static class FitmentEndpoints
                     return Results.BadRequest();
                 }
 
+                // Предпроверка: существует ли уже запись с такими FitmentTypeId, SerialNumber, BuildDate, ModelId
+                var exists = await context.Fitments.AnyAsync(f =>
+                    f.FitmentTypeId == dto.FitmentTypeId &&
+                    f.SerialNumber == dto.SerialNumber &&
+                    f.BuildDate == dto.BuildDate &&
+                    f.ModelId == dto.ModelId);
+
+                if (exists)
+                {
+                    throw new ApiException("Арматура с таким типом, серийным номером, датой сборки и моделью уже существует.", 409);
+                }
+
                 var fitment = dto.ToFitment(creatorId);
                 context.Fitments.Add(fitment);
                 await context.SaveChangesAsync();
@@ -174,6 +187,19 @@ public static class FitmentEndpoints
                 var fitment = await context.Fitments.FindAsync(id);
                 if (fitment is null)
                     return Results.NotFound();
+
+                // Предпроверка при обновлении: убедиться, что не создаём дубликат
+                var exists = await context.Fitments.AnyAsync(f =>
+                    f.FitmentTypeId == dto.FitmentTypeId &&
+                    f.SerialNumber == dto.SerialNumber &&
+                    f.BuildDate == dto.BuildDate &&
+                    f.ModelId == dto.ModelId &&
+                    f.Id != id);
+
+                if (exists)
+                {
+                    throw new ApiException("Арматура с таким типом, серийным номером, датой сборки и моделью уже существует.", 409);
+                }
 
                 fitment.UpdateFitment(dto);
                 await context.SaveChangesAsync();

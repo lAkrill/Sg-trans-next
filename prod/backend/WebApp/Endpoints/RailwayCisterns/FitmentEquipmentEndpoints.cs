@@ -450,6 +450,23 @@ public static class FitmentEquipmentEndpoints
                 var lastItems = await context.Set<FitmentEquipment>()
                     .AsNoTracking()
                     .Where(fe => fe.RailwayCisternsId == cisternId)
+                    .Include(fe => fe.Fitment)
+                    .ThenInclude(f => f.FitmentType)
+                    .Include(fe => fe.JobUser)
+                    .Include(fe => fe.TestUser)
+                    .Include(fe => fe.Depot)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Manufacturer)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Type)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Model)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Owner)
+                    .Include(fe => fe.Document)
+                    .ToListAsync();
+
+                var result = lastItems
                     .GroupBy(fe => fe.FitmentId)
                     .Select(g => g.OrderByDescending(fe => fe.Date).ThenByDescending(fe => fe.Id).FirstOrDefault())
                     .Where(fe => fe != null)
@@ -523,9 +540,9 @@ public static class FitmentEquipmentEndpoints
                             }
                             : null
                     })
-                    .ToListAsync();
+                    .ToList();
 
-                return Results.Ok(lastItems);
+                return Results.Ok(result);
             })
             .WithName("GetLastFitmentEquipmentsByCistern")
             .Produces<List<FitmentEquipmentDTO>>(StatusCodes.Status200OK)

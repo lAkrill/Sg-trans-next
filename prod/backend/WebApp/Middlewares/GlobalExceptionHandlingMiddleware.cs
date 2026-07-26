@@ -82,7 +82,7 @@ public class GlobalExceptionHandlingMiddleware : IMiddleware
             }
         }
 
-        // Проверка на нарушение уникального ограничения
+        // Проверка на нарушение уникального ограничения — специфичные сообщения
         if (innerException?.Message.Contains("unique_part_equipments", StringComparison.OrdinalIgnoreCase) ?? false)
         {
             return new ErrorResponse(
@@ -90,6 +90,26 @@ public class GlobalExceptionHandlingMiddleware : IMiddleware
                 Message: "Запись с такой комбинацией цистерны, детали, даты документа и операции уже существует. Нарушено уникальное ограничение (RailwayCisternsId, PartsId, DocumentDate, Operation).",
                 StatusCode: (int)HttpStatusCode.Conflict,
                 Details: "Невозможно добавить дубликат записи. Проверьте уникальность комбинации полей."
+            );
+        }
+
+        if (innerException?.Message.Contains("Fitments_FitmentTypeId_SerialNumber_BuildDate_ModelId_key", StringComparison.OrdinalIgnoreCase) ?? false)
+        {
+            return new ErrorResponse(
+                Status: "Error",
+                Message: "Запись арматуры с таким набором (тип, серийный номер, дата сборки, модель) уже существует. Нарушено уникальное ограничение.",
+                StatusCode: (int)HttpStatusCode.Conflict,
+                Details: "Проверьте поля FitmentTypeId, SerialNumber, BuildDate и ModelId на уникальность."
+            );
+        }
+
+        if (innerException?.Message.Contains("UQ_Parts_Type_Stamp_Serial_Year", StringComparison.OrdinalIgnoreCase) ?? false)
+        {
+            return new ErrorResponse(
+                Status: "Error",
+                Message: "Деталь с таким сочетанием (тип, номер клейма, серийный номер, год изготовления) уже существует. Нарушено уникальное ограничение.",
+                StatusCode: (int)HttpStatusCode.Conflict,
+                Details: "Проверьте поля PartTypeId, StampNumberId, SerialNumber и ManufactureYear на уникальность."
             );
         }
 

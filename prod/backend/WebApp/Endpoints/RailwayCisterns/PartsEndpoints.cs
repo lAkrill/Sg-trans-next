@@ -8,6 +8,7 @@ using WebApp.DTO.RailwayCisterns;
 using WebApp.DTO.Common;
 using WebApp.Extensions;
 using Microsoft.OpenApi.Models;
+using WebApp.Exceptions;
 
 namespace WebApp.Endpoints.RailwayCisterns;
 
@@ -309,6 +310,18 @@ public static class PartsEndpoints
                 ExtendedUntil = dto.ExtendedUntil,
                 Model = dto.Model
             };
+            // Предпроверка: уникальность по (PartTypeId, StampNumberId, SerialNumber, ManufactureYear)
+            var duplicate = await context.Parts.AnyAsync(p =>
+                p.PartTypeId == dto.PartTypeId &&
+                p.StampNumberId == dto.StampNumberId &&
+                p.SerialNumber == dto.SerialNumber &&
+                p.ManufactureYear == dto.ManufactureYear);
+
+            if (duplicate)
+            {
+                throw new ApiException("Деталь с таким типом, номером клейма, серийным номером и годом изготовления уже существует.", 409);
+            }
+
             context.Add(part);
             await context.SaveChangesAsync();
 
@@ -334,6 +347,18 @@ public static class PartsEndpoints
 
             if (part == null)
                 return Results.NotFound();
+            // Предпроверка при обновлении: уникальность по (PartTypeId, StampNumberId, SerialNumber, ManufactureYear)
+            var duplicate = await context.Parts.AnyAsync(p =>
+                p.PartTypeId == part.PartTypeId &&
+                p.StampNumberId == dto.StampNumberId &&
+                p.SerialNumber == dto.SerialNumber &&
+                p.ManufactureYear == dto.ManufactureYear &&
+                p.Id != id);
+
+            if (duplicate)
+            {
+                throw new ApiException("Деталь с таким типом, номером клейма, серийным номером и годом изготовления уже существует.", 409);
+            }
 
             // Обновляем основную часть
             part.DepotId = dto.DepotId;
