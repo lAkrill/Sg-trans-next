@@ -2,6 +2,7 @@
 export { authApi } from './auth';
 export { messagesApi } from './messages';
 export { filesApi } from './files';
+export { actionLogApi } from './action-log';
 export * from './directories';
 
 // Hooks exports  

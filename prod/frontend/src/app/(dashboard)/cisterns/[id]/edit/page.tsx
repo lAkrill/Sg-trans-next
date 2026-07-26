@@ -34,6 +34,11 @@ import {
 } from "@/hooks";
 import type { UpdateRailwayCisternDTO } from "@/types/cisterns";
 
+function toDateInputValue(value?: string): string | undefined {
+  if (!value) return undefined;
+  return value.includes("T") ? value.split("T")[0] : value.slice(0, 10);
+}
+
 export default function EditCisternPage() {
   const params = useParams();
   const router = useRouter();
@@ -121,11 +126,13 @@ export default function EditCisternPage() {
         techConditions: cistern.techConditions,
         pripiska: cistern.pripiska,
         rent: cistern.rent,
-        periodMajorRepair: cistern.periodMajorRepair,
-        periodPeriodicTest: cistern.periodPeriodicTest,
-        periodIntermediateTest: cistern.periodIntermediateTest,
-        periodDepotRepair: cistern.periodDepotRepair,
-        periodPPRRepair: cistern.periodPPRRepair,
+        periodMajorRepair: toDateInputValue(cistern.periodMajorRepair),
+        periodPeriodicTest: toDateInputValue(cistern.periodPeriodicTest),
+        periodIntermediateTest: toDateInputValue(cistern.periodIntermediateTest),
+        periodDepotRepair: toDateInputValue(cistern.periodDepotRepair),
+        periodPPRRepair: toDateInputValue(cistern.periodPPRRepair),
+        periodPaintRepair: toDateInputValue(cistern.periodPaintRepair),
+        periodDetachRepair: toDateInputValue(cistern.periodDetachRepair),
         railwayCisternStatusId: cistern.railwayCisternStatus?.id || "",
       });
     }
@@ -210,6 +217,9 @@ export default function EditCisternPage() {
       'periodPeriodicTest',
       'periodIntermediateTest',
       'periodDepotRepair',
+      'periodPPRRepair',
+      'periodPaintRepair',
+      'periodDetachRepair',
       'notes',
       'railwayCisternStatusId',
     ] as const;
@@ -987,12 +997,22 @@ export default function EditCisternPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="periodPPRRepair">Дата последней покраски</Label>
+                  <Label htmlFor="periodPaintRepair">Дата последней покраски</Label>
                   <Input
                     id="periodPaintRepair"
                     type="date"
                     value={formData.periodPaintRepair || ''}
                     onChange={(e) => handleInputChange('periodPaintRepair', e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="periodDetachRepair">Дата последнего отцепочного ремонта</Label>
+                  <Input
+                    id="periodDetachRepair"
+                    type="date"
+                    value={formData.periodDetachRepair || ''}
+                    onChange={(e) => handleInputChange('periodDetachRepair', e.target.value)}
                   />
                 </div>
               </div>

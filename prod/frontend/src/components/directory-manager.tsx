@@ -385,6 +385,11 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
   };
 
   const updateFormField = (key: string, value: unknown) => {
+    // Custom selects may emit several form fields at once (e.g. cisternId + cisternNum)
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      setFormData((prev) => ({ ...prev, ...(value as Record<string, unknown>) }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 

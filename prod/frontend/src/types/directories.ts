@@ -45,29 +45,60 @@ export interface UpdateDepotDTO {
 export interface DocumentDTO {
   id: string;
   number: string;
-  type: string;
-  date: string;
-  author?: string;
-  price?: number;
-  note?: string;
-}
-
-export interface CreateDocumentDTO {
-  number: string;
-  type: string | number;
+  type: number | null;
   date: string;
   author?: string | null;
   price?: number | null;
   note?: string | null;
+  file?: string | null;
+}
+
+export interface CreateDocumentDTO {
+  number: string;
+  type: number | null;
+  date: string;
+  author?: string | null;
+  price?: number | null;
+  note?: string | null;
+  file?: string | null;
 }
 
 export interface UpdateDocumentDTO {
   number: string;
-  type: string;
+  type: number | null;
   date: string;
-  author?: string;
-  price?: number;
-  note?: string;
+  author?: string | null;
+  price?: number | null;
+  note?: string | null;
+  file?: string | null;
+}
+
+// DocumentsRegulatory (Нормативные документы)
+export interface DocumentsRegulatoryDTO {
+  id: string;
+  name: string;
+  number?: string | null;
+  date: string;
+  file?: string | null;
+  url?: string | null;
+  updatedAt?: string;
+  creatorId?: string;
+}
+
+export interface CreateDocumentsRegulatoryDTO {
+  name: string;
+  number?: string | null;
+  date: string;
+  file?: string | null;
+  url?: string | null;
+}
+
+export interface UpdateDocumentsRegulatoryDTO {
+  name: string;
+  number?: string | null;
+  date: string;
+  file?: string | null;
+  url?: string | null;
 }
 
 // Station (Станция)
@@ -233,18 +264,21 @@ export interface PartTypeDTO extends BaseEntity {
   name: string;
   code: number;
   description?: string;
+  weight?: number;
 }
 
 export interface CreatePartTypeDTO {
   name: string;
   code: number;
   description?: string;
+  weight?: number;
 }
 
 export interface UpdatePartTypeDTO {
   name: string;
   code: number;
   description?: string;
+  weight?: number;
 }
 
 // PartStatus (Статус детали)
@@ -424,30 +458,20 @@ export interface UpdateWagonModelDTO {
   pprRep: number;
 }
 
-// PersonalWagonDateRep (Персоналдьные периоды ремонта вагона)
+// PersonalWagonDateRep (Персональные периоды ремонта вагона)
 export interface PersonalWagonDateRepDTO extends BaseEntity {
-  cisternNum: string;
-  depoRep: number;
-  intermediateTest: number;
-  periodicTest: number;
-  pprRep: number;
-}
-
-// PersonalWagonDateRep (Персоналдьные периоды ремонта вагона)
-export interface PersonalWagonDateRepDTO extends BaseEntity {
+  cisternId: string;
   cisternNum: string;
   majorRep: number;
   depoRep: number;
   intermediateTest: number;
   periodicTest: number;
   pprRep: number;
-  firstName: string;
-  lastName: string;
-
 }
 
 export interface CreatePersonalWagonDateRepDTO {
   cisternNum: string;
+  cisternId: string;
   majorRep: number;
   depoRep: number;
   intermediateTest: number;
@@ -457,6 +481,7 @@ export interface CreatePersonalWagonDateRepDTO {
 
 export interface UpdatePersonalWagonDateRepDTO {
   cisternNum: string;
+  cisternId: string;
   majorRep: number;
   depoRep: number;
   intermediateTest: number;

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace WebApp.DTO.RailwayCisterns;
 
 public class DocumentDTO
@@ -9,7 +11,9 @@ public class DocumentDTO
     public string Author { get; set; } = null!;
     public decimal? Price { get; set; }
     public string? Note { get; set; }
-    public string? File { get; set; }
+
+    [JsonPropertyName("file")]
+    public string? FileName { get; set; }
 }
 
 public class CreateDocumentDTO
@@ -20,7 +24,9 @@ public class CreateDocumentDTO
     public string Author { get; set; } = null!;
     public decimal? Price { get; set; }
     public string? Note { get; set; }
-    public string? File { get; set; }
+
+    [JsonPropertyName("file")]
+    public string? FileName { get; set; }
 }
 
 public class UpdateDocumentDTO
@@ -31,5 +37,7 @@ public class UpdateDocumentDTO
     public string Author { get; set; } = null!;
     public decimal? Price { get; set; }
     public string? Note { get; set; }
-    public string? File { get; set; }
+
+    [JsonPropertyName("file")]
+    public string? FileName { get; set; }
 }

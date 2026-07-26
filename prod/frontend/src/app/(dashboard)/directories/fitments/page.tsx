@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
@@ -28,14 +29,21 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Edit,
+  History,
+  Loader2,
   Plus,
   Settings,
   Trash2,
 } from "lucide-react";
 import { useDeleteFitment, useFilterAllFitments, useFitments } from "@/hooks";
-import { FitmentsFilter } from "@/components/fitments-filter";
+import {
+  DEFAULT_FITMENT_VISIBLE_COLUMNS,
+  FITMENT_COLUMN_OPTIONS,
+  FitmentsFilter,
+} from "@/components/fitments-filter";
 import { FitmentEquipmentsTable } from "@/components/fitment-equipments-table";
 import { BindFitmentDialog } from "@/components/bind-fitment-dialog";
+import { api } from "@/lib/api";
 import { formatDate } from "@/lib/formatDate";
 import type {
   FitmentDTO,
@@ -62,19 +70,9 @@ export default function FitmentsPage() {
     locationDepoIds: [],
   });
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    "fitmentType",
-    "model",
-    "serialNumber",
-    "passportNumber",
-    "buildDate",
-    "lastRepairDate",
-    "periodRep",
-    "serviceLifeYears",
-    "extendedDate",
-    "code",
-    "locationFitment",
-    "updatedAt",
+    ...DEFAULT_FITMENT_VISIBLE_COLUMNS,
   ]);
+  const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
 
   const getLocationLabel = (code?: number) => {
     switch (code) {
@@ -227,6 +225,104 @@ export default function FitmentsPage() {
     router.push(`/directories/fitments/${fitmentId}/edit?${params.toString()}`);
   };
 
+  const handleViewHistory = (fitmentId: string) => {
+    const params = new URLSearchParams({
+      returnPage: String(currentPage),
+      returnPageSize: String(pageSize),
+    });
+
+    router.push(`/directories/fitments/${fitmentId}/history?${params.toString()}`);
+  };
+
+  const handleExport = useCallback(
+    async (type: "pdf" | "doc" | "xls") => {
+      type ExportColumn = {
+        key: string;
+        label: string;
+        type: "string" | "date" | "number";
+      };
+
+      const allColumns: ExportColumn[] = FITMENT_COLUMN_OPTIONS.map((option) => ({
+        key: option.value,
+        label: option.label,
+        type: "string",
+      }));
+      const columns = allColumns.filter((column) => visibleColumns.includes(column.key));
+
+      const data = currentFitments.map((fitment) => {
+        const row: Record<string, string> = {
+          fitmentType: fitment.fitmentType?.name || "—",
+          model: fitment.model?.name || "—",
+          serialNumber: fitment.serialNumber || "—",
+          passportNumber: fitment.passportNumber || "—",
+          buildDate: formatDate(fitment.buildDate, "ru-RU", "—"),
+          lastRepairDate: formatDate(fitment.lastRepairDate, "ru-RU", "—"),
+          periodRep: fitment.periodRep != null ? String(fitment.periodRep) : "—",
+          serviceLifeYears:
+            fitment.serviceLifeYears != null ? String(fitment.serviceLifeYears) : "—",
+          extendedDate: getExtendedDateDisplay(fitment),
+          code: getLocationLabel(fitment.code),
+          locationFitment: getLocationPlace(fitment),
+          manufacturer: fitment.depot?.shortName || "—",
+          updatedAt: formatDate(fitment.updatedAt, "ru-RU", "—"),
+          createdId: fitment.createdId || "—",
+        };
+
+        const filtered: Record<string, string> = {};
+        for (const column of columns) {
+          filtered[column.key] = row[column.key] ?? "—";
+        }
+        return filtered;
+      });
+
+      const extensionByType: Record<"pdf" | "doc" | "xls", string> = {
+        pdf: "pdf",
+        doc: "docx",
+        xls: "xlsx",
+      };
+      const mimeByType: Record<"pdf" | "doc" | "xls", string> = {
+        pdf: "application/pdf",
+        doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xls: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      };
+
+      setExportingType(type);
+      try {
+        const response = await api.post(
+          "/api/export/table",
+          {
+            type,
+            columns,
+            data,
+            fileName:
+              type === "pdf" ? "FitmentsPDF" : type === "doc" ? "FitmentsDOC" : "FitmentsXLS",
+          },
+          {
+            responseType: "blob",
+          }
+        );
+
+        const fileBaseName =
+          type === "pdf" ? "FitmentsPDF" : type === "doc" ? "FitmentsDOC" : "FitmentsXLS";
+        const url = window.URL.createObjectURL(
+          new Blob([response.data], { type: mimeByType[type] })
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${fileBaseName}.${extensionByType[type]}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (exportError) {
+        console.error(`Export ${type.toUpperCase()} failed`, exportError);
+      } finally {
+        setExportingType(null);
+      }
+    },
+    [currentFitments, visibleColumns]
+  );
+
   const isColumnVisible = (column: string) => visibleColumns.includes(column);
 
   const getVisiblePages = () => {
@@ -368,7 +464,51 @@ export default function FitmentsPage() {
           </div>
           {/* Controls */}
           <div className="flex justify-end items-center gap-4">
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Экспорт DOC"
+                  onClick={() => handleExport("doc")}
+                  disabled={!!exportingType || isCurrentLoading}
+                >
+                  {exportingType === "doc" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Image src="/icon_word.svg" alt="Экспорт DOC" width={16} height={16} />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Экспорт PDF"
+                  onClick={() => handleExport("pdf")}
+                  disabled={!!exportingType || isCurrentLoading}
+                >
+                  {exportingType === "pdf" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Image src="/icon_pdf.png" alt="Экспорт PDF" width={16} height={16} />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Экспорт XLS"
+                  onClick={() => handleExport("xls")}
+                  disabled={!!exportingType || isCurrentLoading}
+                >
+                  {exportingType === "xls" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Image src="/icon_excel.svg" alt="Экспорт XLS" width={16} height={16} />
+                  )}
+                </Button>
+              </div>
               <FitmentsFilter
                 open={filterOpen}
                 onOpenChange={setFilterOpen}
@@ -481,6 +621,14 @@ export default function FitmentsPage() {
                           {isColumnVisible("createdId") && <TableCell>{fitment.createdId || "—"}</TableCell>}
                           <TableCell className="w-[1%] whitespace-nowrap">
                             <div className="flex w-max justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewHistory(fitment.id)}
+                                title="Журнал изменений"
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"

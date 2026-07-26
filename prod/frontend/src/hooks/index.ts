@@ -23,11 +23,13 @@ export * from './partsFilter.hook';
 export * from './fitmentsFilter.hook';
 export * from './part-installations.hook';
 export * from './documents.hook';
+export * from './documentsRegulatory.hook';
 export * from './vessels.hook';
 
 export * from './auth.hook';
 export * from './cisterns.hook';
 export * from './history-actions.hook';
+export * from './action-log.hook';
 export * from './repairs.hook';
 export * from './debounce.hook';
 export * from './messages.hook';

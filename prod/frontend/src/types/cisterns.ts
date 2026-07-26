@@ -93,6 +93,7 @@ export interface RailwayCisternDetailDTO {
   periodDepotRepair?: string;
   periodPPRRepair?: string;
   periodPaintRepair?: string;
+  periodDetachRepair?: string;
   planPeriodMajorRepair?: string;
   planPeriodPeriodicTest?: string;
   planPeriodIntermediateTest?: string;
@@ -194,6 +195,7 @@ export interface CreateRailwayCisternDTO {
   periodDepotRepair?: string;
   periodPPRRepair?: string;
   periodPaintRepair?: string;
+  periodDetachRepair?: string;
   dangerClass: number;
   substance: string;
   tareWeight2: number;

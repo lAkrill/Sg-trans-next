@@ -22,6 +22,7 @@ const MAINTENANCE_SCHEDULE_COLUMNS: {
   { label: "Промежуточное испытание (ИГ)", lastField: "periodIntermediateTest", planField: "planPeriodIntermediateTest" },
   { label: "Профремонт (ППР)", lastField: "periodPPRRepair", planField: "planPeriodPPRRepair" },
   { label: "Покраска", lastField: "periodPaintRepair" },
+  { label: "Отцепочный ремонт", lastField: "periodDetachRepair" },
 ];
 
 function formatCisternScheduleDate(value?: string): string {

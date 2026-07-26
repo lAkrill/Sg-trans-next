@@ -23,14 +23,20 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  SearchableSelect,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui';
-import { Filter, RotateCcw } from 'lucide-react';
-import { usePartTypeOptions } from '@/hooks';
+import { Filter, RotateCcw, X } from 'lucide-react';
+import {
+  useCisternIdAndNumbers,
+  useDepots,
+  usePartStatusOptions,
+  usePartTypeOptions,
+} from '@/hooks';
 import type { PartFilterCriteria } from '@/types/directories';
 
 const LOCATION_CODE_OPTIONS = [
@@ -77,19 +83,12 @@ const initialFilters: PartFilterCriteria = {
   currentLocationIds: [],
   statusIds: [],
   models: [],
-  documentNumbers: [],
-  documentTypes: [],
 };
 
 type ListDraftKey =
   | 'stampNumbers'
   | 'serialNumbers'
-  | 'models'
-  | 'statusIds'
-  | 'depotIds'
-  | 'currentLocationIds'
-  | 'documentNumbers'
-  | 'documentTypes';
+  | 'models';
 
 type ListDrafts = Record<ListDraftKey, string>;
 
@@ -97,32 +96,20 @@ const initialListDrafts: ListDrafts = {
   stampNumbers: '',
   serialNumbers: '',
   models: '',
-  statusIds: '',
-  depotIds: '',
-  currentLocationIds: '',
-  documentNumbers: '',
-  documentTypes: '',
 };
 
 const parseList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
 
-const parseNumberList = (value: string) =>
-  value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map(Number)
-    .filter((item) => !Number.isNaN(item));
+const getYearFromFilterValue = (value?: string) => {
+  if (!value) return '';
+  const yearMatch = value.match(/^(\d{4})/);
+  return yearMatch ? yearMatch[1] : '';
+};
 
 const filtersToListDrafts = (filters: PartFilterCriteria): ListDrafts => ({
   stampNumbers: filters.stampNumbers?.join(', ') || '',
   serialNumbers: filters.serialNumbers?.join(', ') || '',
   models: filters.models?.join(', ') || '',
-  statusIds: filters.statusIds?.join(', ') || '',
-  depotIds: filters.depotIds?.join(', ') || '',
-  currentLocationIds: filters.currentLocationIds?.join(', ') || '',
-  documentNumbers: filters.documentNumbers?.join(', ') || '',
-  documentTypes: filters.documentTypes?.join(', ') || '',
 });
 
 const applyListDrafts = (filters: PartFilterCriteria, drafts: ListDrafts): PartFilterCriteria => ({
@@ -130,11 +117,6 @@ const applyListDrafts = (filters: PartFilterCriteria, drafts: ListDrafts): PartF
   stampNumbers: parseList(drafts.stampNumbers),
   serialNumbers: parseList(drafts.serialNumbers),
   models: parseList(drafts.models),
-  statusIds: parseList(drafts.statusIds),
-  depotIds: parseList(drafts.depotIds),
-  currentLocationIds: parseList(drafts.currentLocationIds),
-  documentNumbers: parseList(drafts.documentNumbers),
-  documentTypes: parseNumberList(drafts.documentTypes),
 });
 
 export function PartsFilter({
@@ -150,9 +132,33 @@ export function PartsFilter({
   children,
 }: PartsFilterProps) {
   const { data: partTypeOptions = [], isLoading: isPartTypesLoading } = usePartTypeOptions();
+  const { data: partStatusOptions = [], isLoading: isPartStatusesLoading } = usePartStatusOptions();
+  const { data: depots = [], isLoading: isDepotsLoading } = useDepots();
+  const { data: cisternIdAndNumbers = [], isLoading: isCisternsLoading } = useCisternIdAndNumbers();
   const [localFilters, setLocalFilters] = useState<PartFilterCriteria>(propFilters || initialFilters);
   const [listDrafts, setListDrafts] = useState<ListDrafts>(
     filtersToListDrafts(propFilters || initialFilters)
+  );
+
+  const depotOptions = depots.map((depot) => ({
+    value: depot.id,
+    label: `${depot.shortName || depot.name || '—'} (${depot.code || '—'})`,
+  }));
+
+  const cisternOptions = cisternIdAndNumbers.map((cistern) => ({
+    value: cistern.id,
+    label: cistern.number,
+  }));
+
+  const selectedDepotIds = localFilters.depotIds || [];
+  const selectedCurrentLocationIds = localFilters.currentLocationIds || [];
+
+  const availableDepotOptions = depotOptions.filter(
+    (option) => !selectedDepotIds.includes(option.value)
+  );
+
+  const availableCisternOptions = cisternOptions.filter(
+    (option) => !selectedCurrentLocationIds.includes(option.value)
   );
 
   const handleApplyFilters = () => {
@@ -184,6 +190,38 @@ export function PartsFilter({
     updateFilter(
       'partTypeIds',
       checked ? [...current, partTypeId] : current.filter((id) => id !== partTypeId)
+    );
+  };
+
+  const toggleStatusId = (statusId: string, checked: boolean) => {
+    const current = localFilters.statusIds || [];
+    updateFilter(
+      'statusIds',
+      checked ? [...current, statusId] : current.filter((id) => id !== statusId)
+    );
+  };
+
+  const handleDepotSelect = (depotId: string) => {
+    if (!depotId || selectedDepotIds.includes(depotId)) return;
+    updateFilter('depotIds', [...selectedDepotIds, depotId]);
+  };
+
+  const handleDepotRemove = (depotId: string) => {
+    updateFilter(
+      'depotIds',
+      selectedDepotIds.filter((id) => id !== depotId)
+    );
+  };
+
+  const handleCurrentLocationSelect = (cisternId: string) => {
+    if (!cisternId || selectedCurrentLocationIds.includes(cisternId)) return;
+    updateFilter('currentLocationIds', [...selectedCurrentLocationIds, cisternId]);
+  };
+
+  const handleCurrentLocationRemove = (cisternId: string) => {
+    updateFilter(
+      'currentLocationIds',
+      selectedCurrentLocationIds.filter((id) => id !== cisternId)
     );
   };
 
@@ -358,66 +396,108 @@ export function PartsFilter({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="statusIds">ID статусов</Label>
-                      <Input
-                        id="statusIds"
-                        placeholder="Введите ID статусов"
-                        value={listDrafts.statusIds}
-                        onChange={(e) => updateListDraft('statusIds', e.target.value)}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="depotIds">ID депо</Label>
-                        <Input
-                          id="depotIds"
-                          placeholder="Введите ID депо"
-                          value={listDrafts.depotIds}
-                          onChange={(e) => updateListDraft('depotIds', e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="currentLocationIds">ID вагонов</Label>
-                        <Input
-                          id="currentLocationIds"
-                          placeholder="Введите ID вагонов"
-                          value={listDrafts.currentLocationIds}
-                          onChange={(e) => updateListDraft('currentLocationIds', e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="documentNumbers">Номера документов</Label>
-                        <Input
-                          id="documentNumbers"
-                          placeholder="Введите номера документов"
-                          value={listDrafts.documentNumbers}
-                          onChange={(e) => updateListDraft('documentNumbers', e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="documentTypes">Типы документов</Label>
-                        <Input
-                          id="documentTypes"
-                          placeholder="Введите типы документов"
-                          value={listDrafts.documentTypes}
-                          onChange={(e) => updateListDraft('documentTypes', e.target.value)}
-                        />
-                      </div>
+                      <Label>Статусы</Label>
+                      {isPartStatusesLoading ? (
+                        <p className="text-sm text-muted-foreground">Загрузка статусов...</p>
+                      ) : partStatusOptions.length ? (
+                        <div className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-2">
+                          {partStatusOptions.map((option) => (
+                            <div key={option.value} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`part-status-${option.value}`}
+                                checked={localFilters.statusIds?.includes(option.value) ?? false}
+                                onCheckedChange={(checked) =>
+                                  toggleStatusId(option.value, checked === true)
+                                }
+                              />
+                              <Label
+                                htmlFor={`part-status-${option.value}`}
+                                className="text-sm font-normal"
+                              >
+                                {option.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Статусы не найдены</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="documentId">ID документа</Label>
-                      <Input
-                        id="documentId"
-                        placeholder="Введите ID документа"
-                        value={localFilters.documentId || ''}
-                        onChange={(e) => updateFilter('documentId', e.target.value || undefined)}
+                      <Label htmlFor="depotIds">Депо</Label>
+                      <SearchableSelect
+                        value=""
+                        onChange={handleDepotSelect}
+                        options={availableDepotOptions}
+                        placeholder="Выберите депо"
+                        searchPlaceholder="Введите наименование или код"
+                        isLoading={isDepotsLoading}
                       />
+                      {selectedDepotIds.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {selectedDepotIds.map((depotId) => {
+                            const option = depotOptions.find((item) => item.value === depotId);
+                            return (
+                              <Badge
+                                key={depotId}
+                                variant="secondary"
+                                className="gap-1 pr-1"
+                              >
+                                {option?.label || depotId}
+                                <button
+                                  type="button"
+                                  className="rounded-sm p-0.5 hover:bg-muted"
+                                  onClick={() => handleDepotRemove(depotId)}
+                                  aria-label="Удалить депо"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="currentLocationIds">Вагоны</Label>
+                      <SearchableSelect
+                        value=""
+                        onChange={handleCurrentLocationSelect}
+                        options={availableCisternOptions}
+                        placeholder="Выберите номер вагона"
+                        searchPlaceholder="Введите номер вагона"
+                        isLoading={isCisternsLoading}
+                      />
+                      {selectedCurrentLocationIds.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {selectedCurrentLocationIds.map((cisternId) => {
+                            const option = cisternOptions.find(
+                              (item) => item.value === cisternId
+                            );
+                            return (
+                              <Badge
+                                key={cisternId}
+                                variant="secondary"
+                                className="gap-1 pr-1"
+                              >
+                                {option?.label || cisternId}
+                                <button
+                                  type="button"
+                                  className="rounded-sm p-0.5 hover:bg-muted"
+                                  onClick={() => handleCurrentLocationRemove(cisternId)}
+                                  aria-label="Удалить вагон"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
                   </CardContent>
                 </Card>
 
@@ -430,20 +510,32 @@ export function PartsFilter({
                       <Label>Год производства</Label>
                       <div className="grid grid-cols-2 gap-2">
                         <Input
-                          type="date"
-                          value={localFilters.manufactureYear?.from || ''}
-                          onChange={(e) => updateFilter('manufactureYear', {
-                            ...localFilters.manufactureYear,
-                            from: e.target.value || undefined,
-                          })}
+                          type="number"
+                          placeholder="От"
+                          min={1900}
+                          max={new Date().getFullYear()}
+                          value={getYearFromFilterValue(localFilters.manufactureYear?.from)}
+                          onChange={(e) => {
+                            const year = e.target.value ? Number(e.target.value) : undefined;
+                            updateFilter('manufactureYear', {
+                              ...localFilters.manufactureYear,
+                              from: year != null && !Number.isNaN(year) ? `${year}-01-01` : undefined,
+                            });
+                          }}
                         />
                         <Input
-                          type="date"
-                          value={localFilters.manufactureYear?.to || ''}
-                          onChange={(e) => updateFilter('manufactureYear', {
-                            ...localFilters.manufactureYear,
-                            to: e.target.value || undefined,
-                          })}
+                          type="number"
+                          placeholder="До"
+                          min={1900}
+                          max={new Date().getFullYear()}
+                          value={getYearFromFilterValue(localFilters.manufactureYear?.to)}
+                          onChange={(e) => {
+                            const year = e.target.value ? Number(e.target.value) : undefined;
+                            updateFilter('manufactureYear', {
+                              ...localFilters.manufactureYear,
+                              to: year != null && !Number.isNaN(year) ? `${year}-12-31` : undefined,
+                            });
+                          }}
                         />
                       </div>
                     </div>

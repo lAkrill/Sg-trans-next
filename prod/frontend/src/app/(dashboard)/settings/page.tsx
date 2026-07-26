@@ -16,7 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui";
-import { Bell, Shield, Moon, Globe, Database, Save, Sun, Monitor } from "lucide-react";
+import Link from "next/link";
+import { Bell, Shield, Moon, Globe, Database, Save, Sun, Monitor, ClipboardList } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useVersion } from "@/hooks";
 
@@ -156,6 +157,19 @@ export default function SettingsPage() {
               <Label>Сменить пароль</Label>
               <Button variant="outline" size="sm">
                 Изменить пароль
+              </Button>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label>Журнал событий системы</Label>
+              <p className="text-sm text-muted-foreground">
+                История действий пользователей в системе
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/settings/action-log">
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Журнал событий системы
+                </Link>
               </Button>
             </div>
           </CardContent>

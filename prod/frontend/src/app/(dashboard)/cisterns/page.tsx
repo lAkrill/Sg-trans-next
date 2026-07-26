@@ -61,6 +61,31 @@ const SERVICE_END_DATE_SOURCE_COLUMNS = [
   EXTENSION_SERVICE_LIFE_DATE_COLUMN,
 ] as const;
 
+const DEFAULT_SORT_FIELDS: SortCriteria[] = [
+  { fieldName: "railwaycisternstatus.name", descending: true },
+];
+
+const isDefaultSortFields = (fields: SortCriteria[]): boolean =>
+  fields.length === 1 &&
+  fields[0].fieldName === DEFAULT_SORT_FIELDS[0].fieldName &&
+  fields[0].descending === DEFAULT_SORT_FIELDS[0].descending;
+
+const countActiveFilterCriteria = (filters: FilterCriteria): number => {
+  let count = 0;
+
+  Object.values(filters).forEach((value) => {
+    if (value !== undefined && value !== null && value !== "") {
+      if (Array.isArray(value) && value.length > 0) count++;
+      else if (typeof value === "object" && value !== null) {
+        const rangeValues = Object.values(value);
+        if (rangeValues.some((v) => v !== undefined && v !== null && v !== "")) count++;
+      } else if (!Array.isArray(value)) count++;
+    }
+  });
+
+  return count;
+};
+
 /** Computed columns → source fields required from filter API */
 const toApiSelectedColumns = (columns: string[]): string[] => {
   const result = new Set<string>();
@@ -248,15 +273,13 @@ export default function CisternsPage() {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearchMode, setIsSearchMode] = useState(false);
-  const [isFilterMode, setIsFilterMode] = useState(true);
+  const [isFilterMode, setIsFilterMode] = useState(false);
   // Client-side pagination for search results
   const [searchPage, setSearchPage] = useState(1);
   const [searchPageSize, setSearchPageSize] = useState(10);
   // Advanced filters state
   const [advancedFilters, setAdvancedFilters] = useState<FilterCriteria>({});
-  const [sortFields, setSortFields] = useState<SortCriteria[]>([
-    { fieldName: "railwaycisternstatus.name", descending: true },
-  ]);
+  const [sortFields, setSortFields] = useState<SortCriteria[]>(DEFAULT_SORT_FIELDS);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     "number",
     "manufacturer.name",
@@ -297,10 +320,6 @@ export default function CisternsPage() {
     error: filterError,
   } = useCisternFilterWithPagination(filterRequest, isFilterMode && !isSearchMode);
 
-  useEffect(() => {
-    console.log(filterResults);
-  }, [filterResults]);
-
   // Autocomplete for cistern numbers (only when typing)
   const { data: allCisternNumbers = [], isLoading: isLoadingNumbers } = useCisternNumbers();
 
@@ -325,10 +344,13 @@ export default function CisternsPage() {
 
   const deleteMutation = useDeleteCistern();
 
-  // Switch between search, filter and normal mode based on search term and filters
+  // Switch between search, filter and normal mode based on search term and filters.
+  // Default status sort alone must not force filter mode — otherwise the normal list never loads.
   useEffect(() => {
     const hasSearchTerm = debouncedSearchTerm.trim().length > 0;
-    const hasFilters = Object.keys(advancedFilters).length > 0 || sortFields.length > 0;
+    const hasActiveFilters = countActiveFilterCriteria(advancedFilters) > 0;
+    const hasCustomSort = sortFields.length > 0 && !isDefaultSortFields(sortFields);
+    const hasFilters = hasActiveFilters || hasCustomSort;
 
     setIsSearchMode(hasSearchTerm);
     setIsFilterMode(hasFilters && !hasSearchTerm);
@@ -337,7 +359,7 @@ export default function CisternsPage() {
     if (hasSearchTerm) {
       setSearchPage(1);
     } else if (hasFilters) {
-      setFilter((prev) => ({ ...prev, page: 1 }));
+      setFilter((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
     }
   }, [debouncedSearchTerm, advancedFilters, sortFields]);
 
@@ -462,7 +484,7 @@ export default function CisternsPage() {
 
   const handleClearFilters = useCallback(() => {
     setAdvancedFilters({});
-    setSortFields([{ fieldName: "railwaycisternstatus.name", descending: true }]);
+    setSortFields(DEFAULT_SORT_FIELDS);
     setVisibleColumns([
       "number",
       "manufacturer.name",
@@ -478,24 +500,13 @@ export default function CisternsPage() {
     setFilter((prev) => ({ ...prev, page: 1 }));
   }, []);
 
-  // Count active filters
+  // Count active filters (default status sort is not an "active" filter)
   const activeFiltersCount = useMemo(() => {
-    let count = 0;
+    let count = countActiveFilterCriteria(advancedFilters);
 
-    // Count non-empty filter values
-    Object.values(advancedFilters).forEach((value) => {
-      if (value !== undefined && value !== null && value !== "") {
-        if (Array.isArray(value) && value.length > 0) count++;
-        else if (typeof value === "object" && value !== null) {
-          // For range objects, check if any property is set
-          const rangeValues = Object.values(value);
-          if (rangeValues.some((v) => v !== undefined && v !== null && v !== "")) count++;
-        } else if (!Array.isArray(value)) count++;
-      }
-    });
-
-    // Add sort fields count
-    count += sortFields.length;
+    if (!isDefaultSortFields(sortFields)) {
+      count += sortFields.length;
+    }
 
     return count;
   }, [advancedFilters, sortFields]);
@@ -750,7 +761,10 @@ export default function CisternsPage() {
                 <TableHeader>
                   <TableRow>
                     {visibleColumns.map((column) => (
-                      <TableHead key={column}>
+                      <TableHead
+                        key={column}
+                        className={column === "type.name" ? "w-[16rem] min-w-[16rem]" : undefined}
+                      >
                         {column === "number"
                           ? "Номер"
                           : column === "manufacturer.name"
@@ -818,7 +832,16 @@ export default function CisternsPage() {
                       className={getServiceEndDateRowClass(cistern)}
                     >
                       {visibleColumns.map((column) => (
-                        <TableCell key={`${cistern.id}-${column}`} className={column === "number" ? "font-medium" : ""}>
+                        <TableCell
+                          key={`${cistern.id}-${column}`}
+                          className={
+                            column === "number"
+                              ? "font-medium"
+                              : column === "type.name"
+                              ? "w-[16rem] min-w-[16rem] max-w-[16rem] whitespace-normal break-words"
+                              : undefined
+                          }
+                        >
                           {column === "number" ? (
                             <Link href={`/cisterns/${cistern.id}`} className="text-primary hover:underline">
                               {getDisplayValue(cistern, column)}

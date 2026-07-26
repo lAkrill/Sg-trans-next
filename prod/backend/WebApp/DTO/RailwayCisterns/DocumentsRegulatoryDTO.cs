@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace WebApp.DTO.RailwayCisterns;
 
 public class DocumentsRegulatoryDTO
@@ -6,7 +8,10 @@ public class DocumentsRegulatoryDTO
     public string Name { get; set; } = null!;
     public string? Number { get; set; }
     public DateOnly Date { get; set; }
-    public string? File { get; set; }
+
+    [JsonPropertyName("file")]
+    public string? FileName { get; set; }
+
     public string? Url { get; set; }
     public DateTime UpdatedAt { get; set; }
     public Guid CreatorId { get; set; }
@@ -17,7 +22,10 @@ public class CreateDocumentsRegulatoryDTO
     public string Name { get; set; } = null!;
     public string? Number { get; set; }
     public DateOnly Date { get; set; }
-    public string? File { get; set; }
+
+    [JsonPropertyName("file")]
+    public string? FileName { get; set; }
+
     public string? Url { get; set; }
 }
 
@@ -26,7 +34,10 @@ public class UpdateDocumentsRegulatoryDTO
     public string Name { get; set; } = null!;
     public string? Number { get; set; }
     public DateOnly Date { get; set; }
-    public string? File { get; set; }
+
+    [JsonPropertyName("file")]
+    public string? FileName { get; set; }
+
     public string? Url { get; set; }
 }
 
@@ -40,7 +51,7 @@ public static class DocumentsRegulatoryDTOMapper
             Name = document.Name,
             Number = document.Number,
             Date = document.Date,
-            File = document.File,
+            FileName = document.File,
             Url = document.Url,
             UpdatedAt = document.UpdatedAt,
             CreatorId = document.CreatorId
@@ -55,7 +66,7 @@ public static class DocumentsRegulatoryDTOMapper
             Name = dto.Name,
             Number = dto.Number,
             Date = dto.Date,
-            File = dto.File,
+            File = dto.FileName,
             Url = dto.Url,
             CreatorId = creatorId,
             UpdatedAt = DateTime.UtcNow
@@ -67,7 +78,7 @@ public static class DocumentsRegulatoryDTOMapper
         document.Name = dto.Name;
         document.Number = dto.Number;
         document.Date = dto.Date;
-        document.File = dto.File;
+        document.File = dto.FileName;
         document.Url = dto.Url;
         document.UpdatedAt = DateTime.UtcNow;
     }

@@ -185,17 +185,23 @@ export const cisternsApi = {
   // Advanced filter with pagination
   filterWithPagination: async (filterData: RailwayCisternFilterSortDTO): Promise<FilteredCisternsResponse> => {
     const response = await api.post<FilteredCisternsApiResponse>(`${CISTERNS_ENDPOINT}/filter`, filterData);
-    const apiData = response.data;
+    const apiData = response.data as FilteredCisternsApiResponse & {
+      Items?: RailwayCisternListDTO[];
+      PageNumber?: number;
+      TotalCount?: number;
+      PageSize?: number;
+      TotalPages?: number;
+    };
 
-    //console.log('API Filter Response:', apiData);
-    
+    const items = apiData.items ?? apiData.Items ?? [];
+
     // Transform API response to match expected format
     return {
-      railwayCisterns: apiData.items,
-      totalCount: apiData.totalCount,
-      currentPage: apiData.pageNumber,
-      pageSize: apiData.pageSize,
-      totalPages: apiData.totalPages,
+      railwayCisterns: Array.isArray(items) ? items : [],
+      totalCount: apiData.totalCount ?? apiData.TotalCount ?? 0,
+      currentPage: apiData.pageNumber ?? apiData.PageNumber ?? 1,
+      pageSize: apiData.pageSize ?? apiData.PageSize ?? filterData.pageSize ?? 10,
+      totalPages: apiData.totalPages ?? apiData.TotalPages ?? 1,
     };
   },
 
