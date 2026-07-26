@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Eye, Inbox, Loader2, Mail, MailOpen, Paperclip, Send } from "lucide-react";
+import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { Eye, Inbox, Loader2, Mail, MailOpen, Paperclip, Send, X } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 import {
   Badge,
   Button,
@@ -15,15 +16,81 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Skeleton,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
+  Textarea,
 } from "@/components/ui";
 import { filesApi } from "@/api/files";
-import { useAllUsers, useCurrentUser, useMessagesByUser, useUpdateMessage } from "@/hooks";
-import { MessageStatus, type MessageDTO } from "@/types/messages";
+import {
+  useAllUsers,
+  useCreateMessage,
+  useCurrentUser,
+  useMessagesByUser,
+  useUpdateMessage,
+} from "@/hooks";
+import { MessagePriority, MessageStatus, type MessageDTO } from "@/types/messages";
+
+const ALLOWED_MESSAGE_FILE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".pdf"] as const;
+const ALLOWED_MESSAGE_FILE_ACCEPT = ".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf";
+const MAX_MESSAGE_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+const isAllowedMessageFile = (file: File) => {
+  const lowerName = file.name.toLowerCase();
+  return ALLOWED_MESSAGE_FILE_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+};
+
+const getSendErrorMessage = (err: unknown, fallback: string) => {
+  if (!err || typeof err !== "object") return fallback;
+
+  const axiosError = err as {
+    message?: string;
+    code?: string;
+    response?: {
+      status?: number;
+      statusText?: string;
+      data?: {
+        message?: string;
+        Message?: string;
+        details?: string;
+        Details?: string;
+        title?: string;
+        Title?: string;
+      };
+    };
+  };
+
+  const data = axiosError.response?.data;
+  const serverMessage =
+    data?.message || data?.Message || data?.details || data?.Details || data?.title || data?.Title;
+
+  if (serverMessage) return serverMessage;
+
+  const status = axiosError.response?.status;
+  if (status) {
+    const statusText = axiosError.response?.statusText;
+    return statusText ? `Ошибка сервера (${status}: ${statusText})` : `Ошибка сервера (${status})`;
+  }
+
+  if (axiosError.code === "ERR_NETWORK" || axiosError.message === "Network Error") {
+    return "Нет связи с сервером";
+  }
+
+  if (axiosError.message && axiosError.message !== "Network Error") {
+    return axiosError.message;
+  }
+
+  return fallback;
+};
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return "—";
@@ -65,11 +132,17 @@ const UserMessageCard = () => {
   const { data: user } = useCurrentUser();
   const userId = user?.userId;
   const { data: messages = [], isLoading, error } = useMessagesByUser(userId);
-  const { data: users = [] } = useAllUsers();
+  const { data: users = [], isLoading: isLoadingUsers } = useAllUsers();
   const updateMessageMutation = useUpdateMessage();
+  const createMessageMutation = useCreateMessage();
   const [selectedMessage, setSelectedMessage] = useState<MessageDTO | null>(null);
   const [selectedMessageType, setSelectedMessageType] = useState<"received" | "sent">("received");
   const [isViewingFile, setIsViewingFile] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [recipientId, setRecipientId] = useState("");
+  const [messageText, setMessageText] = useState("");
+  const [messageFile, setMessageFile] = useState<File | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const userNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -155,6 +228,113 @@ const UserMessageCard = () => {
     }
   };
 
+  const formatUserName = (item: {
+    firstName?: string;
+    lastName?: string;
+    patronymic?: string;
+    email: string;
+  }) => {
+    const fullName = [item.lastName, item.firstName, item.patronymic].filter(Boolean).join(" ");
+    return fullName ? `${fullName} (${item.email})` : item.email;
+  };
+
+  const resetSendForm = () => {
+    setRecipientId("");
+    setMessageText("");
+    setMessageFile(null);
+    setSendError(null);
+  };
+
+  const handleSendDialogChange = (open: boolean) => {
+    setSendDialogOpen(open);
+    if (!open) {
+      resetSendForm();
+    }
+  };
+
+  const handleMessageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+
+    if (!file) {
+      setMessageFile(null);
+      return;
+    }
+
+    if (!isAllowedMessageFile(file)) {
+      setSendError("Допустимые форматы файла: PNG, JPG, JPEG, PDF");
+      setMessageFile(null);
+      return;
+    }
+
+    if (file.size > MAX_MESSAGE_FILE_SIZE_BYTES) {
+      setSendError("Размер файла не должен превышать 10 МБ");
+      setMessageFile(null);
+      return;
+    }
+
+    setSendError(null);
+    setMessageFile(file);
+  };
+
+  const handleSendSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSendError(null);
+
+    if (!userId) {
+      setSendError("Не удалось определить текущего пользователя");
+      return;
+    }
+
+    if (!recipientId || !messageText.trim()) {
+      return;
+    }
+
+    let step: "upload" | "message" = "message";
+
+    try {
+      let fileName: string | null = null;
+      let filePath: string | null = null;
+
+      if (messageFile) {
+        step = "upload";
+        const extension = messageFile.name.includes(".")
+          ? messageFile.name.slice(messageFile.name.lastIndexOf(".")).toLowerCase()
+          : "";
+        const uniqueFileName = `${uuidv4()}${extension}`;
+        const uploaded = await filesApi.upload(messageFile, {
+          directory: "Message",
+          fileName: uniqueFileName,
+        });
+        fileName = uploaded.fileName;
+        filePath = "Message";
+      }
+
+      step = "message";
+      await createMessageMutation.mutateAsync({
+        text: messageText.trim(),
+        fromUserId: userId,
+        toUserId: recipientId,
+        priority: MessagePriority.Normal,
+        fileName,
+        filePath,
+      });
+
+      handleSendDialogChange(false);
+    } catch (err) {
+      const fallback =
+        step === "upload"
+          ? "Не удалось загрузить файл. Попробуйте ещё раз."
+          : "Не удалось отправить сообщение. Попробуйте ещё раз.";
+      const details = getSendErrorMessage(err, fallback);
+      setSendError(
+        details === fallback
+          ? fallback
+          : `${step === "upload" ? "Ошибка загрузки файла" : "Ошибка отправки сообщения"}: ${details}`
+      );
+    }
+  };
+
   const renderMessageList = (items: MessageDTO[], type: "received" | "sent") => {
     if (items.length === 0) {
       return (
@@ -223,7 +403,7 @@ const UserMessageCard = () => {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 gap-4">
         <CardTitle className="flex items-center space-x-2">
           <div className="rounded-lg bg-blue-500 p-3">
             <Mail className="h-6 w-6 text-white" />
@@ -235,6 +415,14 @@ const UserMessageCard = () => {
             </Badge>
           )}
         </CardTitle>
+        <Button
+          type="button"
+          className="bg-blue-500 text-white hover:bg-blue-600"
+          onClick={() => handleSendDialogChange(true)}
+        >
+          <Send className="mr-2 h-4 w-4" />
+          Отправить сообщение
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
@@ -377,6 +565,115 @@ const UserMessageCard = () => {
               Закрыть
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={sendDialogOpen} onOpenChange={handleSendDialogChange}>
+        <DialogContent className="max-h-[85vh] sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Отправить сообщение</DialogTitle>
+            <DialogDescription>
+              Укажите получателя и текст сообщения. При необходимости приложите файл.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSendSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="user-message-recipient">Кому отправлять</Label>
+              <Select value={recipientId} onValueChange={setRecipientId} required>
+                <SelectTrigger id="user-message-recipient" className="w-full">
+                  <SelectValue
+                    placeholder={isLoadingUsers ? "Загрузка пользователей..." : "Выберите получателя"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {formatUserName(item)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="user-message-text">Сообщение</Label>
+              <Textarea
+                id="user-message-text"
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder="Введите текст сообщения..."
+                rows={4}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="user-message-file">Файл</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" asChild>
+                  <label htmlFor="user-message-file" className="cursor-pointer">
+                    <Paperclip className="mr-2 h-4 w-4" />
+                    {messageFile ? "Заменить файл" : "Загрузить файл"}
+                  </label>
+                </Button>
+                <Input
+                  id="user-message-file"
+                  type="file"
+                  accept={ALLOWED_MESSAGE_FILE_ACCEPT}
+                  className="hidden"
+                  onChange={handleMessageFileChange}
+                />
+                <span className="text-xs text-muted-foreground">PNG, JPG, JPEG, PDF до 10 МБ</span>
+              </div>
+              {messageFile && (
+                <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                  <span className="truncate">{messageFile.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMessageFile(null)}
+                    disabled={createMessageMutation.isPending}
+                    aria-label="Удалить файл"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {sendError && <p className="text-sm text-red-600">{sendError}</p>}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleSendDialogChange(false)}
+                disabled={createMessageMutation.isPending}
+              >
+                Отмена
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  createMessageMutation.isPending ||
+                  !userId ||
+                  !recipientId ||
+                  !messageText.trim()
+                }
+              >
+                {createMessageMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Отправка...
+                  </>
+                ) : (
+                  "Отправить"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </Card>

@@ -12,6 +12,17 @@ import {
   TabsList,
   TabsTrigger,
   Button,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  Badge,
 } from "@/components/ui";
 import {
   Table,
@@ -29,14 +40,19 @@ import {
   ChevronsRight,
   Loader2,
   CalendarCog,
+  ListChecks,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type {
   RailwayCisternRepairsFilterListDTO,
   RailwayCisternRepairsFilterRequestDTO,
 } from "@/types/cisterns";
 import { cisternsApi } from "@/api/cisterns";
+import { partEquipmentApi, partsApi } from "@/api/directories";
 import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
 import { PlanningRepairsFilters, countPlanningRepairsFilters } from "@/components/repairs/planning-repairs-filters";
 import { PlanningRepairsTable } from "@/components/repairs/planning-repairs-table";
@@ -46,12 +62,187 @@ import {
 } from "@/lib/repairs/planning-columns";
 import { getUpcomingRepairCellClass } from "@/lib/repairs/date-highlighting";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/formatDate";
+import {
+  evaluatePartNeed,
+  formatUpcomingRepairType,
+  getPartsNeedRowClass,
+  resolveUpcomingRepair,
+  type PartsNeedHighlight,
+  type UpcomingRepairType,
+} from "@/lib/parts/parts-need";
 import { useRepairsInFilter, useRepairsOutFilter, useRepairsMatchingFilter } from "@/hooks";
 import type {
   RepairsInFilterCriteria,
   RepairsOutFilterCriteria,
   RepairsSortCriteria,
 } from "@/types/repairs";
+import type { LastEquipmentDTO, PartDTO } from "@/types/directories";
+
+const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
+
+function isValidEntityId(id?: string | null): id is string {
+  return !!id && id !== EMPTY_GUID;
+}
+
+type PartsNeedRow = {
+  id: string;
+  cisternId: string | null;
+  partId: string | null;
+  partTypeId: string | null;
+  stampNumber: string | null;
+  serialNumber: string | null;
+  cisternNumber: string;
+  equipmentTypeName: string;
+  partDetails: string;
+  thickness: string;
+  truckType: string;
+  document: string;
+  highlight: PartsNeedHighlight | null;
+  repairType: UpcomingRepairType | null;
+  repairDate: string | null;
+};
+
+type PartYearValue = string | { year: number; month: number; day: number };
+
+function formatPartsNeedPartDetails(equipment: LastEquipmentDTO): string {
+  const part = equipment.lastEquipment?.part;
+  const stamp = part?.stampInfo?.value || "—";
+  const serial = part?.serialNumber || "—";
+  const year = part?.manufactureYear
+    ? new Date(part.manufactureYear).getFullYear()
+    : "—";
+  return `${stamp}; ${serial}; ${year}`;
+}
+
+function formatPartYear(yearData?: PartYearValue) {
+  if (!yearData) return "—";
+  if (typeof yearData === "string") {
+    const yearMatch = yearData.match(/^(\d{4})/);
+    return yearMatch ? yearMatch[1] : yearData;
+  }
+  return String(yearData.year);
+}
+
+function getPartLocationDisplay(code?: number | null) {
+  switch (code) {
+    case 1:
+      return "Депо";
+    case 2:
+      return "Вагон-цистерна";
+    case 0:
+    default:
+      return "Не установлена";
+  }
+}
+
+function getPartWagonDepotDisplay(part: PartDTO) {
+  if (part.currentLocation?.number) return part.currentLocation.number;
+  if (part.depot) {
+    const depotName = part.depot.shortName || part.depot.name;
+    return depotName ? `${part.depot.code} (${depotName})` : part.depot.code;
+  }
+  return "—";
+}
+
+function getPartServiceLifeYears(part: PartDTO): number | null {
+  const value = (part as PartDTO & { serviceLifeYears?: number | null }).serviceLifeYears;
+  if (value == null || value === 0 || Number.isNaN(value)) return null;
+  return value;
+}
+
+function getDefaultPartServiceLifeYears(partTypeCode?: number): number {
+  switch (partTypeCode) {
+    case 1:
+      return 42;
+    case 2:
+      return 35;
+    case 3:
+      return 35;
+    case 4:
+      return 30;
+    case 10:
+      return 32;
+    default:
+      return 35;
+  }
+}
+
+function getPartManufactureDate(yearData?: PartYearValue): Date | null {
+  if (!yearData) return null;
+  if (typeof yearData === "string") {
+    const parsed = new Date(yearData);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+    const yearMatch = yearData.match(/^(\d{4})/);
+    if (!yearMatch) return null;
+    return new Date(Number(yearMatch[1]), 0, 1);
+  }
+  return new Date(yearData.year, (yearData.month || 1) - 1, yearData.day || 1);
+}
+
+function getPartExtendedDateDisplay(part: PartDTO): string {
+  const manufactureDate = getPartManufactureDate(part.manufactureYear);
+  if (!manufactureDate || Number.isNaN(manufactureDate.getTime())) return "—";
+  const serviceLifeYears =
+    getPartServiceLifeYears(part) ?? getDefaultPartServiceLifeYears(part.partType?.code);
+  const endDate = new Date(manufactureDate);
+  endDate.setFullYear(endDate.getFullYear() + serviceLifeYears);
+  return String(endDate.getFullYear());
+}
+
+function formatPartsNeedThickness(equipment: LastEquipmentDTO): string {
+  const left = equipment.lastEquipment?.thicknessLeft;
+  const right = equipment.lastEquipment?.thicknessRight;
+  if (left && right) return `${left}/${right}`;
+  return "—";
+}
+
+function formatPartsNeedDocument(equipment: LastEquipmentDTO): string {
+  const document = equipment.lastEquipment?.document;
+  if (!document?.number) return "—";
+  const date = document.date
+    ? new Date(document.date).toLocaleDateString("ru-RU")
+    : "—";
+  return `${document.number} (${date})`;
+}
+
+function toPartsNeedRow(
+  equipment: LastEquipmentDTO,
+  cistern: { id: string; number: string },
+  index: number,
+  options: {
+    highlight?: PartsNeedHighlight | null;
+    repairType?: UpcomingRepairType | null;
+    repairDate?: Date | null;
+  } = {}
+): PartsNeedRow {
+  const last = equipment.lastEquipment;
+  const cisternId = last?.railwayCistern?.id || cistern.id;
+  const partId = last?.part?.partId;
+  const partTypeId = last?.equipmentType?.partTypeId;
+  const stampNumber = last?.part?.stampInfo?.value?.trim() || null;
+  const serialNumber = last?.part?.serialNumber?.trim() || null;
+  return {
+    id: `${last?.id ?? equipment.equipmentTypeId}-${cistern.id}-${index}`,
+    cisternId: isValidEntityId(cisternId) ? cisternId : null,
+    partId: isValidEntityId(partId) ? partId : null,
+    partTypeId: isValidEntityId(partTypeId) ? partTypeId : null,
+    stampNumber,
+    serialNumber,
+    cisternNumber: last?.railwayCistern?.number || cistern.number || "—",
+    equipmentTypeName:
+      last?.equipmentType?.partTypeName || equipment.equipmentTypeName || "—",
+    partDetails: formatPartsNeedPartDetails(equipment),
+    thickness: formatPartsNeedThickness(equipment),
+    truckType: last?.truckType ? String(last.truckType) : "—",
+    document: formatPartsNeedDocument(equipment),
+    highlight: options.highlight ?? null,
+    repairType: options.repairType ?? null,
+    repairDate: options.repairDate
+      ? options.repairDate.toLocaleDateString("ru-RU")
+      : null,
+  };
+}
 
 function countRepairsInFilters(f: RepairsInFilterCriteria): number {
   let n = 0;
@@ -152,6 +343,7 @@ function TableRecordsHeader({
 }
 
 export default function RepairsPage() {
+  const router = useRouter();
   const [planningRows, setPlanningRows] = useState<RailwayCisternRepairsFilterListDTO[] | null>(
     null
   );
@@ -167,9 +359,18 @@ export default function RepairsPage() {
   const [pageOut, setPageOut] = useState(1);
   const [pageMatched, setPageMatched] = useState(1);
   const [pagePlanning, setPagePlanning] = useState(1);
+  const [pagePartsNeed, setPagePartsNeed] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [pageSizePlanning, setPageSizePlanning] = useState(10);
+  const [pageSizePartsNeed, setPageSizePartsNeed] = useState(10);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
+  const [partsNeedRows, setPartsNeedRows] = useState<PartsNeedRow[] | null>(null);
+  const [isPartsNeedLoading, setIsPartsNeedLoading] = useState(false);
+  const [partsNeedInfoOpen, setPartsNeedInfoOpen] = useState(false);
+  const [isPartsNeedInfoLoading, setIsPartsNeedInfoLoading] = useState(false);
+  const [partsNeedInfoParts, setPartsNeedInfoParts] = useState<PartDTO[]>([]);
+  const [partsNeedInfoError, setPartsNeedInfoError] = useState<string | null>(null);
 
   // Filters (like cisterns page)
   const [filterTableType, setFilterTableType] = useState<RepairsFilterTableType>("in");
@@ -323,18 +524,38 @@ export default function RepairsPage() {
 
   const planningRowsPaginated = useMemo(() => {
     const list = planningRowsFiltered ?? [];
-    const start = (pagePlanning - 1) * pageSize;
-    return list.slice(start, start + pageSize);
-  }, [planningRowsFiltered, pagePlanning, pageSize]);
+    const start = (pagePlanning - 1) * pageSizePlanning;
+    return list.slice(start, start + pageSizePlanning);
+  }, [planningRowsFiltered, pagePlanning, pageSizePlanning]);
 
   const totalCountIn = filterDataIn?.totalCount ?? 0;
   const totalCountOut = filterDataOut?.totalCount ?? 0;
   const totalCountMatched = filterDataMatching?.totalCount ?? 0;
   const totalCountPlanning = (planningRowsFiltered ?? []).length;
+  const totalCountPartsNeed = (partsNeedRows ?? []).length;
   const totalPagesIn = Math.max(1, filterDataIn?.totalPages ?? 1);
   const totalPagesOut = Math.max(1, filterDataOut?.totalPages ?? 1);
   const totalPagesMatched = Math.max(1, filterDataMatching?.totalPages ?? 1);
-  const totalPagesPlanning = Math.max(1, Math.ceil(totalCountPlanning / pageSize));
+  const totalPagesPlanning = Math.max(1, Math.ceil(totalCountPlanning / pageSizePlanning));
+  const totalPagesPartsNeed = Math.max(1, Math.ceil(totalCountPartsNeed / pageSizePartsNeed));
+
+  const partsNeedRowsPaginated = useMemo(() => {
+    const list = partsNeedRows ?? [];
+    const start = (pagePartsNeed - 1) * pageSizePartsNeed;
+    return list.slice(start, start + pageSizePartsNeed);
+  }, [partsNeedRows, pagePartsNeed, pageSizePartsNeed]);
+
+  const partsNeedTypeCountsDescription = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of partsNeedRows ?? []) {
+      const typeName = row.equipmentTypeName || "—";
+      counts.set(typeName, (counts.get(typeName) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ru"))
+      .map(([name, count]) => `${name}: ${count}`)
+      .join("; ");
+  }, [partsNeedRows]);
 
   const handlePageChangeIn = useCallback((page: number) => {
     setPageIn(Math.max(1, Math.min(page, totalPagesIn)));
@@ -352,13 +573,244 @@ export default function RepairsPage() {
     setPagePlanning(Math.max(1, Math.min(page, totalPagesPlanning)));
   }, [totalPagesPlanning]);
 
+  const handlePageChangePartsNeed = useCallback((page: number) => {
+    setPagePartsNeed(Math.max(1, Math.min(page, totalPagesPartsNeed)));
+  }, [totalPagesPartsNeed]);
+
   const handlePageSizeChange = useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
     setPageIn(1);
     setPageOut(1);
     setPageMatched(1);
+  }, []);
+
+  const handlePageSizeChangePlanning = useCallback((newPageSize: number) => {
+    setPageSizePlanning(newPageSize);
     setPagePlanning(1);
   }, []);
+
+  const handlePageSizeChangePartsNeed = useCallback((newPageSize: number) => {
+    setPageSizePartsNeed(newPageSize);
+    setPagePartsNeed(1);
+  }, []);
+
+  const handleGeneratePartsNeedList = useCallback(async () => {
+    const cisterns = planningRowsFiltered ?? [];
+    if (!cisterns.length) return;
+
+    setIsPartsNeedLoading(true);
+    setPagePartsNeed(1);
+    try {
+      const equipmentResults = await Promise.allSettled(
+        cisterns.map(async (cistern) => {
+          const equipments = await partEquipmentApi.getLastByCistern(cistern.id);
+          return { cistern, equipments };
+        })
+      );
+
+      type PartsNeedCandidate = {
+        equipment: LastEquipmentDTO;
+        cistern: RailwayCisternRepairsFilterListDTO;
+        partId: string;
+        repairType: UpcomingRepairType;
+        repairDate: Date;
+      };
+
+      const candidates: PartsNeedCandidate[] = [];
+      equipmentResults.forEach((result) => {
+        if (result.status !== "fulfilled") return;
+        const { cistern, equipments } = result.value;
+        const upcoming = resolveUpcomingRepair({
+          planPeriodDepotRepair: cistern.planPeriodDepotRepair,
+          planPeriodMajorRepair: cistern.planPeriodMajorRepair,
+        });
+        // Без даты ближайшего ДР/КР потребность не считаем
+        if (!upcoming) return;
+
+        equipments.forEach((equipment) => {
+          if (!equipment?.lastEquipment) return;
+          const partId = equipment.lastEquipment.part?.partId;
+          if (!isValidEntityId(partId)) return;
+          candidates.push({
+            equipment,
+            cistern,
+            partId,
+            repairType: upcoming.repairType,
+            repairDate: upcoming.repairDate,
+          });
+        });
+      });
+
+      const partResults = await Promise.allSettled(
+        candidates.map(async (candidate) => {
+          const part = await partsApi.getById(candidate.partId);
+          return { candidate, part };
+        })
+      );
+
+      const loaded = partResults.flatMap((result) => {
+        if (result.status !== "fulfilled" || !result.value.part) return [];
+        return [result.value];
+      });
+
+      const rows = loaded.flatMap(({ candidate, part }, index) => {
+        const last = candidate.equipment.lastEquipment;
+        const need = evaluatePartNeed({
+          part,
+          repairType: candidate.repairType,
+          repairDate: candidate.repairDate,
+          wagonModelName: candidate.cistern.wagonModelName,
+          thicknessLeft: last?.thicknessLeft,
+          thicknessRight: last?.thicknessRight,
+        });
+        if (!need) return [];
+        return [
+          toPartsNeedRow(candidate.equipment, candidate.cistern, index, {
+            highlight: need.highlight,
+            repairType: need.repairType,
+            repairDate: need.repairDate,
+          }),
+        ];
+      });
+      setPartsNeedRows(rows);
+    } finally {
+      setIsPartsNeedLoading(false);
+    }
+  }, [planningRowsFiltered]);
+
+  const handlePartsNeedGoTo = useCallback(
+    (row: PartsNeedRow) => {
+      if (!row.cisternId) return;
+      router.push(`/cisterns/${row.cisternId}?tab=components`);
+    },
+    [router]
+  );
+
+  const handlePartsNeedShowInfo = useCallback(async (row: PartsNeedRow) => {
+    if (!row.partId) return;
+
+    setPartsNeedInfoOpen(true);
+    setIsPartsNeedInfoLoading(true);
+    setPartsNeedInfoError(null);
+    setPartsNeedInfoParts([]);
+
+    try {
+      const part = await partsApi.getById(row.partId);
+      setPartsNeedInfoParts(part ? [part] : []);
+    } catch {
+      setPartsNeedInfoError("Не удалось загрузить информацию о детали");
+    } finally {
+      setIsPartsNeedInfoLoading(false);
+    }
+  }, []);
+
+  const handlePartsNeedOpenPartPage = useCallback(
+    (partId: string) => {
+      router.push(`/directories/parts/${partId}/edit`);
+    },
+    [router]
+  );
+
+  const handlePartsNeedInfoOpenChange = useCallback((open: boolean) => {
+    setPartsNeedInfoOpen(open);
+    if (!open) {
+      setPartsNeedInfoParts([]);
+      setPartsNeedInfoError(null);
+      setIsPartsNeedInfoLoading(false);
+    }
+  }, []);
+
+  const handleExportPartsNeed = useCallback(
+    async (type: "pdf" | "doc" | "xls") => {
+      if (!partsNeedRows?.length) return;
+
+      const columns = [
+        { key: "cisternNumber", label: "Номер вагона-цистерны", type: "string" as const },
+        { key: "upcomingRepair", label: "Ближайший ремонт", type: "string" as const },
+        { key: "equipmentTypeName", label: "Тип детали", type: "string" as const },
+        {
+          key: "partDetails",
+          label: "Деталь (код пред.; завод. номер; год)",
+          type: "string" as const,
+        },
+        {
+          key: "thickness",
+          label: "Толщина колесной пары (Л/П)",
+          type: "string" as const,
+        },
+        { key: "truckType", label: "Код вида тележки", type: "string" as const },
+        { key: "document", label: "Документ", type: "string" as const },
+      ];
+
+      const data = partsNeedRows.map((row) => ({
+        cisternNumber: row.cisternNumber || "—",
+        upcomingRepair: row.repairType
+          ? `${formatUpcomingRepairType(row.repairType)}${
+              row.repairDate ? ` (${row.repairDate})` : ""
+            }`
+          : "—",
+        equipmentTypeName: row.equipmentTypeName || "—",
+        partDetails: row.partDetails || "—",
+        thickness: row.thickness || "—",
+        truckType: row.truckType || "—",
+        document: row.document || "—",
+      }));
+
+      const extensionByType: Record<"pdf" | "doc" | "xls", string> = {
+        pdf: "pdf",
+        doc: "docx",
+        xls: "xlsx",
+      };
+      const mimeByType: Record<"pdf" | "doc" | "xls", string> = {
+        pdf: "application/pdf",
+        doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xls: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      };
+
+      setExportingType(type);
+      try {
+        const response = await api.post(
+          "/api/export/table",
+          {
+            type,
+            columns,
+            data,
+            fileName:
+              type === "pdf"
+                ? "PartsNeedPDF"
+                : type === "doc"
+                  ? "PartsNeedDOC"
+                  : "PartsNeedXLS",
+          },
+          {
+            responseType: "blob",
+          }
+        );
+
+        const fileBaseName =
+          type === "pdf"
+            ? "PartsNeedPDF"
+            : type === "doc"
+              ? "PartsNeedDOC"
+              : "PartsNeedXLS";
+        const url = window.URL.createObjectURL(
+          new Blob([response.data], { type: mimeByType[type] })
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${fileBaseName}.${extensionByType[type]}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error(`Export parts need ${type.toUpperCase()} failed`, error);
+      } finally {
+        setExportingType(null);
+      }
+    },
+    [partsNeedRows]
+  );
 
   const activeFiltersCount = useMemo(() => {
     const filterCount =
@@ -688,15 +1140,19 @@ export default function RepairsPage() {
     totalPages,
     totalCount,
     onPageChange,
+    pageSize: pageSizeProp = pageSize,
+    onPageSizeChange = handlePageSizeChange,
   }: {
     currentPage: number;
     totalPages: number;
     totalCount: number;
     onPageChange: (page: number) => void;
+    pageSize?: number;
+    onPageSizeChange?: (pageSize: number) => void;
   }) => {
     if (totalPages <= 1) return null;
-    const startItem = (currentPage - 1) * pageSize + 1;
-    const endItem = Math.min(currentPage * pageSize, totalCount);
+    const startItem = (currentPage - 1) * pageSizeProp + 1;
+    const endItem = Math.min(currentPage * pageSizeProp, totalCount);
     return (
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center space-x-2">
@@ -704,8 +1160,8 @@ export default function RepairsPage() {
             Показано {startItem}-{endItem} из {totalCount} записей
           </p>
           <select
-            value={pageSize}
-            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            value={pageSizeProp}
+            onChange={(e) => onPageSizeChange(Number(e.target.value))}
             className="ml-2 text-sm border rounded px-2 py-1 bg-background border-input"
           >
             <option value={5}>5 на странице</option>
@@ -1273,9 +1729,347 @@ export default function RepairsPage() {
                 totalPages={totalPagesPlanning}
                 totalCount={totalCountPlanning}
                 onPageChange={handlePageChangePlanning}
+                pageSize={pageSizePlanning}
+                onPageSizeChange={handlePageSizeChangePlanning}
               />
             </div>
+          </Card >
+
+          <Card className="mt-6">
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <CardTitle>
+                <h3 className="font-bold">Потребность в запасных частях</h3>
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    title="Экспорт DOC"
+                    onClick={() => handleExportPartsNeed("doc")}
+                    disabled={
+                      !!exportingType ||
+                      isPartsNeedLoading ||
+                      !partsNeedRows?.length
+                    }
+                  >
+                    {exportingType === "doc" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Image
+                        src="/icon_word.svg"
+                        alt="Экспорт DOC"
+                        width={16}
+                        height={16}
+                      />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    title="Экспорт PDF"
+                    onClick={() => handleExportPartsNeed("pdf")}
+                    disabled={
+                      !!exportingType ||
+                      isPartsNeedLoading ||
+                      !partsNeedRows?.length
+                    }
+                  >
+                    {exportingType === "pdf" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Image
+                        src="/icon_pdf.png"
+                        alt="Экспорт PDF"
+                        width={16}
+                        height={16}
+                      />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    title="Экспорт XLS"
+                    onClick={() => handleExportPartsNeed("xls")}
+                    disabled={
+                      !!exportingType ||
+                      isPartsNeedLoading ||
+                      !partsNeedRows?.length
+                    }
+                  >
+                    {exportingType === "xls" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Image
+                        src="/icon_excel.svg"
+                        alt="Экспорт XLS"
+                        width={16}
+                        height={16}
+                      />
+                    )}
+                  </Button>
+                </div>
+                <Button
+                  onClick={handleGeneratePartsNeedList}
+                  disabled={
+                    isInitialLoading ||
+                    isPlanningFilterLoading ||
+                    isPartsNeedLoading ||
+                    totalCountPlanning === 0
+                  }
+                >
+                  {isPartsNeedLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ListChecks className="h-4 w-4" />
+                  )}
+                  Сформировать список запчастей для замены
+                </Button>
+              </div>
+            </CardHeader>
+            {(isPartsNeedLoading || partsNeedRows !== null) && (
+              <CardContent className="space-y-4">
+                <div className="overflow-x-auto">
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-col gap-1">
+                      <CardDescription>
+                        Всего записей: {totalCountPartsNeed}
+                      </CardDescription>
+                      {partsNeedTypeCountsDescription ? (
+                        <CardDescription>{partsNeedTypeCountsDescription}</CardDescription>
+                      ) : null}
+                    </div>
+                  </CardHeader>
+                  <Table className="w-full text-xs">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap w-0">
+                          Номер вагона-цистерны
+                        </TableHead>
+                        <TableHead className="whitespace-nowrap w-0">
+                          Ближайший ремонт
+                        </TableHead>
+                        <TableHead className="whitespace-normal py-2 min-w-0">
+                          Тип детали
+                        </TableHead>
+                        <TableHead className="whitespace-normal py-2 min-w-0">
+                          Деталь <br />
+                          (код пред.; завод. номер; год)
+                        </TableHead>
+                        <TableHead className="whitespace-nowrap w-0">
+                          Толщина колесной <br /> пары (Л/П)
+                        </TableHead>
+                        <TableHead className="whitespace-nowrap w-0">
+                          Код вида тележки
+                        </TableHead>
+                        <TableHead className="whitespace-nowrap w-0">Документ</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isPartsNeedLoading ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className="text-center text-muted-foreground py-8"
+                          >
+                            <div className="inline-flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Формирование списка запчастей...</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : partsNeedRowsPaginated.length ? (
+                        partsNeedRowsPaginated.map((row) => (
+                          <ContextMenu key={row.id}>
+                            <ContextMenuTrigger asChild>
+                              <TableRow
+                                className={cn(
+                                  "cursor-context-menu",
+                                  getPartsNeedRowClass(row.highlight) ??
+                                    "even:bg-muted/30"
+                                )}
+                              >
+                                <TableCell className="whitespace-nowrap">
+                                  {row.cisternNumber}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap">
+                                  {row.repairType
+                                    ? `${formatUpcomingRepairType(row.repairType)}${
+                                        row.repairDate ? ` (${row.repairDate})` : ""
+                                      }`
+                                    : "—"}
+                                </TableCell>
+                                <TableCell className="whitespace-normal break-words min-w-0">
+                                  {row.equipmentTypeName}
+                                </TableCell>
+                                <TableCell className="whitespace-normal break-words min-w-0">
+                                  {row.partDetails}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap">
+                                  {row.thickness}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap">
+                                  {row.truckType}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap">
+                                  {row.document}
+                                </TableCell>
+                              </TableRow>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem
+                                disabled={!row.cisternId}
+                                onSelect={() => handlePartsNeedGoTo(row)}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                Перейти к комплектации вагона-цистерны
+                              </ContextMenuItem>
+                              <ContextMenuItem
+                                disabled={!row.partId}
+                                onSelect={() => handlePartsNeedShowInfo(row)}
+                              >
+                                <Info className="h-4 w-4" />
+                                Показать информацию о детали
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className="text-center text-muted-foreground py-8"
+                          >
+                            Нет данных
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="px-2 pb-2">
+                  <RepairsPagination
+                    currentPage={pagePartsNeed}
+                    totalPages={totalPagesPartsNeed}
+                    totalCount={totalCountPartsNeed}
+                    onPageChange={handlePageChangePartsNeed}
+                    pageSize={pageSizePartsNeed}
+                    onPageSizeChange={handlePageSizeChangePartsNeed}
+                  />
+                </div>
+              </CardContent>
+            )}
           </Card>
+
+          <Dialog open={partsNeedInfoOpen} onOpenChange={handlePartsNeedInfoOpenChange}>
+            <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-6xl">
+              <DialogHeader>
+                <DialogTitle>Информация о детали</DialogTitle>
+                <DialogDescription>
+                  Результат поиска в справочнике деталей
+                </DialogDescription>
+              </DialogHeader>
+
+              {isPartsNeedInfoLoading ? (
+                <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Загрузка информации о детали...</span>
+                </div>
+              ) : partsNeedInfoError ? (
+                <div className="py-8 text-center text-sm text-destructive">
+                  {partsNeedInfoError}
+                </div>
+              ) : !partsNeedInfoParts.length ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  По заданным параметрам детали не найдены
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table className="w-full text-xs">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Тип детали</TableHead>
+                        <TableHead>Клеймо</TableHead>
+                        <TableHead>
+                          Заводской <br /> номер
+                        </TableHead>
+                        <TableHead>
+                          Год <br /> производства
+                        </TableHead>
+                        <TableHead>Местоположение</TableHead>
+                        <TableHead>Вагон/Депо</TableHead>
+                        <TableHead>
+                          Срок <br /> службы
+                        </TableHead>
+                        <TableHead>
+                          Дата окончания <br /> эксплуатации
+                        </TableHead>
+                        <TableHead>
+                          Дата продления <br /> эксплуатации
+                        </TableHead>
+                        <TableHead>Статус</TableHead>
+                        <TableHead>Примечания</TableHead>
+                        <TableHead>Модель</TableHead>
+                        <TableHead className="w-[1%] whitespace-nowrap text-right">
+                          Действия
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {partsNeedInfoParts.map((part) => (
+                        <TableRow key={part.id}>
+                          <TableCell className="font-medium">
+                            {part.partType?.name ?? "—"}
+                          </TableCell>
+                          <TableCell>{part.stampNumber?.value ?? "—"}</TableCell>
+                          <TableCell>{part.serialNumber || "—"}</TableCell>
+                          <TableCell>{formatPartYear(part.manufactureYear)}</TableCell>
+                          <TableCell>{getPartLocationDisplay(part.code)}</TableCell>
+                          <TableCell>{getPartWagonDepotDisplay(part)}</TableCell>
+                          <TableCell>{getPartServiceLifeYears(part) ?? "—"}</TableCell>
+                          <TableCell>{getPartExtendedDateDisplay(part)}</TableCell>
+                          <TableCell>
+                            {formatDate(part.extendedUntil, "ru-RU", "—")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              style={{ borderColor: part.status?.color }}
+                            >
+                              {part.status?.name ?? "—"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{part.notes || "—"}</TableCell>
+                          <TableCell>{part.model || "—"}</TableCell>
+                          <TableCell className="w-[1%] whitespace-nowrap text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePartsNeedOpenPartPage(part.id)}
+                            >
+                              Открыть
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => handlePartsNeedInfoOpenChange(false)}
+                >
+                  Закрыть
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>

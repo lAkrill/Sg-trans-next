@@ -318,21 +318,21 @@ export default function PartsPage() {
   const getLocationDisplay = (code?: number | null) => {
     switch (code) {
       case 1:
-        return "Вагон-цистерна";
-      case 2:
         return "Депо";
+      case 2:
+        return "Вагон-цистерна";
       case 0:
       default:
-        return "Не установлено";
+        return "Не установлена";
     }
   };
 
   const getWagonDepotDisplay = (part: PartDTO) => {
-    if (part.currentLocation?.number) {
+    if (part.code === 2 && part.currentLocation?.number) {
       return part.currentLocation.number;
     }
 
-    if (part.depot) {
+    if (part.code === 1 && part.depot) {
       const depotName = part.depot.shortName || part.depot.name;
       return depotName ? `${part.depot.code} (${depotName})` : part.depot.code;
     }

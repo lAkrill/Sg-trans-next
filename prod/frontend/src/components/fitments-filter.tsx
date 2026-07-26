@@ -68,6 +68,7 @@ const sortFieldOptions = [
   { value: 'lastRepairDate', label: 'Дата последнего ТО' },
   { value: 'periodRep', label: 'Период ремонта' },
   { value: 'serviceLifeYears', label: 'Срок службы' },
+  { value: 'extendedDate', label: 'Дата окончания эксплуатации' },
   { value: 'code', label: 'Местоположение' },
   { value: 'locationFitment', label: 'Вагон/Депо' },
   { value: 'manufacturer', label: 'Производитель' },

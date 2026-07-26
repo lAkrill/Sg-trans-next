@@ -70,11 +70,10 @@ export default function FitmentsPage() {
     "lastRepairDate",
     "periodRep",
     "serviceLifeYears",
+    "extendedDate",
     "code",
     "locationFitment",
-    "manufacturer",
     "updatedAt",
-    "createdId",
   ]);
 
   const getLocationLabel = (code?: number) => {
@@ -98,6 +97,50 @@ export default function FitmentsPage() {
       return depotCode ? `${shortName} (${depotCode})` : shortName;
     }
     return "—";
+  };
+
+  const startOfLocalDay = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const getExtendedDate = (fitment: FitmentDTO): Date | null => {
+    if (
+      !fitment.buildDate ||
+      fitment.serviceLifeYears == null ||
+      Number.isNaN(fitment.serviceLifeYears)
+    ) {
+      return null;
+    }
+
+    const start = new Date(fitment.buildDate);
+    if (Number.isNaN(start.getTime())) return null;
+
+    const end = startOfLocalDay(start);
+    end.setFullYear(end.getFullYear() + fitment.serviceLifeYears);
+    return end;
+  };
+
+  const getExtendedDateDisplay = (fitment: FitmentDTO): string => {
+    const end = getExtendedDate(fitment);
+    return end ? end.toLocaleDateString("ru-RU") : "—";
+  };
+
+  /** Красный — срок истёк; розовый — осталось ≤ 30 дней */
+  const getExtendedDateCellClass = (fitment: FitmentDTO): string | undefined => {
+    const end = getExtendedDate(fitment);
+    if (!end) return undefined;
+
+    const today = startOfLocalDay(new Date());
+    if (end < today) {
+      return "bg-red-700 text-white dark:bg-red-950 dark:text-white";
+    }
+
+    const in30Days = new Date(today);
+    in30Days.setDate(in30Days.getDate() + 30);
+    if (end <= in30Days) {
+      return "bg-pink-200/80 dark:bg-pink-900/60";
+    }
+
+    return undefined;
   };
 
   // Обычная загрузка арматуры (без фильтров)
@@ -392,6 +435,11 @@ export default function FitmentsPage() {
                         {isColumnVisible("lastRepairDate") && <TableHead>Дата <br />последнего ТО</TableHead>}
                         {isColumnVisible("periodRep") && <TableHead>Период <br />ремонта</TableHead>}
                         {isColumnVisible("serviceLifeYears") && <TableHead>Срок <br />службы</TableHead>}
+                        {isColumnVisible("extendedDate") && (
+                          <TableHead>
+                            Дата окончания <br />эксплуатации
+                          </TableHead>
+                        )}
                         {isColumnVisible("code") && <TableHead>Местоположение</TableHead>}  
                         {isColumnVisible("locationFitment") && <TableHead>Вагон/Депо</TableHead>}
                         {isColumnVisible("manufacturer") && <TableHead>Производитель</TableHead>}
@@ -415,9 +463,16 @@ export default function FitmentsPage() {
                           {isColumnVisible("lastRepairDate") && <TableCell>{formatDate(fitment.lastRepairDate, "ru-RU", "—")}</TableCell>}
                           {isColumnVisible("periodRep") && <TableCell>{fitment.periodRep}</TableCell>}
                           {isColumnVisible("serviceLifeYears") && <TableCell>{fitment.serviceLifeYears}</TableCell>}
+                          {isColumnVisible("extendedDate") && (
+                            <TableCell className={getExtendedDateCellClass(fitment)}>
+                              {getExtendedDateDisplay(fitment)}
+                            </TableCell>
+                          )}
+
                           {isColumnVisible("code") && (
                             <TableCell>{getLocationLabel(fitment.code)}</TableCell>
                           )}
+
                           {isColumnVisible("locationFitment") && (
                             <TableCell>{getLocationPlace(fitment)}</TableCell>
                           )}
