@@ -51,6 +51,8 @@ export function GeneralInfoTab({ cistern }: GeneralInfoTabProps) {
         registrationNumber={cistern.registrationNumber}
         registrationDate={cistern.registrationDate}
         registrarName={cistern.registrar?.name}
+        reRegistrationDate={cistern.reRegistrationDate}
+        reRegistrationNextDate={cistern.reRegistrationNextDate}
       />
 
       <AdditionalInfoCard

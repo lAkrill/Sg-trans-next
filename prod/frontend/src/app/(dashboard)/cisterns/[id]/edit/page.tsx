@@ -108,8 +108,10 @@ export default function EditCisternPage() {
         tareWeight3: cistern.tareWeight3,
         buildDate: cistern.buildDate,
         commissioningDate: cistern.commissioningDate,
+        extensionServiceLifeDate: cistern.extensionServiceLifeDate,
         registrationDate: cistern.registrationDate,
         reRegistrationDate: cistern.reRegistrationDate,
+        reRegistrationNextDate: cistern.reRegistrationNextDate,
         manufacturerId: cistern.manufacturer?.id || "",
         typeId: cistern.type?.id || "",
         modelId: cistern.model?.id || "",
@@ -195,11 +197,13 @@ export default function EditCisternPage() {
       'fillingVolume',
       'initialTareWeight',
       'commissioningDate',
+      'extensionServiceLifeDate',
       'registrarId',
       'ownerId',
       'techConditions',
       'pripiska',
       'reRegistrationDate',
+      'reRegistrationNextDate',
       'rent',
       'modelId',
       'periodMajorRepair',
@@ -371,83 +375,96 @@ export default function EditCisternPage() {
               <CardDescription>Базовые данные о вагон-цистерне</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="number">Номер вагон-цистерны *</Label>  
-                <Input
-                  id="number"
-                  value={formData.number || ""}
-                  onChange={(e) => handleInputChange("number", e.target.value)}
-                  placeholder="Введите номер вагон-цистерны"
-                  required
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="number">Номер вагон-цистерны *</Label>
+                  <Input
+                    id="number"
+                    value={formData.number || ""}
+                    onChange={(e) => handleInputChange("number", e.target.value)}
+                    placeholder="Введите номер вагон-цистерны"
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="serialNumber">Заводской номер *</Label>
-                <Input
-                  id="serialNumber"
-                  value={formData.serialNumber || ""}
-                  onChange={(e) => handleInputChange("serialNumber", e.target.value)}
-                  placeholder="Введите заводской номер"
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="serialNumber">Заводской номер *</Label>
+                  <Input
+                    id="serialNumber"
+                    value={formData.serialNumber || ""}
+                    onChange={(e) => handleInputChange("serialNumber", e.target.value)}
+                    placeholder="Введите заводской номер"
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="buildDate">Дата постройки *</Label>
-                <Input
-                  id="buildDate"
-                  type="date"
-                  value={formData.buildDate || ""}
-                  onChange={(e) => handleInputChange("buildDate", e.target.value)}
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="buildDate">Дата постройки *</Label>
+                  <Input
+                    id="buildDate"
+                    type="date"
+                    value={formData.buildDate || ""}
+                    onChange={(e) => handleInputChange("buildDate", e.target.value)}
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="commissioningDate">Дата ввода в эксплуатацию</Label>
-                <Input
-                  id="commissioningDate"
-                  type="date"
-                  value={formData.commissioningDate || ""}
-                  onChange={(e) => handleInputChange("commissioningDate", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="railwayCisternStatusId">Статус вагон-цистерны</Label>
-                <Select
-                  key={`status-${selectValues.railwayCisternStatusId}`}
-                  value={selectValues.railwayCisternStatusId || "none"}
-                  onValueChange={(value) => {
-                    const actualValue = value === "none" ? "" : value;
-                    handleInputChange("railwayCisternStatusId", actualValue);
-                    setSelectValues((prev) => ({
-                      ...prev,
-                      railwayCisternStatusId: actualValue,
-                    }));
-                  }}
-                  disabled={loadingCisternStatuses}
-                >
-                  <SelectTrigger id="railwayCisternStatusId">
-                    <SelectValue placeholder="Выберите статус" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Не выбрано</SelectItem>
-                    {cistern?.railwayCisternStatus?.id &&
-                      !cisternStatusOptions.some(
-                        (o) => o.value === cistern.railwayCisternStatus?.id
-                      ) && (
-                        <SelectItem value={cistern.railwayCisternStatus.id}>
-                          {cistern.railwayCisternStatus.name}
+                <div className="space-y-2">
+                  <Label htmlFor="commissioningDate">Дата ввода в эксплуатацию</Label>
+                  <Input
+                    id="commissioningDate"
+                    type="date"
+                    value={formData.commissioningDate || ""}
+                    onChange={(e) => handleInputChange("commissioningDate", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="extensionServiceLifeDate">Дата продления срока эксплуатации</Label>
+                  <Input
+                    id="extensionServiceLifeDate"
+                    type="date"
+                    value={formData.extensionServiceLifeDate?.slice(0, 10) || ""}
+                    onChange={(e) => handleInputChange("extensionServiceLifeDate", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="railwayCisternStatusId">Статус вагон-цистерны</Label>
+                  <Select
+                    key={`status-${selectValues.railwayCisternStatusId}`}
+                    value={selectValues.railwayCisternStatusId || "none"}
+                    onValueChange={(value) => {
+                      const actualValue = value === "none" ? "" : value;
+                      handleInputChange("railwayCisternStatusId", actualValue);
+                      setSelectValues((prev) => ({
+                        ...prev,
+                        railwayCisternStatusId: actualValue,
+                      }));
+                    }}
+                    disabled={loadingCisternStatuses}
+                  >
+                    <SelectTrigger id="railwayCisternStatusId">
+                      <SelectValue placeholder="Выберите статус" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Не выбрано</SelectItem>
+                      {cistern?.railwayCisternStatus?.id &&
+                        !cisternStatusOptions.some(
+                          (o) => o.value === cistern.railwayCisternStatus?.id
+                        ) && (
+                          <SelectItem value={cistern.railwayCisternStatus.id}>
+                            {cistern.railwayCisternStatus.name}
+                          </SelectItem>
+                        )}
+                      {cisternStatusOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
-                      )}
-                    {cisternStatusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -546,36 +563,48 @@ export default function EditCisternPage() {
               <CardDescription>Данные о регистрации вагон-цистерны</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="registrationNumber">Регистрационный номер *</Label>
-                <Input
-                  id="registrationNumber"
-                  value={formData.registrationNumber || ""}
-                  onChange={(e) => handleInputChange("registrationNumber", e.target.value)}
-                  placeholder="Введите регистрационный номер"
-                  required
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="registrationNumber">Регистрационный номер *</Label>
+                  <Input
+                    id="registrationNumber"
+                    value={formData.registrationNumber || ""}
+                    onChange={(e) => handleInputChange("registrationNumber", e.target.value)}
+                    placeholder="Введите регистрационный номер"
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="registrationDate">Дата регистрации *</Label>
-                <Input
-                  id="registrationDate"
-                  type="date"
-                  value={formData.registrationDate || ""}
-                  onChange={(e) => handleInputChange("registrationDate", e.target.value)}
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="registrationDate">Дата регистрации *</Label>
+                  <Input
+                    id="registrationDate"
+                    type="date"
+                    value={formData.registrationDate || ""}
+                    onChange={(e) => handleInputChange("registrationDate", e.target.value)}
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="reRegistrationDate">Дата перерегистрации</Label>
-                <Input
-                  id="reRegistrationDate"
-                  type="date"
-                  value={formData.reRegistrationDate || ""}
-                  onChange={(e) => handleInputChange("reRegistrationDate", e.target.value)}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="reRegistrationDate">Дата перерегистрации</Label>
+                  <Input
+                    id="reRegistrationDate"
+                    type="date"
+                    value={formData.reRegistrationDate || ""}
+                    onChange={(e) => handleInputChange("reRegistrationDate", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reRegistrationNextDate">Дата следующей перерегистрации</Label>
+                  <Input
+                    id="reRegistrationNextDate"
+                    type="date"
+                    value={formData.reRegistrationNextDate?.slice(0, 10) || ""}
+                    onChange={(e) => handleInputChange("reRegistrationNextDate", e.target.value)}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

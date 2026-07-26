@@ -77,6 +77,7 @@ export interface RailwayCisternDetailDTO {
   techConditions?: string;
   pripiska?: string;
   reRegistrationDate?: string;
+  reRegistrationNextDate?: string;
   pressure: number;
   testPressure: number;
   rent?: string;
@@ -180,11 +181,13 @@ export interface CreateRailwayCisternDTO {
   techConditions?: string;
   pripiska?: string;
   reRegistrationDate?: string;
+  reRegistrationNextDate?: string;
   pressure: number;
   testPressure: number;
   rent?: string;
   affiliationId: string;
   serviceLifeYears: number;
+  extensionServiceLifeDate?: string;
   periodMajorRepair?: string;
   periodPeriodicTest?: string;
   periodIntermediateTest?: string;

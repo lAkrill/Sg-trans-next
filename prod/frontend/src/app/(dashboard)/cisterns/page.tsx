@@ -54,10 +54,11 @@ import type {
 type DisplayCistern = RailwayCisternDetailDTO | RailwayCisternListDTO;
 
 const SERVICE_END_DATE_COLUMN = "serviceenddate";
+const EXTENSION_SERVICE_LIFE_DATE_COLUMN = "extensionservicelifedate";
 const SERVICE_END_DATE_SOURCE_COLUMNS = [
   "builddate",
   "servicelifeyears",
-  "extensionservicelifedate",
+  EXTENSION_SERVICE_LIFE_DATE_COLUMN,
 ] as const;
 
 /** Computed columns → source fields required from filter API */
@@ -124,6 +125,15 @@ const formatServiceEndDate = (cistern: DisplayCistern): string => {
   return endDate ? endDate.toLocaleDateString("ru-RU") : "";
 };
 
+const formatExtensionServiceLifeDate = (cistern: DisplayCistern): string => {
+  const record = cistern as unknown as Record<string, unknown>;
+  const value =
+    (record.extensionServiceLifeDate as string | undefined) ||
+    (record.extensionservicelifedate as string | undefined);
+  const date = parseLocalDate(value);
+  return date ? date.toLocaleDateString("ru-RU") : "—";
+};
+
 /** Красный — срок истёк; розовый — истекает в течение года */
 const getServiceEndDateRowClass = (cistern: DisplayCistern): string | undefined => {
   const endDate = getServiceEndDate(cistern);
@@ -147,6 +157,9 @@ const getServiceEndDateRowClass = (cistern: DisplayCistern): string | undefined 
 const getDisplayValue = (cistern: DisplayCistern, field: string): string => {
   if (field === SERVICE_END_DATE_COLUMN) {
     return formatServiceEndDate(cistern);
+  }
+  if (field === EXTENSION_SERVICE_LIFE_DATE_COLUMN) {
+    return formatExtensionServiceLifeDate(cistern);
   }
 
   // Convert field name to camelCase property name
@@ -249,6 +262,7 @@ export default function CisternsPage() {
     "manufacturer.name",
     "builddate",
     "serviceenddate",
+    "extensionservicelifedate",
     "type.name",
     "model.name",
     "owner.name",
@@ -454,6 +468,7 @@ export default function CisternsPage() {
       "manufacturer.name",
       "builddate",
       "serviceenddate",
+      "extensionservicelifedate",
       "type.name",
       "model.name",
       "owner.name",
@@ -744,6 +759,8 @@ export default function CisternsPage() {
                           ? <>Дата <br />постройки</>
                           : column === "serviceenddate"
                           ? <>Конец срока<br />эксплуатации</>
+                          : column === "extensionservicelifedate"
+                          ? <>Продление срока<br />эксплуатации</>
                           : column === "type.name"
                           ? "Тип"
                           : column === "model.name"

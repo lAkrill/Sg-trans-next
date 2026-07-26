@@ -438,6 +438,7 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
     { value: "manufacturer.name", label: "Производитель" },
     { value: "builddate", label: "Дата постройки" },
     { value: "serviceenddate", label: "Конец срока эксплуатации" },
+    { value: "extensionservicelifedate", label: "Продление срока эксплуатации" },
     { value: "tareweight", label: "Тара" },
     { value: "loadcapacity", label: "Грузоподъемность" },
     { value: "length", label: "Длина" },

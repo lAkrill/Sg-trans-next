@@ -13,16 +13,8 @@ interface BasicInfoCardProps {
 
 function formatServiceEndDate(
   buildDate: string,
-  serviceLifeYears?: number,
-  extensionServiceLifeDate?: string
+  serviceLifeYears?: number
 ): string {
-  if (extensionServiceLifeDate) {
-    const extensionDate = new Date(extensionServiceLifeDate);
-    if (!Number.isNaN(extensionDate.getTime())) {
-      return extensionDate.toLocaleDateString('ru-RU');
-    }
-  }
-
   if (serviceLifeYears == null || Number.isNaN(serviceLifeYears)) {
     return 'Не указана';
   }
@@ -78,13 +70,21 @@ export function BasicInfoCard({
             </div>
           </div>
           <div>
+            <div className="text-sm font-medium text-gray-500">Дата продления срока эксплуатации</div>
+            <div className="text-lg">
+              {extensionServiceLifeDate
+                ? new Date(extensionServiceLifeDate).toLocaleDateString('ru-RU')
+                : 'Не указана'}
+            </div>
+          </div>
+          <div>
             <div className="text-sm font-medium text-gray-500">Статус вагон-цистерны</div>
             <div className="text-lg">{railwayCisternStatusName || 'Не указан'}</div>
           </div>
           <div>
             <div className="text-sm font-medium text-gray-500">Дата конца срока эксплуатации</div>
             <div className="text-lg">
-              {formatServiceEndDate(buildDate, serviceLifeYears, extensionServiceLifeDate)}
+              {formatServiceEndDate(buildDate, serviceLifeYears)}
             </div>
           </div>
         </div>
