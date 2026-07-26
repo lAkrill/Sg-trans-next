@@ -31,6 +31,7 @@ public class Part
     public int ServiceLifeYears { get; set; } = 0;
     public DateOnly? ExtendedUntil { get; set; }
     public string? Model { get; set; }
+    public string? File { get; set; }
     
     // Навигационные свойства для специализированных деталей
     

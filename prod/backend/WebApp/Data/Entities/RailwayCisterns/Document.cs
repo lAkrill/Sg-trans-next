@@ -9,6 +9,7 @@ public class Document
     public string Author { get; set; } = null!;
     public decimal? Price { get; set; }
     public string? Note { get; set; }
+    public string? File { get; set; }
     
     // Навигационные свойства
     public ICollection<Part> Parts { get; set; } = new List<Part>();

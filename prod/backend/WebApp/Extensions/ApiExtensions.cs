@@ -50,6 +50,8 @@ public static class ApiExtensions
         // New endpoints
         app.MapStationEndpoints();
         app.MapDocumentEndpoints();
+        app.MapScrapmetalEndpoints();
+        app.MapDocumentsRegulatoryEndpoints();
         app.MapVesselEndpoints();
         app.MapDislocationEndpoints();
         

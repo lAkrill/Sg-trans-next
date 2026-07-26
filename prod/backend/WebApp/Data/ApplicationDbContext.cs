@@ -40,6 +40,8 @@ public class ApplicationDbContext(
     public DbSet<Station> Stations { get; set; }
     public DbSet<Document> Documents { get; set; }
     public DbSet<Dislocation> Dislocations { get; set; }
+    public DbSet<Scrapmetal> Scrapmetals { get; set; }
+    public DbSet<DocumentsRegulatory> DocumentsRegulatory { get; set; }
 
     public DbSet<PersonalCisRepairPeriod> PersonalCisRepairPeriods { get; set; }
     

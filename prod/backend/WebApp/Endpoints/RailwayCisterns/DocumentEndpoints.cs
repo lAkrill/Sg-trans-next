@@ -124,7 +124,8 @@ public static class DocumentEndpoints
                 Date = dto.Date,
                 Author = dto.Author,
                 Price = dto.Price,
-                Note = dto.Note
+                Note = dto.Note,
+                File = dto.File
             };
 
             context.Documents.Add(document);
@@ -150,6 +151,7 @@ public static class DocumentEndpoints
             document.Author = dto.Author;
             document.Price = dto.Price;
             document.Note = dto.Note;
+            document.File = dto.File;
 
             await context.SaveChangesAsync();
             return Results.NoContent();

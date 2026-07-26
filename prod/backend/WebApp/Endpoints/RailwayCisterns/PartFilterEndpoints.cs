@@ -190,6 +190,7 @@ public static class PartFilterEndpoints
             ServiceLifeYears = p.ServiceLifeYears,
             ExtendedUntil = p.ExtendedUntil,
             Model = p.Model,
+            File = p.File,
             Document = p.Document != null ? new DocumentDTO
             {
                 Id = p.Document.Id,

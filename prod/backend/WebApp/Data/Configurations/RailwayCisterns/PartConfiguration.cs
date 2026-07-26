@@ -15,6 +15,7 @@ public partial class PartConfiguration : IEntityTypeConfiguration<Part>
         entity.Property(e => e.Notes).HasColumnType("text");
         entity.Property(e => e.CreatedAt).HasColumnType("timestamp with time zone");
         entity.Property(e => e.UpdatedAt).HasColumnType("timestamp with time zone");
+        entity.Property(e => e.File).HasColumnType("text");
         entity.Property(e => e.Code);
         entity.Property(e => e.DocumentId);
         entity.Property(e => e.ServiceLifeYears).HasDefaultValue(0);

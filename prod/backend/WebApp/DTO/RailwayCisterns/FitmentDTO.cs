@@ -8,6 +8,7 @@ public class FitmentDTO
     public Guid FitmentTypeId { get; set; }
     public string SerialNumber { get; set; } = null!;
     public string PassportNumber { get; set; } = null!;
+    public string? File { get; set; }
     public DateTime BuildDate { get; set; }
     public DateTime? LastRepairDate { get; set; }
     public int PeriodRep { get; set; }
@@ -32,6 +33,7 @@ public class CreateFitmentDTO
     public Guid FitmentTypeId { get; set; }
     public string SerialNumber { get; set; } = null!;
     public string PassportNumber { get; set; } = "0";
+    public string? File { get; set; }
     public DateTime BuildDate { get; set; }
     public DateTime? LastRepairDate { get; set; }
     public int PeriodRep { get; set; } = 1;
@@ -48,6 +50,7 @@ public class UpdateFitmentDTO
     public Guid FitmentTypeId { get; set; }
     public string SerialNumber { get; set; } = null!;
     public string PassportNumber { get; set; } = null!;
+    public string? File { get; set; }
     public DateTime BuildDate { get; set; }
     public DateTime? LastRepairDate { get; set; }
     public int PeriodRep { get; set; }
@@ -108,6 +111,7 @@ public static class FitmentDTOMapper
             FitmentTypeId = fitment.FitmentTypeId,
             SerialNumber = fitment.SerialNumber,
             PassportNumber = fitment.PassportNumber,
+            File = fitment.File,
             BuildDate = fitment.BuildDate,
             LastRepairDate = fitment.LastRepairDate,
             PeriodRep = fitment.PeriodRep,
@@ -155,6 +159,7 @@ public static class FitmentDTOMapper
             FitmentTypeId = createFitmentDTO.FitmentTypeId,
             SerialNumber = createFitmentDTO.SerialNumber,
             PassportNumber = createFitmentDTO.PassportNumber,
+            File = createFitmentDTO.File,
             BuildDate = createFitmentDTO.BuildDate,
             LastRepairDate = createFitmentDTO.LastRepairDate,
             PeriodRep = createFitmentDTO.PeriodRep,
@@ -174,6 +179,7 @@ public static class FitmentDTOMapper
         fitment.FitmentTypeId = updateFitmentDTO.FitmentTypeId;
         fitment.SerialNumber = updateFitmentDTO.SerialNumber;
         fitment.PassportNumber = updateFitmentDTO.PassportNumber;
+        fitment.File = updateFitmentDTO.File;
         fitment.BuildDate = updateFitmentDTO.BuildDate;
         fitment.LastRepairDate = updateFitmentDTO.LastRepairDate;
         fitment.PeriodRep = updateFitmentDTO.PeriodRep;

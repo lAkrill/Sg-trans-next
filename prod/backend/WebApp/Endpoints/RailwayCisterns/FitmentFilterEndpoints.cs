@@ -109,6 +109,7 @@ public static class FitmentFilterEndpoints
             FitmentTypeId = f.FitmentTypeId,
             SerialNumber = f.SerialNumber,
             PassportNumber = f.PassportNumber,
+            File = f.File,
             BuildDate = f.BuildDate,
             LastRepairDate = f.LastRepairDate,
             PeriodRep = f.PeriodRep,

@@ -12,6 +12,7 @@ public class Fitment
     public string SerialNumber { get; set; }
     
     public string PassportNumber { get; set; } = "0";
+    public string? File { get; set; }
     
     public DateTime BuildDate { get; set; }
     

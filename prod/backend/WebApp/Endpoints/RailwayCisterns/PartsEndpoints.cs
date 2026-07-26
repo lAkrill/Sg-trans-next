@@ -308,7 +308,8 @@ public static class PartsEndpoints
                 DocumentId = dto.DocumentId,
                 ServiceLifeYears = dto.ServiceLifeYears,
                 ExtendedUntil = dto.ExtendedUntil,
-                Model = dto.Model
+                Model = dto.Model,
+                File = dto.File
             };
             // Предпроверка: уникальность по (PartTypeId, StampNumberId, SerialNumber, ManufactureYear)
             var duplicate = await context.Parts.AnyAsync(p =>
@@ -393,6 +394,7 @@ public static class PartsEndpoints
             part.ServiceLifeYears = dto.ServiceLifeYears ?? part.ServiceLifeYears;
             part.ExtendedUntil = dto.ExtendedUntil ?? part.ExtendedUntil;
             part.Model = dto.Model ?? part.Model;
+            part.File = dto.File;
 
             // create history entry for update
             var userIdStringUpd = httpContext.User.FindFirstValue("userId");

@@ -17,6 +17,9 @@ public class FitmentConfiguration : IEntityTypeConfiguration<Fitment>
             .IsRequired()
             .HasDefaultValue("0");
 
+        builder.Property(f => f.File)
+            .HasColumnType("text");
+
         builder.Property(f => f.BuildDate)
             .IsRequired();
 

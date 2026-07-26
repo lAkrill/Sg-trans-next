@@ -15,6 +15,7 @@ public class PartDTO
     public int ServiceLifeYears { get; set; }
     public DateOnly? ExtendedUntil { get; set; }
     public string? Model { get; set; }
+    public string? File { get; set; }
     //
     public RailwayCisternIdAndNumberDTO? CurrentLocation { get; set; }
     public int? Code { get; set; }
@@ -37,6 +38,7 @@ public class CreatePartDTO
     public int ServiceLifeYears { get; set; } = 0;
     public DateOnly? ExtendedUntil { get; set; }
     public string? Model { get; set; }
+    public string? File { get; set; }
 }
 
 public class UpdatePartDTO
@@ -53,4 +55,5 @@ public class UpdatePartDTO
     public int? ServiceLifeYears { get; set; }
     public DateOnly? ExtendedUntil { get; set; }
     public string? Model { get; set; }
+    public string? File { get; set; }
 }
