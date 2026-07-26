@@ -175,7 +175,7 @@ public static class FitmentEndpoints
                 {
                     Id = Guid.NewGuid(),
                     FitmentId = fitment.Id,
-                    Date = DateTime.UtcNow,
+                    Date = DateTime.Now,
                     CreatorId = creatorId,
                     Note = note
                 });
@@ -254,7 +254,7 @@ public static class FitmentEndpoints
                         {
                             Id = Guid.NewGuid(),
                             FitmentId = fitment.Id,
-                            Date = DateTime.UtcNow,
+                            Date = DateTime.Now,
                             CreatorId = creatorIdUpd,
                             Note = note
                         });
@@ -285,7 +285,7 @@ public static class FitmentEndpoints
                     {
                         Id = Guid.NewGuid(),
                         FitmentId = fitment.Id,
-                        Date = DateTime.UtcNow,
+                        Date = DateTime.Now,
                         CreatorId = creatorIdDel,
                         Note = note
                     });

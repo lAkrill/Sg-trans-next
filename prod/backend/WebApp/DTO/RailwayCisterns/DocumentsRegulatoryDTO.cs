@@ -58,7 +58,7 @@ public static class DocumentsRegulatoryDTOMapper
             File = dto.File,
             Url = dto.Url,
             CreatorId = creatorId,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.Now
         };
     }
 
@@ -69,6 +69,6 @@ public static class DocumentsRegulatoryDTOMapper
         document.Date = dto.Date;
         document.File = dto.File;
         document.Url = dto.Url;
-        document.UpdatedAt = DateTime.UtcNow;
+        document.UpdatedAt = DateTime.Now;
     }
 }

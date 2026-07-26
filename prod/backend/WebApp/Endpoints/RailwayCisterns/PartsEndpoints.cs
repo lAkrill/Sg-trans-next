@@ -336,7 +336,7 @@ public static class PartsEndpoints
                 {
                     Id = Guid.NewGuid(),
                     PartId = part.Id,
-                    Date = DateTime.UtcNow,
+                    Date = DateTime.Now,
                     CreatorId = creatorId,
                     Note = note
                 });
@@ -346,15 +346,11 @@ public static class PartsEndpoints
 
             return Results.Created($"/api/parts/{part.Id}", part.Id);
         })
-        .WithName("CreatePart")
-        .ProducesValidationProblem()
-        .Produces<Guid>(StatusCodes.Status201Created)
-        .RequirePermissions(Permission.Create);
+        .WithName("CreatePart");
 
-        // Обновление колесной пары
         group.MapPut("/{id}", async (
             [FromServices] ApplicationDbContext context,
-            Guid id,
+            [FromRoute] Guid id,
             [FromBody] UpdatePartDTO dto,
             HttpContext httpContext) =>
         {
@@ -424,7 +420,7 @@ public static class PartsEndpoints
                     {
                         Id = Guid.NewGuid(),
                         PartId = part.Id,
-                        Date = DateTime.UtcNow,
+                        Date = DateTime.Now,
                         CreatorId = creatorIdUpd,
                         Note = note
                     });
@@ -458,13 +454,13 @@ public static class PartsEndpoints
                 {
                     Id = Guid.NewGuid(),
                     PartId = part.Id,
-                    Date = DateTime.UtcNow,
+                    Date = DateTime.Now,
                     CreatorId = creatorIdDel,
                     Note = note
                 });
             }
 
-            context.Parts.Remove(part);
+            context.Remove(part);
             await context.SaveChangesAsync();
             return Results.NoContent();
         })

@@ -81,7 +81,7 @@ public static class LocationEndpoints
                 Name = dto.Name,
                 Type = dto.Type,
                 Description = dto.Description,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 CreatorId = httpContext.User.FindFirstValue("userId")
             };
 

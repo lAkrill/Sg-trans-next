@@ -261,11 +261,11 @@ public static class RailwayCisternFilterEndpoints
                 depoRep = pers.DepoRep.Value;
         }
 
-        cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest);
-        cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, intermediateTest);
-        cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, pprRepair);
-        cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, majorRep);
-        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep);
+        cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest, cistern.ExtensionServiceLifeDate);
+        cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, intermediateTest, cistern.ExtensionServiceLifeDate);
+        cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, pprRepair, cistern.ExtensionServiceLifeDate);
+        cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, majorRep, cistern.ExtensionServiceLifeDate);
+        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep, cistern.ExtensionServiceLifeDate);
 
         if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
         {
@@ -292,12 +292,21 @@ public static class RailwayCisternFilterEndpoints
         }
     }
 
-    private static DateOnly PlanDate(DateOnly? repairDate, DateOnly CommissioningDate, int serviceLifeYears, int years = 4)
+    private static DateOnly PlanDate(DateOnly? repairDate, DateOnly CommissioningDate, int serviceLifeYears, int years = 4, DateOnly? extensionServiceLifeDate = null)
     {
         DateOnly date = CommissioningDate;
         if (repairDate.HasValue)
             date = repairDate.Value;
         date = date.AddYears(years);
+
+        if (extensionServiceLifeDate.HasValue)
+        {
+            if (date > extensionServiceLifeDate.Value)
+                return extensionServiceLifeDate.Value;
+
+            return date;
+        }
+
         var serviceDate = CommissioningDate.AddYears(serviceLifeYears);
         if (serviceDate <= date)
             date = serviceDate;
@@ -672,7 +681,7 @@ public static class RailwayCisternFilterEndpoints
             query = query.Where(rc => rc.TechConditions != null && filters.TechConditions.Contains(rc.TechConditions));
 
         if (filters.Prispiski != null && filters.Prispiski.Any())
-            query = query.Where(rc => rc.Pripiska != null && filters.Prispiski.Contains(rc.Pripiska));
+            query = query.Where(rc => rc.Pripiska != null && filters.Prispiski.Any(p => rc.Pripiska.Contains(p)));
 
         if (filters.ReRegistrationDate != null)
         {
@@ -744,6 +753,14 @@ public static class RailwayCisternFilterEndpoints
                 query = query.Where(rc => rc.PeriodDepotRepair <= filters.PeriodDepotRepair.To);
         }
 
+        if (filters.PeriodPPRRepair != null)
+        {
+            if (filters.PeriodPPRRepair.From.HasValue)
+                query = query.Where(rc => rc.PeriodPPRRepair >= filters.PeriodPPRRepair.From);
+            if (filters.PeriodPPRRepair.To.HasValue)
+                query = query.Where(rc => rc.PeriodPPRRepair <= filters.PeriodPPRRepair.To);
+        }
+
         if (filters.PeriodPaintRepair != null)
         {
             if (filters.PeriodPaintRepair.From.HasValue)
@@ -780,7 +797,7 @@ public static class RailwayCisternFilterEndpoints
             query = query.Where(rc => filters.CisternStatusIds.Contains(rc.CisternStatusId));
 
         if (filters.Notes != null && filters.Notes.Any())
-            query = query.Where(rc => rc.Notes != null && filters.Notes.Contains(rc.Notes));
+            query = query.Where(rc => rc.Notes != null && filters.Notes.Any(n => rc.Notes.Contains(n)));
 
         if (filters.DangerClasses != null && filters.DangerClasses.Any())
             query = query.Where(rc => filters.DangerClasses.Contains(rc.DangerClass));

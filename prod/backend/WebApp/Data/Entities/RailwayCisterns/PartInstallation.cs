@@ -10,7 +10,7 @@ public class PartInstallation
     public Guid? WagonId { get; set; }
     public RailwayCistern? Wagon { get; set; }
     
-    public DateTime InstalledAt { get; set; } = DateTime.UtcNow;
+    public DateTime InstalledAt { get; set; } = DateTime.Now;
     public string? InstalledBy { get; set; }
     
     public DateTime? RemovedAt { get; set; }
