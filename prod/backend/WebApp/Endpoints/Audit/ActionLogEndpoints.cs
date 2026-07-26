@@ -6,6 +6,13 @@ using WebApp.Extensions;
 
 namespace WebApp.Endpoints.Audit;
 
+public record ActionLogPaginationResponse(
+    List<ActionLogDTO> Items,
+    int TotalCount,
+    int TotalPages,
+    int CurrentPage,
+    int PageSize);
+
 public static class ActionLogEndpoints
 {
     public static void MapActionLogEndpoints(this IEndpointRouteBuilder app)
@@ -16,13 +23,21 @@ public static class ActionLogEndpoints
 
         group.MapGet("/", async ([FromServices] ApplicationDbContext context, [FromQuery] int skip = 0, [FromQuery] int take = 50) =>
         {
-            var items = await context.Set<WebApp.Data.Entities.Audit.ActionLog>()
+            var query = context.Set<WebApp.Data.Entities.Audit.ActionLog>()
                 .AsNoTracking()
-                .OrderByDescending(a => a.DateTime)
-                .Skip(skip).Take(take)
+                .OrderByDescending(a => a.DateTime);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(skip)
+                .Take(take)
                 .Select(a => a.ToActionLogDTO())
                 .ToListAsync();
-            return Results.Ok(items);
+
+            var totalPages = take > 0 ? (int)Math.Ceiling(totalCount / (double)take) : 0;
+            var currentPage = take > 0 ? (skip / take) + 1 : 1;
+
+            return Results.Ok(new ActionLogPaginationResponse(items, totalCount, totalPages, currentPage, take));
         })
         .RequirePermissions(WebApp.Data.Enums.Permission.Read);
 
