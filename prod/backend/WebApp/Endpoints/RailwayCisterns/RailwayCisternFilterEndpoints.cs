@@ -249,15 +249,15 @@ public static class RailwayCisternFilterEndpoints
 
         if (pers != null)
         {
-            if (pers.PeriodicTest.HasValue)
+            if (pers.PeriodicTest.HasValue && pers.PeriodicTest.Value > 0)
                 periodictest = pers.PeriodicTest.Value;
-            if (pers.IntermediateTest.HasValue)
+            if (pers.IntermediateTest.HasValue && pers.IntermediateTest.Value > 0)
                 intermediateTest = pers.IntermediateTest.Value;
-            if (pers.PPRRep.HasValue)
+            if (pers.PPRRep.HasValue && pers.PPRRep.Value > 0)
                 pprRepair = pers.PPRRep.Value;
-            if (pers.MajorRep.HasValue)
+            if (pers.MajorRep.HasValue && pers.MajorRep.Value > 0)
                 majorRep = pers.MajorRep.Value;
-            if (pers.DepoRep.HasValue)
+            if (pers.DepoRep.HasValue && pers.DepoRep.Value > 0)
                 depoRep = pers.DepoRep.Value;
         }
 
@@ -299,17 +299,16 @@ public static class RailwayCisternFilterEndpoints
             date = repairDate.Value;
         date = date.AddYears(years);
 
+        var serviceDate = CommissioningDate.AddYears(serviceLifeYears);
+
         if (extensionServiceLifeDate.HasValue)
         {
-            if (date > extensionServiceLifeDate.Value)
-                return extensionServiceLifeDate.Value;
-
-            return date;
+           serviceDate =  extensionServiceLifeDate.Value;
         }
 
-        var serviceDate = CommissioningDate.AddYears(serviceLifeYears);
         if (serviceDate <= date)
             date = serviceDate;
+
         return date;
     }
 

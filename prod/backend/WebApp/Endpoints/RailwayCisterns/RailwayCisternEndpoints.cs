@@ -654,27 +654,27 @@ public static class RailwayCisternEndpoints
                     }
                     if (pers != null)
                     {
-                        if (pers.PeriodicTest.HasValue)
+                        if (pers.PeriodicTest.HasValue && pers.PeriodicTest.Value > 0)
                         {
                             periodictest = pers.PeriodicTest.Value;
                             cistern.PlanPeriodPeriodicTestStatus = "Из ремонтов для конкретного вагона " + pers.PeriodicTest.Value.ToString();
                         }
-                        if (pers.IntermediateTest.HasValue)
+                        if (pers.IntermediateTest.HasValue && pers.IntermediateTest.Value > 0)
                         {
                             IntermediateTest = pers.IntermediateTest.Value;
                             cistern.PlanPeriodIntermediateTestStatus = "Из ремонтов для конкретного вагона " + pers.IntermediateTest.Value.ToString();
                         }
-                        if (pers.PPRRep.HasValue)
+                        if (pers.PPRRep.HasValue && pers.PPRRep.Value > 0)
                         {
                             PPRRepair = pers.PPRRep.Value;
                             cistern.PlanPeriodPPRRepairStatus = "Из ремонтов для конкретного вагона " + pers.PPRRep.Value.ToString();
                         }
-                        if (pers.MajorRep.HasValue)
+                        if (pers.MajorRep.HasValue && pers.MajorRep.Value > 0)
                         {
                             MajorRep = pers.MajorRep.Value;
                             cistern.PlanPeriodMajorRepairStatus = "Из ремонтов для конкретного вагона " + pers.MajorRep.ToString();
                         }
-                        if (pers.DepoRep.HasValue)
+                        if (pers.DepoRep.HasValue && pers.DepoRep.Value > 0)
                         {
                             DepoRep = pers.DepoRep.Value;
                             cistern.PlanPeriodDepotRepairStatus = "Из ремонтов для конкретного вагона " + pers.DepoRep.ToString();
@@ -961,15 +961,15 @@ public static class RailwayCisternEndpoints
 
         if (pers != null)
         {
-            if (pers.PeriodicTest.HasValue)
+            if (pers.PeriodicTest.HasValue && pers.PeriodicTest.Value > 0)
                 periodictest = pers.PeriodicTest.Value;
-            if (pers.IntermediateTest.HasValue)
+            if (pers.IntermediateTest.HasValue && pers.IntermediateTest.Value > 0)
                 intermediateTest = pers.IntermediateTest.Value;
-            if (pers.PPRRep.HasValue)
+            if (pers.PPRRep.HasValue && pers.PPRRep.Value > 0)
                 pprRepair = pers.PPRRep.Value;
-            if (pers.MajorRep.HasValue)
+            if (pers.MajorRep.HasValue && pers.MajorRep.Value > 0)
                 majorRep = pers.MajorRep.Value;
-            if (pers.DepoRep.HasValue)
+            if (pers.DepoRep.HasValue && pers.DepoRep.Value > 0)
                 depoRep = pers.DepoRep.Value;
         }
 
@@ -1033,7 +1033,7 @@ public static class RailwayCisternEndpoints
 
         if (serviceDate <= date)
             date = serviceDate;
-            
+
         return date;
     }
 
