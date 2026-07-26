@@ -65,7 +65,7 @@ public static class DepotEndpoints
                 Code = dto.Code,
                 Location = dto.Location,
                 ShortName = dto.ShortName,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 CreatorId = Guid.Parse(httpContext.User.FindFirstValue("userId"))
             };
 

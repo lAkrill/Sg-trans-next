@@ -423,6 +423,7 @@ public class FilterRepairsCisternsRequestDTO
     public DateRange? PlanPeriodIntermediateTest { get; set; }
     public DateRange? PlanPeriodDepotRepair { get; set; }
     public DateRange? PlanPeriodPPRRepair { get; set; }
+    public DateRange? ExtensionServiceLifeDate { get; set; }
     public bool IsAnd {get; set;} = true;
 }
 

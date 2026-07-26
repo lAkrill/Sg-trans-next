@@ -63,7 +63,7 @@ public static class ScrapmetalDTOMapper
             Note = dto.Note,
             DocumentId = dto.DocumentId,
             CreatorId = creatorId,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.Now
         };
     }
 
@@ -75,6 +75,6 @@ public static class ScrapmetalDTOMapper
         scrapmetal.Code = dto.Code;
         scrapmetal.Note = dto.Note;
         scrapmetal.DocumentId = dto.DocumentId;
-        scrapmetal.UpdatedAt = DateTime.UtcNow;
+        scrapmetal.UpdatedAt = DateTime.Now;
     }
 }

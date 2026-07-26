@@ -6,7 +6,7 @@ using WebApp.Extensions;
 
 namespace WebApp.Endpoints.Audit;
 
-public record ActionLogPagedResponse(
+public record ActionLogPaginationResponse(
     List<ActionLogDTO> Items,
     int TotalCount,
     int TotalPages,
@@ -26,29 +26,21 @@ public static class ActionLogEndpoints
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 50) =>
         {
-            if (page < 1) page = 1;
-            if (pageSize < 1) pageSize = 50;
-
             var query = context.Set<WebApp.Data.Entities.Audit.ActionLog>()
                 .AsNoTracking()
                 .OrderByDescending(a => a.DateTime);
 
             var totalCount = await query.CountAsync();
-            var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)pageSize));
-            if (page > totalPages) page = totalPages;
-
             var items = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
+                .Skip(skip)
+                .Take(take)
                 .Select(a => a.ToActionLogDTO())
                 .ToListAsync();
 
-            return Results.Ok(new ActionLogPagedResponse(
-                items,
-                totalCount,
-                totalPages,
-                page,
-                pageSize));
+            var totalPages = take > 0 ? (int)Math.Ceiling(totalCount / (double)take) : 0;
+            var currentPage = take > 0 ? (skip / take) + 1 : 1;
+
+            return Results.Ok(new ActionLogPaginationResponse(items, totalCount, totalPages, currentPage, take));
         })
         .RequirePermissions(WebApp.Data.Enums.Permission.Read);
 

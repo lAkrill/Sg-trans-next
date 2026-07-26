@@ -419,7 +419,7 @@ public static class RailwayCisternEndpoints
                 {
                     Id = Guid.NewGuid(),
                     CisternId = cistern.Id,
-                    Date = DateTime.UtcNow,
+                    Date = DateTime.Now,
                     CreatorId = creatorId,
                     Note = $"Удален вагон №{cistern.Number}, регистрационный номер {cistern.RegistrationNumber}."
                 });
@@ -433,7 +433,6 @@ public static class RailwayCisternEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .RequirePermissions(Permission.Delete);
 
-        // Search detailed list by number
         group.MapPost("/repairs-filter", async (
                 [FromServices] ApplicationDbContext context,
                 [FromBody] FilterRepairsCisternsRequestDTO req) =>
@@ -564,6 +563,18 @@ public static class RailwayCisternEndpoints
                             query = query.Where(rc => rc.PeriodDetachRepair <= req.PeriodDetachRepair.To.Value);
                         }
                     }
+
+                    if (req.ExtensionServiceLifeDate != null)
+                    {
+                        if (req.ExtensionServiceLifeDate.From.HasValue)
+                        {
+                            query = query.Where(rc => rc.ExtensionServiceLifeDate >= req.ExtensionServiceLifeDate.From.Value);
+                        }
+                        if (req.ExtensionServiceLifeDate.To.HasValue)
+                        {
+                            query = query.Where(rc => rc.ExtensionServiceLifeDate <= req.ExtensionServiceLifeDate.To.Value);
+                        }
+                    }
                 }
 
                 var cisterns = await query.Select(rc => new FilterRepairsCisternsResponseDTO
@@ -643,45 +654,45 @@ public static class RailwayCisternEndpoints
                     }
                     if (pers != null)
                     {
-                        if (pers.PeriodicTest.HasValue)
+                        if (pers.PeriodicTest.HasValue && pers.PeriodicTest.Value > 0)
                         {
                             periodictest = pers.PeriodicTest.Value;
                             cistern.PlanPeriodPeriodicTestStatus = "Из ремонтов для конкретного вагона " + pers.PeriodicTest.Value.ToString();
                         }
-                        if (pers.IntermediateTest.HasValue)
+                        if (pers.IntermediateTest.HasValue && pers.IntermediateTest.Value > 0)
                         {
                             IntermediateTest = pers.IntermediateTest.Value;
                             cistern.PlanPeriodIntermediateTestStatus = "Из ремонтов для конкретного вагона " + pers.IntermediateTest.Value.ToString();
                         }
-                        if (pers.PPRRep.HasValue)
+                        if (pers.PPRRep.HasValue && pers.PPRRep.Value > 0)
                         {
                             PPRRepair = pers.PPRRep.Value;
                             cistern.PlanPeriodPPRRepairStatus = "Из ремонтов для конкретного вагона " + pers.PPRRep.Value.ToString();
                         }
-                        if (pers.MajorRep.HasValue)
+                        if (pers.MajorRep.HasValue && pers.MajorRep.Value > 0)
                         {
                             MajorRep = pers.MajorRep.Value;
                             cistern.PlanPeriodMajorRepairStatus = "Из ремонтов для конкретного вагона " + pers.MajorRep.ToString();
                         }
-                        if (pers.DepoRep.HasValue)
+                        if (pers.DepoRep.HasValue && pers.DepoRep.Value > 0)
                         {
                             DepoRep = pers.DepoRep.Value;
                             cistern.PlanPeriodDepotRepairStatus = "Из ремонтов для конкретного вагона " + pers.DepoRep.ToString();
                         }
                     }
 
-                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest);
-                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, IntermediateTest);
-                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, PPRRepair);
-                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, MajorRep);
+                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest, cistern.ExtensionServiceLifeDate);
+                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, IntermediateTest, cistern.ExtensionServiceLifeDate);
+                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, PPRRepair, cistern.ExtensionServiceLifeDate);
+                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, MajorRep, cistern.ExtensionServiceLifeDate);
                     if (cistern.PeriodDepotRepair < cistern.PeriodMajorRepair)
                     {
-                        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep, cistern.ExtensionServiceLifeDate);
                         cistern.PlanPeriodDepotRepairStatus += "  (от капитального)";
                     }
                     else
                     {
-                        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep, cistern.ExtensionServiceLifeDate);
                     }
 
                     //???????????????????????????????????
@@ -700,7 +711,7 @@ public static class RailwayCisternEndpoints
                         while (nextDepot < cistern.PlanPeriodMajorRepair)
                         {
                             prevDepot = nextDepot;
-                            nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep);
+                            nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep, cistern.ExtensionServiceLifeDate);
                         }
 
                         int diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
@@ -763,6 +774,10 @@ public static class RailwayCisternEndpoints
                             if (!match && req.PeriodDetachRepair != null)
                             {
                                 match = MatchesDateRange(rc.PeriodDetachRepair, req.PeriodDetachRepair);
+                            }
+                            if (!match && req.ExtensionServiceLifeDate != null)
+                            {
+                                match = MatchesDateRange(rc.ExtensionServiceLifeDate, req.ExtensionServiceLifeDate);
                             }
 
                             if (!match && req.CommissioningEndDate != null)
@@ -879,6 +894,18 @@ public static class RailwayCisternEndpoints
                                 cisterns = cisterns.Where(rc => rc.PeriodPaintRepair <= req.PeriodPaintRepair.To.Value).ToList();
                             }
                         }
+
+                        if (req.ExtensionServiceLifeDate != null)
+                        {
+                            if (req.ExtensionServiceLifeDate.From.HasValue)
+                            {
+                                cisterns = cisterns.Where(rc => rc.ExtensionServiceLifeDate >= req.ExtensionServiceLifeDate.From.Value).ToList();
+                            }
+                            if (req.ExtensionServiceLifeDate.To.HasValue)
+                            {
+                                cisterns = cisterns.Where(rc => rc.ExtensionServiceLifeDate <= req.ExtensionServiceLifeDate.To.Value).ToList();
+                            }
+                        }
                     }
                 }
                 var cisternsList = cisterns.ToList();
@@ -934,29 +961,29 @@ public static class RailwayCisternEndpoints
 
         if (pers != null)
         {
-            if (pers.PeriodicTest.HasValue)
+            if (pers.PeriodicTest.HasValue && pers.PeriodicTest.Value > 0)
                 periodictest = pers.PeriodicTest.Value;
-            if (pers.IntermediateTest.HasValue)
+            if (pers.IntermediateTest.HasValue && pers.IntermediateTest.Value > 0)
                 intermediateTest = pers.IntermediateTest.Value;
-            if (pers.PPRRep.HasValue)
+            if (pers.PPRRep.HasValue && pers.PPRRep.Value > 0)
                 pprRepair = pers.PPRRep.Value;
-            if (pers.MajorRep.HasValue)
+            if (pers.MajorRep.HasValue && pers.MajorRep.Value > 0)
                 majorRep = pers.MajorRep.Value;
-            if (pers.DepoRep.HasValue)
+            if (pers.DepoRep.HasValue && pers.DepoRep.Value > 0)
                 depoRep = pers.DepoRep.Value;
         }
 
-        cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest);
-        cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, intermediateTest);
-        cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, pprRepair);
-        cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, majorRep);
+        cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest, cistern.ExtensionServiceLifeDate);
+        cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, intermediateTest, cistern.ExtensionServiceLifeDate);
+        cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, pprRepair, cistern.ExtensionServiceLifeDate);
+        cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, majorRep, cistern.ExtensionServiceLifeDate);
         if (cistern.PeriodDepotRepair < cistern.PeriodMajorRepair)
         {
-            cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep);
+            cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep, cistern.ExtensionServiceLifeDate);
         }
         else
         {
-            cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep);
+            cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep, cistern.ExtensionServiceLifeDate);
         }
 
 
@@ -990,15 +1017,23 @@ public static class RailwayCisternEndpoints
         }
     }
 
-    public static DateOnly PlanDate(DateOnly? repairDate, DateOnly CommissioningDate, int serviceLifeYears, int years = 4)
+    public static DateOnly PlanDate(DateOnly? repairDate, DateOnly CommissioningDate, int serviceLifeYears, int years = 4, DateOnly? extensionServiceLifeDate = null)
     {
         DateOnly date = CommissioningDate;
         if (repairDate.HasValue)
             date = repairDate.Value;
         date = date.AddYears(years);
+
         var serviceDate = CommissioningDate.AddYears(serviceLifeYears);
+
+        if (extensionServiceLifeDate.HasValue)
+        {
+           serviceDate =  extensionServiceLifeDate.Value;
+        }
+
         if (serviceDate <= date)
             date = serviceDate;
+
         return date;
     }
 
