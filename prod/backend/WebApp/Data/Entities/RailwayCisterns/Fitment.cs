@@ -37,4 +37,5 @@ public class Fitment
     
     public Guid CreatorId { get; set; }
     public User Creator { get; set; }
+    public ICollection<HistoryActionsFitment> HistoryActionsFitments { get; set; } = new List<HistoryActionsFitment>();
 }

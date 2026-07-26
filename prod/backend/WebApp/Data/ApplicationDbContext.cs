@@ -26,6 +26,7 @@ public class ApplicationDbContext(
     public DbSet<Vessel> Vessels { get; set; }
     public DbSet<Depot> Depots { get; set; }
     public DbSet<Part> Parts { get; set; }
+    public DbSet<HistoryActionsPart> HistoryActionsParts { get; set; }
     public DbSet<Location> Locations { get; set; }
     public DbSet<PartInstallation> PartInstallations { get; set; }
     public DbSet<RepairType> RepairTypes { get; set; }
@@ -56,6 +57,7 @@ public class ApplicationDbContext(
     
     //Fitments
     public DbSet<Fitment> Fitments { get; set; }
+    public DbSet<HistoryActionsFitment> HistoryActionsFitments { get; set; }
     public DbSet<FitmentType> FitmentTypes { get; set; }
     public DbSet<FitmentModel> FitmentModels { get; set; }
     

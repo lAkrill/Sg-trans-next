@@ -141,9 +141,9 @@ public static class FitmentEndpoints
             .RequirePermissions(Permission.Read);
 
         group.MapPost("/", async (
-                [FromServices] ApplicationDbContext context,
-                HttpContext httpContext,
-                [FromBody] CreateFitmentDTO dto) =>
+            [FromServices] ApplicationDbContext context,
+            HttpContext httpContext,
+            [FromBody] CreateFitmentDTO dto) =>
             {
                 var userIdString = httpContext.User.FindFirst("userId")?.Value;
                 if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var creatorId))
@@ -165,6 +165,21 @@ public static class FitmentEndpoints
 
                 var fitment = dto.ToFitment(creatorId);
                 context.Fitments.Add(fitment);
+
+                // create history entry for create (creatorId parsed above)
+                var fitmentType = await context.FitmentTypes.FindAsync(fitment.FitmentTypeId);
+                var model = await context.FitmentModels.FindAsync(fitment.ModelId);
+                var depot = await context.Depots.FindAsync(fitment.DepotId);
+                var note = $"Создана арматура: Тип={fitmentType?.Name ?? fitment.FitmentTypeId.ToString()}, Модель={model?.Name ?? fitment.ModelId.ToString()}, Депо={depot?.Name ?? fitment.DepotId.ToString()}, Серийный номер={fitment.SerialNumber}";
+                context.HistoryActionsFitments.Add(new WebApp.Data.Entities.RailwayCisterns.HistoryActionsFitment
+                {
+                    Id = Guid.NewGuid(),
+                    FitmentId = fitment.Id,
+                    Date = DateTime.UtcNow,
+                    CreatorId = creatorId,
+                    Note = note
+                });
+
                 await context.SaveChangesAsync();
 
                 // Reload with relations
@@ -180,9 +195,10 @@ public static class FitmentEndpoints
             .RequirePermissions(Permission.Create);
 
         group.MapPut("/{id}", async (
-                [FromServices] ApplicationDbContext context,
-                [FromRoute] Guid id,
-                [FromBody] UpdateFitmentDTO dto) =>
+            [FromServices] ApplicationDbContext context,
+            [FromRoute] Guid id,
+            [FromBody] UpdateFitmentDTO dto,
+            HttpContext httpContext) =>
             {
                 var fitment = await context.Fitments.FindAsync(id);
                 if (fitment is null)
@@ -201,7 +217,50 @@ public static class FitmentEndpoints
                     throw new ApiException("Арматура с таким типом, серийным номером, датой сборки и моделью уже существует.", 409);
                 }
 
-                fitment.UpdateFitment(dto);
+                // build human-readable change note
+                var userIdStringUpd = httpContext.User.FindFirst("userId")?.Value;
+                if (Guid.TryParse(userIdStringUpd, out var creatorIdUpd))
+                {
+                    var oldFitmentType = await context.FitmentTypes.FindAsync(fitment.FitmentTypeId);
+                    var oldModel = await context.FitmentModels.FindAsync(fitment.ModelId);
+                    var oldDepot = await context.Depots.FindAsync(fitment.DepotId);
+
+                    var newFitmentType = await context.FitmentTypes.FindAsync(dto.FitmentTypeId);
+                    var newModel = await context.FitmentModels.FindAsync(dto.ModelId);
+                    var newDepot = await context.Depots.FindAsync(dto.DepotId);
+
+                    var changes = new List<string>();
+                    void AddChange(string field, object? oldV, object? newV)
+                    {
+                        if (oldV == null && newV == null) return;
+                        if (oldV != null && oldV.Equals(newV)) return;
+                        changes.Add($"{field}: {oldV} -> {newV}");
+                    }
+
+                    AddChange("Type", oldFitmentType?.Name ?? fitment.FitmentTypeId.ToString(), newFitmentType?.Name ?? dto.FitmentTypeId.ToString());
+                    AddChange("Model", oldModel?.Name ?? fitment.ModelId.ToString(), newModel?.Name ?? dto.ModelId.ToString());
+                    AddChange("Depot", oldDepot?.Name ?? fitment.DepotId.ToString(), newDepot?.Name ?? dto.DepotId.ToString());
+                    AddChange("SerialNumber", fitment.SerialNumber, dto.SerialNumber);
+                    AddChange("BuildDate", fitment.BuildDate, dto.BuildDate);
+                    AddChange("LastRepairDate", fitment.LastRepairDate, dto.LastRepairDate);
+
+                    // apply changes
+                    fitment.UpdateFitment(dto);
+
+                    var note = changes.Count == 0 ? string.Empty : string.Join("; ", changes);
+                    if (!string.IsNullOrEmpty(note))
+                    {
+                        context.HistoryActionsFitments.Add(new WebApp.Data.Entities.RailwayCisterns.HistoryActionsFitment
+                        {
+                            Id = Guid.NewGuid(),
+                            FitmentId = fitment.Id,
+                            Date = DateTime.UtcNow,
+                            CreatorId = creatorIdUpd,
+                            Note = note
+                        });
+                    }
+                }
+
                 await context.SaveChangesAsync();
                 return Results.NoContent();
             })
@@ -210,11 +269,28 @@ public static class FitmentEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .RequirePermissions(Permission.Update);
 
-        group.MapDelete("/{id}", async ([FromServices] ApplicationDbContext context, [FromRoute] Guid id) =>
+        group.MapDelete("/{id}", async ([FromServices] ApplicationDbContext context, [FromRoute] Guid id, HttpContext httpContext) =>
             {
                 var fitment = await context.Fitments.FindAsync(id);
                 if (fitment is null)
                     return Results.NotFound();
+
+                var userIdStringDel = httpContext.User.FindFirst("userId")?.Value;
+                if (Guid.TryParse(userIdStringDel, out var creatorIdDel))
+                {
+                    var model = await context.FitmentModels.FindAsync(fitment.ModelId);
+                    var type = await context.FitmentTypes.FindAsync(fitment.FitmentTypeId);
+                    var note = $"Удалена арматура: Серийный номер={fitment.SerialNumber}, Тип={type?.Name ?? fitment.FitmentTypeId.ToString()}, Модель={model?.Name ?? fitment.ModelId.ToString()}";
+                    context.HistoryActionsFitments.Add(new WebApp.Data.Entities.RailwayCisterns.HistoryActionsFitment
+                    {
+                        Id = Guid.NewGuid(),
+                        FitmentId = fitment.Id,
+                        Date = DateTime.UtcNow,
+                        CreatorId = creatorIdDel,
+                        Note = note
+                    });
+                }
+
                 context.Remove(fitment);
                 await context.SaveChangesAsync();
                 return Results.NoContent();

@@ -36,6 +36,7 @@ public class Part
     
     
     public ICollection<PartInstallation> PartInstallations { get; set; } = new List<PartInstallation>();
+    public ICollection<HistoryActionsPart> HistoryActionsParts { get; set; } = new List<HistoryActionsPart>();
     
     public int? Code { get; set; }
     [Column("DocumetnsId")]

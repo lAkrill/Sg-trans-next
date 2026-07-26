@@ -323,6 +323,24 @@ public static class PartsEndpoints
             }
 
             context.Add(part);
+            // create history entry
+            var userIdString = httpContext.User.FindFirstValue("userId");
+            if (Guid.TryParse(userIdString, out var creatorId))
+            {
+                // resolve part type and stamp display values
+                var partType = await context.PartTypes.FindAsync(part.PartTypeId);
+                var stamp = await context.StampNumbers.FindAsync(part.StampNumberId);
+                var note = $"Создана запчасть: Тип={partType?.Name ?? part.PartTypeId.ToString()}, Клеймо={stamp?.Value ?? part.StampNumberId.ToString()}, Серийный номер={part.SerialNumber}";
+                context.HistoryActionsParts.Add(new WebApp.Data.Entities.RailwayCisterns.HistoryActionsPart
+                {
+                    Id = Guid.NewGuid(),
+                    PartId = part.Id,
+                    Date = DateTime.UtcNow,
+                    CreatorId = creatorId,
+                    Note = note
+                });
+            }
+
             await context.SaveChangesAsync();
 
             return Results.Created($"/api/parts/{part.Id}", part.Id);
@@ -336,7 +354,8 @@ public static class PartsEndpoints
         group.MapPut("/{id}", async (
             [FromServices] ApplicationDbContext context,
             Guid id,
-            [FromBody] UpdatePartDTO dto) =>
+            [FromBody] UpdatePartDTO dto,
+            HttpContext httpContext) =>
         {
             // Validate: can't have both depot and current location
             if (dto.DepotId.HasValue && dto.CurrentLocation.HasValue)
@@ -375,6 +394,41 @@ public static class PartsEndpoints
             part.ExtendedUntil = dto.ExtendedUntil ?? part.ExtendedUntil;
             part.Model = dto.Model ?? part.Model;
 
+            // create history entry for update
+            var userIdStringUpd = httpContext.User.FindFirstValue("userId");
+            if (Guid.TryParse(userIdStringUpd, out var creatorIdUpd))
+            {
+                var partType = await context.PartTypes.FindAsync(part.PartTypeId);
+                var stamp = await context.StampNumbers.FindAsync(part.StampNumberId);
+                var changes = new List<string>();
+                void AddChange(string field, object? oldV, object? newV)
+                {
+                    if (oldV == null && newV == null) return;
+                    if (oldV != null && oldV.Equals(newV)) return;
+                    changes.Add($"{field}: {oldV} -> {newV}");
+                }
+                AddChange("DepotId", null, part.DepotId);
+                AddChange("StampNumber", stamp?.Value ?? part.StampNumberId.ToString(), dto.StampNumberId);
+                AddChange("SerialNumber", part.SerialNumber, dto.SerialNumber);
+                AddChange("ManufactureYear", part.ManufactureYear, dto.ManufactureYear);
+                AddChange("CurrentLocation", part.CurrentLocation, dto.CurrentLocation);
+                AddChange("Status", part.StatusId, dto.StatusId);
+                AddChange("Notes", part.Notes, dto.Notes);
+
+                var note = changes.Count == 0 ? string.Empty : string.Join("; ", changes);
+                if (!string.IsNullOrEmpty(note))
+                {
+                    context.HistoryActionsParts.Add(new WebApp.Data.Entities.RailwayCisterns.HistoryActionsPart
+                    {
+                        Id = Guid.NewGuid(),
+                        PartId = part.Id,
+                        Date = DateTime.UtcNow,
+                        CreatorId = creatorIdUpd,
+                        Note = note
+                    });
+                }
+            }
+
             await context.SaveChangesAsync();
             return Results.NoContent();
         })
@@ -387,11 +441,26 @@ public static class PartsEndpoints
         // Удаление детали
         group.MapDelete("/{id}", async (
             [FromServices] ApplicationDbContext context,
-            Guid id) =>
+            Guid id,
+            HttpContext httpContext) =>
         {
             var part = await context.Parts.FindAsync(id);
             if (part == null)
                 return Results.NotFound();
+
+            var userIdStringDel = httpContext.User.FindFirstValue("userId");
+            if (Guid.TryParse(userIdStringDel, out var creatorIdDel))
+            {
+                var note = $"Удалена запчасть: Серийный номер={part.SerialNumber}, КлеймоId={part.StampNumberId}";
+                context.HistoryActionsParts.Add(new WebApp.Data.Entities.RailwayCisterns.HistoryActionsPart
+                {
+                    Id = Guid.NewGuid(),
+                    PartId = part.Id,
+                    Date = DateTime.UtcNow,
+                    CreatorId = creatorIdDel,
+                    Note = note
+                });
+            }
 
             context.Parts.Remove(part);
             await context.SaveChangesAsync();
