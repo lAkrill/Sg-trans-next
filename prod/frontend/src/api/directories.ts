@@ -98,10 +98,16 @@ import { CreateVesselDTO, PaginatedVesselsResponse, UpdateVesselDto, VesselDTO }
 
 const normalizeDocumentDto = (item: Record<string, unknown> | DocumentDTO): DocumentDTO => {
   const raw = item as Record<string, unknown>;
+  const rawType = raw.type ?? raw.Type;
+  const parsedType =
+    rawType === null || rawType === undefined || rawType === ""
+      ? null
+      : Number(rawType);
+
   return {
     id: String(raw.id ?? raw.Id ?? ''),
     number: String(raw.number ?? raw.Number ?? ''),
-    type: (raw.type ?? raw.Type ?? null) as number | null,
+    type: parsedType != null && Number.isFinite(parsedType) ? parsedType : null,
     date: String(raw.date ?? raw.Date ?? ''),
     author: (raw.author ?? raw.Author ?? null) as string | null,
     price: (raw.price ?? raw.Price ?? null) as number | null,

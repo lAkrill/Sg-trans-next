@@ -266,6 +266,7 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
   const deleteMutation = config.hooks.useDelete();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<T | null>(null);
@@ -408,21 +409,71 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
       }
     }
 
+    if (typeof value === "boolean") {
+      return value ? "Да" : "Нет";
+    }
+
     return String(value);
   };
 
-  const filteredItems = items.filter((item) =>
-    config.searchFields.some((field) => {
-      const value = item[field];
-      if (typeof value === "string") {
-        return value.toLowerCase().includes(searchTerm.toLowerCase());
-      }
-      if (typeof value === "number") {
-        return value.toString().includes(searchTerm);
-      }
-      return false;
-    })
-  );
+  const getSearchableText = (value: unknown, fieldKey: keyof T) => {
+    if (value === undefined || value === null || value === "") {
+      return "";
+    }
+
+    if (typeof value === "boolean") {
+      return value ? "да" : "нет";
+    }
+
+    if (typeof value === "number") {
+      return value.toString();
+    }
+
+    if (value instanceof Date || isDateField(String(fieldKey))) {
+      return formatTableCellValue(value, fieldKey).toLowerCase();
+    }
+
+    return String(value).toLowerCase();
+  };
+
+  const matchesQuery = (value: unknown, fieldKey: keyof T, query: string) => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return true;
+    return getSearchableText(value, fieldKey).includes(normalizedQuery);
+  };
+
+  const getFieldLabel = (fieldKey: keyof T) =>
+    config.tableColumns.find((column) => column.key === fieldKey)?.label ??
+    config.fields.find((field) => field.key === String(fieldKey))?.label ??
+    String(fieldKey);
+
+  const searchableFields =
+    config.searchFields.length > 0
+      ? config.searchFields
+      : config.tableColumns.map((column) => column.key);
+
+  const searchPlaceholder =
+    searchableFields.length > 0
+      ? `Поиск: ${searchableFields.map(getFieldLabel).join(", ")}`
+      : "Поиск...";
+
+  const hasActiveFilters =
+    Boolean(searchTerm.trim()) ||
+    Object.values(columnFilters).some((value) => Boolean(value.trim()));
+
+  const filteredItems = items.filter((item) => {
+    const matchesGlobal =
+      !searchTerm.trim() ||
+      searchableFields.some((field) => matchesQuery(item[field], field, searchTerm));
+
+    if (!matchesGlobal) return false;
+
+    return config.tableColumns.every((column) => {
+      const query = columnFilters[String(column.key)] ?? "";
+      if (!query.trim()) return true;
+      return matchesQuery(item[column.key], column.key, query);
+    });
+  });
 
   // Pagination calculations
   const totalItems = filteredItems.length;
@@ -434,15 +485,16 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
   // Reset pagination when search changes
   useEffect(() => {
     setCurrentPage(1);
-    // console.log("searchTerm", searchTerm);
-    // console.log("currentPage", currentPage);
-    // console.log("itemsPerPage", itemsPerPage);
-    // console.log("totalItems", totalItems);
-    // console.log("totalPages", totalPages);
-    // console.log("startIndex", startIndex);
-    // console.log("endIndex", endIndex);
-    // console.log("paginatedItems", paginatedItems);
-  }, [searchTerm]);
+  }, [searchTerm, columnFilters]);
+
+  const updateColumnFilter = (fieldKey: string, value: string) => {
+    setColumnFilters((prev) => ({ ...prev, [fieldKey]: value }));
+  };
+
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setColumnFilters({});
+  };
 
   useEffect(() => {
     if (isCreateOpen) {
@@ -656,42 +708,63 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
 
       {/* Controls */}
       <div className="flex justify-between items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Поиск..."
+            placeholder={searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 pr-9"
           />
+          {searchTerm && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 p-0"
+              onClick={() => setSearchTerm("")}
+              aria-label="Очистить поиск"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
-        <Dialog open={isCreateOpen} onOpenChange={handleCreateDialogChange}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Добавить
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <Button type="button" variant="outline" onClick={clearAllFilters}>
+              <X className="h-4 w-4 mr-2" />
+              Сбросить
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Добавить {config.title.toLowerCase()}</DialogTitle>
-              <DialogDescription>Создайте новую запись в справочнике.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              {config.fields.map((field) => renderField(field, "create"))}
-              {formError && <p className="text-sm text-red-600">{formError}</p>}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => handleCreateDialogChange(false)} disabled={isSubmitting}>
-                Отмена
+          )}
+
+          <Dialog open={isCreateOpen} onOpenChange={handleCreateDialogChange}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Добавить
               </Button>
-              <Button onClick={handleCreate} disabled={isSubmitting || !isFormValid()}>
-                {isUploading ? "Загрузка..." : createMutation.isPending ? "Создание..." : "Создать"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Добавить {config.title.toLowerCase()}</DialogTitle>
+                <DialogDescription>Создайте новую запись в справочнике.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {config.fields.map((field) => renderField(field, "create"))}
+                {formError && <p className="text-sm text-red-600">{formError}</p>}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => handleCreateDialogChange(false)} disabled={isSubmitting}>
+                  Отмена
+                </Button>
+                <Button onClick={handleCreate} disabled={isSubmitting || !isFormValid()}>
+                  {isUploading ? "Загрузка..." : createMutation.isPending ? "Создание..." : "Создать"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Content */}
@@ -699,7 +772,11 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
         <CardHeader>
           <div className="flex gap-2 items-center">
             {/* <CardTitle>Справочник {config.title.toLowerCase()}</CardTitle> */}
-            <CardDescription>Всего записей: {items.length}</CardDescription>
+            <CardDescription>
+              {hasActiveFilters
+                ? `Найдено: ${filteredItems.length} из ${items.length}`
+                : `Всего записей: ${items.length}`}
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -710,7 +787,7 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
               <div className="text-center">
                 <config.icon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600 dark:text-gray-400">
-                  {searchTerm ? "Ничего не найдено" : "Нет данных для отображения"}
+                  {hasActiveFilters ? "Ничего не найдено" : "Нет данных для отображения"}
                 </p>
               </div>
             </div>
@@ -720,12 +797,21 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                 <TableHeader>
                   <TableRow>
                     {config.tableColumns.map((column) => (
-                      <TableHead key={String(column.key)} className="whitespace-normal break-words align-middle">
-                        {column.label}
+                      <TableHead key={String(column.key)} className="whitespace-normal break-words align-top">
+                        <div className="flex flex-col gap-1.5 min-w-[120px]">
+                          <span>{column.label}</span>
+                          <Input
+                            value={columnFilters[String(column.key)] ?? ""}
+                            onChange={(e) => updateColumnFilter(String(column.key), e.target.value)}
+                            placeholder="Фильтр..."
+                            className="h-8 font-normal"
+                            aria-label={`Фильтр по полю ${column.label}`}
+                          />
+                        </div>
                       </TableHead>
                     ))}
-                    <TableHead className="whitespace-normal break-words align-middle">Дата обновления</TableHead>
-                    <TableHead className="text-right whitespace-normal break-words align-middle">Действия</TableHead>
+                    <TableHead className="whitespace-normal break-words align-top">Дата обновления</TableHead>
+                    <TableHead className="text-right whitespace-normal break-words align-top">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

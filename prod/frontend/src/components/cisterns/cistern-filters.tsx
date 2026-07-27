@@ -542,11 +542,12 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
         </SheetHeader>
 
         <Tabs defaultValue="filters" className="w-full flex flex-col h-[90%] pb-4">
-          <TabsList className={`grid w-full ${filterTypeId ? "grid-cols-4" : "grid-cols-3"} flex-shrink-0`}>
-            <TabsTrigger value="filters">Фильтры</TabsTrigger>
-            <TabsTrigger value="sorting">Сортировка</TabsTrigger>
-            <TabsTrigger value="columns">Столбцы</TabsTrigger>
-            {filterTypeId && <TabsTrigger value="saved">Сохраненные</TabsTrigger>}
+          <TabsList className={`grid w-full ${filterTypeId ? "grid-cols-5" : "grid-cols-4"} flex-shrink-0`}>
+            <TabsTrigger value="filters" className="text-xs">Фильтры</TabsTrigger>
+            <TabsTrigger value="sorting" className="text-xs">Сортировка</TabsTrigger>
+            <TabsTrigger value="columns" className="text-xs">Столбцы</TabsTrigger>
+            <TabsTrigger value="quick" className="text-xs">Быстрый фильтр</TabsTrigger>
+            {filterTypeId && <TabsTrigger value="saved" className="text-xs">Сохраненные</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="filters" className="flex-1 overflow-y-scroll">
@@ -831,6 +832,25 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
               </Card>
             </div>
           </TabsContent>
+
+          <TabsContent value="quick" className="flex-1">
+            <div className="space-y-4 pr-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Быстрый фильтр</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2">
+                  <Button variant="outline" className="justify-start">
+                    Не соответствует нормам РФ
+                  </Button>
+                  <Button variant="outline" className="justify-start">
+                    Не годен под налив
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           {filterTypeId && (
             <TabsContent value="saved" className="flex-1">
               <div className="space-y-4 pr-4">

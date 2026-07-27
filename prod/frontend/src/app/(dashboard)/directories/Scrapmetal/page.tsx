@@ -26,6 +26,11 @@ import {
   Input,
   Label,
   SearchableSelect,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from "@/components/ui";
 import {
@@ -46,6 +51,8 @@ import {
   useDeleteScrapmetal,
   useAllDocuments,
   useAllParts,
+  usePartTypes,
+  useCreateDocument,
 } from "@/hooks";
 import {
   DEFAULT_SCRAPMETAL_SORT,
@@ -57,9 +64,11 @@ import {
   type ScrapmetalSortConfig,
   type ScrapmetalSortField,
 } from "@/components/scrapmetal-filter";
+import { getDocumentTypeLabel, DOCUMENT_TYPE_OPTIONS } from "@/components/documents-filter";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/formatDate";
 import type {
+  CreateDocumentDTO,
   CreateScrapmetalDTO,
   ScrapmetalDTO,
   UpdateScrapmetalDTO,
@@ -81,6 +90,55 @@ const EMPTY_FORM: ScrapmetalFormState = {
   code: "0",
   note: "",
   documentId: "",
+};
+
+const CODE_OPTIONS = [
+  { value: "0", label: "Передача" },
+  { value: "1", label: "Факт." },
+] as const;
+
+/** Типы документов для металлолома */
+const SCRAPMETAL_DOCUMENT_TYPES = [3, 4] as const;
+const DEFAULT_SCRAPMETAL_DOCUMENT_TYPE = 4;
+const CREATE_NEW_DOCUMENT_VALUE = "__create_new_document__";
+
+const SCRAPMETAL_DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPE_OPTIONS.filter((option) =>
+  (SCRAPMETAL_DOCUMENT_TYPES as readonly number[]).includes(option.value)
+);
+
+const isScrapmetalDocumentType = (type: number | string | null | undefined) => {
+  if (type == null || type === "") return false;
+  const normalized = Number(type);
+  return (SCRAPMETAL_DOCUMENT_TYPES as readonly number[]).includes(normalized);
+};
+
+/** Номер (Дата, Автор) - Тип документа */
+const formatDocumentLabel = (document: {
+  number?: string | null;
+  date?: string | null;
+  author?: string | null;
+  type?: number | null;
+}) => {
+  const number = document.number?.trim() || "—";
+  const date = formatDate(document.date, "ru-RU", "—");
+  const author = document.author?.trim() || "—";
+  const typeLabel = getDocumentTypeLabel(document.type);
+  return `${number} (${date}, ${author}) - ${typeLabel}`;
+};
+
+const EMPTY_DOCUMENT_FORM: CreateDocumentDTO = {
+  number: "",
+  type: DEFAULT_SCRAPMETAL_DOCUMENT_TYPE,
+  date: "",
+  author: "",
+  price: null,
+  note: "",
+  file: "",
+};
+
+const formatCodeLabel = (code: number | string | null | undefined) => {
+  const value = String(code ?? 0);
+  return CODE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 };
 
 const SCRAPMETAL_COLUMNS = SCRAPMETAL_COLUMN_OPTIONS.map((option) => ({
@@ -260,25 +318,65 @@ export default function ScrapmetalPage() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isCreateDocumentOpen, setIsCreateDocumentOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ScrapmetalDTO | null>(null);
   const [formData, setFormData] = useState<ScrapmetalFormState>(EMPTY_FORM);
+  const [documentFormData, setDocumentFormData] = useState<CreateDocumentDTO>(EMPTY_DOCUMENT_FORM);
+  const [documentFormError, setDocumentFormError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingDocument, setIsCreatingDocument] = useState(false);
 
   const { data: items = [], isLoading, error } = useScrapmetal();
   const { data: documents = [], isLoading: documentsLoading } = useAllDocuments();
   const { data: parts = [], isLoading: partsLoading } = useAllParts();
+  const { data: partTypes = [] } = usePartTypes();
   const createMutation = useCreateScrapmetal();
   const updateMutation = useUpdateScrapmetal();
   const deleteMutation = useDeleteScrapmetal();
+  const createDocumentMutation = useCreateDocument();
+
+  const partTypeWeightById = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const partType of partTypes) {
+      if (Number.isFinite(partType.weight)) {
+        map.set(partType.id, Number(partType.weight));
+      }
+    }
+    return map;
+  }, [partTypes]);
+
+  const getWeightForPartId = useCallback(
+    (partId: string) => {
+      const part = parts.find((item) => item.id === partId);
+      if (!part?.partType?.id) return "0";
+      const weight =
+        partTypeWeightById.get(part.partType.id) ??
+        (Number.isFinite(part.partType.weight) ? Number(part.partType.weight) : 0);
+      return String(weight ?? 0);
+    },
+    [parts, partTypeWeightById]
+  );
 
   const partLabelById = useMemo(() => {
+    const formatManufactureYear = (
+      yearData?: string | { year: number; month: number; day: number }
+    ) => {
+      if (!yearData) return "—";
+      if (typeof yearData === "string") {
+        const yearMatch = yearData.match(/^(\d{4})/);
+        return yearMatch ? yearMatch[1] : yearData;
+      }
+      return String(yearData.year);
+    };
+
     const map = new Map<string, string>();
     for (const part of parts) {
-      const serial = part.serialNumber?.trim();
-      const typeName = part.partType?.name?.trim();
-      const label = [serial || "—", typeName].filter(Boolean).join(" · ");
-      map.set(part.id, label || part.id);
+      const serial = part.serialNumber?.trim() || "—";
+      const stamp = part.stampNumber?.value?.trim() || "—";
+      const year = formatManufactureYear(part.manufactureYear);
+      const typeName = part.partType?.name?.trim() || "—";
+      map.set(part.id, `${serial} (${stamp}; ${year}) - ${typeName}`);
     }
     return map;
   }, [parts]);
@@ -286,10 +384,7 @@ export default function ScrapmetalPage() {
   const documentLabelById = useMemo(() => {
     const map = new Map<string, string>();
     for (const document of documents) {
-      map.set(
-        document.id,
-        `${document.number}(${formatDate(document.date, "ru-RU", "—")})`
-      );
+      map.set(document.id, formatDocumentLabel(document));
     }
     return map;
   }, [documents]);
@@ -319,14 +414,39 @@ export default function ScrapmetalPage() {
     [parts, resolvePartLabel]
   );
 
-  const documentOptions = useMemo(
-    () =>
-      documents.map((document) => ({
+  const documentOptions = useMemo(() => {
+    // Значения из справочника /api/documents/all — только типы 3 и 4
+    const scrapmetalDocuments = documents
+      .filter((document) => isScrapmetalDocumentType(document.type))
+      .slice()
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return (Number.isFinite(dateB) ? dateB : 0) - (Number.isFinite(dateA) ? dateA : 0);
+      });
+
+    const options = [
+      { value: CREATE_NEW_DOCUMENT_VALUE, label: "Создать новый документ" },
+      ...scrapmetalDocuments.map((document) => ({
         value: document.id,
-        label: resolveDocumentLabel(document.id),
+        label: formatDocumentLabel(document),
       })),
-    [documents, resolveDocumentLabel]
-  );
+    ];
+
+    // Если выбран документ другого типа (например, при редактировании) — показать его в списке
+    if (
+      formData.documentId &&
+      !options.some((option) => option.value === formData.documentId)
+    ) {
+      const selected = documents.find((document) => document.id === formData.documentId);
+      options.splice(1, 0, {
+        value: formData.documentId,
+        label: selected ? formatDocumentLabel(selected) : resolveDocumentLabel(formData.documentId),
+      });
+    }
+
+    return options;
+  }, [documents, formData.documentId, resolveDocumentLabel]);
 
   const filteredItems = useMemo(() => {
     const filtered = items.filter((item) =>
@@ -515,6 +635,86 @@ export default function ScrapmetalPage() {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handlePartChange = (partId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      partId,
+      weight: partId ? getWeightForPartId(partId) : "0",
+    }));
+  };
+
+  const handleDocumentChange = (documentId: string) => {
+    if (documentId === CREATE_NEW_DOCUMENT_VALUE) {
+      setDocumentFormData({
+        ...EMPTY_DOCUMENT_FORM,
+        date: formData.date || new Date().toISOString().slice(0, 10),
+      });
+      setDocumentFormError(null);
+      setIsCreateDocumentOpen(true);
+      return;
+    }
+
+    const document = documents.find((item) => item.id === documentId);
+    const documentDate = document?.date?.slice(0, 10) ?? "";
+
+    setFormData((prev) => ({
+      ...prev,
+      documentId,
+      ...(documentId && documentDate ? { date: documentDate } : {}),
+    }));
+  };
+
+  const updateDocumentFormField = <K extends keyof CreateDocumentDTO>(
+    key: K,
+    value: CreateDocumentDTO[K]
+  ) => {
+    setDocumentFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleCreateDocumentDialogChange = (open: boolean) => {
+    if (!open && isCreatingDocument) return;
+    setIsCreateDocumentOpen(open);
+    if (!open) {
+      setDocumentFormData(EMPTY_DOCUMENT_FORM);
+      setDocumentFormError(null);
+    }
+  };
+
+  const handleCreateDocument = async () => {
+    if (!documentFormData.number.trim() || !documentFormData.date || isCreatingDocument) return;
+
+    setDocumentFormError(null);
+    setIsCreatingDocument(true);
+
+    try {
+      const newDocumentId = await createDocumentMutation.mutateAsync({
+        number: documentFormData.number.trim(),
+        type: documentFormData.type ?? DEFAULT_SCRAPMETAL_DOCUMENT_TYPE,
+        date: documentFormData.date,
+        author: documentFormData.author?.trim() || null,
+        price: null,
+        note: documentFormData.note?.trim() || null,
+        file: null,
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        documentId: newDocumentId,
+        date: documentFormData.date,
+      }));
+      setIsCreateDocumentOpen(false);
+      setDocumentFormData(EMPTY_DOCUMENT_FORM);
+      setDocumentFormError(null);
+    } catch (createDocumentError) {
+      console.error("Ошибка при создании документа:", createDocumentError);
+      setDocumentFormError(
+        getFormErrorMessage(createDocumentError, "Не удалось создать документ. Попробуйте ещё раз.")
+      );
+    } finally {
+      setIsCreatingDocument(false);
+    }
+  };
+
   const isFormValid = () => Boolean(formData.date);
 
   const handleCreate = async () => {
@@ -569,7 +769,7 @@ export default function ScrapmetalPage() {
       case "date":
         return formatDate(item.date, "ru-RU", "—");
       case "code":
-        return Number.isFinite(item.code) ? String(item.code) : "—";
+        return formatCodeLabel(item.code);
       case "note":
         return item.note || "—";
       case "documentId":
@@ -596,7 +796,7 @@ export default function ScrapmetalPage() {
           partId: resolvePartLabel(item.partId),
           weight: Number.isFinite(item.weight) ? String(item.weight) : "—",
           date: formatDate(item.date, "ru-RU", "—"),
-          code: Number.isFinite(item.code) ? String(item.code) : "—",
+          code: formatCodeLabel(item.code),
           note: item.note || "—",
           documentId: resolveDocumentLabel(item.documentId),
           updatedAt: item.updatedAt ? formatDate(item.updatedAt, "ru-RU", "—") : "—",
@@ -661,10 +861,10 @@ export default function ScrapmetalPage() {
         <Label htmlFor="partId">Деталь</Label>
         <SearchableSelect
           value={formData.partId}
-          onChange={(value) => updateFormField("partId", value)}
+          onChange={handlePartChange}
           options={partOptions}
           placeholder="Выберите деталь"
-          searchPlaceholder="Введите серийный номер или тип"
+          searchPlaceholder="Введите серийный номер, клеймо или тип"
           isLoading={partsLoading}
         />
       </div>
@@ -691,20 +891,25 @@ export default function ScrapmetalPage() {
         />
       </div>
       <div>
-        <Label htmlFor="code">Код</Label>
-        <Input
-          id="code"
-          type="number"
-          value={formData.code}
-          onChange={(e) => updateFormField("code", e.target.value)}
-          placeholder="Введите код"
-        />
+        <Label htmlFor="code">Тип записи</Label>
+        <Select value={formData.code} onValueChange={(value) => updateFormField("code", value)}>
+          <SelectTrigger id="code">
+            <SelectValue placeholder="Выберите тип записи" />
+          </SelectTrigger>
+          <SelectContent>
+            {CODE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <Label htmlFor="documentId">Документ</Label>
         <SearchableSelect
           value={formData.documentId}
-          onChange={(value) => updateFormField("documentId", value)}
+          onChange={handleDocumentChange}
           options={documentOptions}
           placeholder="Выберите документ"
           searchPlaceholder="Введите номер или дату"
@@ -909,7 +1114,7 @@ export default function ScrapmetalPage() {
       </Card>
 
       <Dialog open={isCreateOpen} onOpenChange={handleCreateDialogChange}>
-        <DialogContent>
+        <DialogContent className="overflow-visible sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Добавить запись металлолома</DialogTitle>
             <DialogDescription>
@@ -940,7 +1145,7 @@ export default function ScrapmetalPage() {
       </Dialog>
 
       <Dialog open={isEditOpen} onOpenChange={handleEditDialogChange}>
-        <DialogContent>
+        <DialogContent className="overflow-visible sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Редактировать запись металлолома</DialogTitle>
             <DialogDescription>
@@ -964,6 +1169,105 @@ export default function ScrapmetalPage() {
                 </>
               ) : (
                 "Сохранить"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCreateDocumentOpen} onOpenChange={handleCreateDocumentDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Создать документ</DialogTitle>
+            <DialogDescription>
+              Новый документ для металлолома: «АКТ приемки металлолома» или «АКТ
+              приемки-передачи металлолома».
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="document-number">
+                Номер <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="document-number"
+                value={documentFormData.number}
+                onChange={(e) => updateDocumentFormField("number", e.target.value)}
+                placeholder="Введите номер документа"
+              />
+            </div>
+            <div>
+              <Label htmlFor="document-type">Тип</Label>
+              <Select
+                value={String(documentFormData.type ?? DEFAULT_SCRAPMETAL_DOCUMENT_TYPE)}
+                onValueChange={(value) => updateDocumentFormField("type", Number(value))}
+              >
+                <SelectTrigger id="document-type">
+                  <SelectValue placeholder="Выберите тип" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SCRAPMETAL_DOCUMENT_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={String(option.value)}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="document-date">
+                Дата <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="document-date"
+                type="date"
+                value={documentFormData.date}
+                onChange={(e) => updateDocumentFormField("date", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="document-author">Автор</Label>
+              <Input
+                id="document-author"
+                value={documentFormData.author ?? ""}
+                onChange={(e) => updateDocumentFormField("author", e.target.value)}
+                placeholder="Введите автора"
+              />
+            </div>
+            <div>
+              <Label htmlFor="document-note">Примечание</Label>
+              <Input
+                id="document-note"
+                value={documentFormData.note ?? ""}
+                onChange={(e) => updateDocumentFormField("note", e.target.value)}
+                placeholder="Введите примечание"
+              />
+            </div>
+            {documentFormError && <p className="text-sm text-red-600">{documentFormError}</p>}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleCreateDocumentDialogChange(false)}
+              disabled={isCreatingDocument}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handleCreateDocument}
+              disabled={
+                isCreatingDocument ||
+                !documentFormData.number.trim() ||
+                !documentFormData.date
+              }
+            >
+              {isCreatingDocument ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Создание...
+                </>
+              ) : (
+                "Создать"
               )}
             </Button>
           </DialogFooter>

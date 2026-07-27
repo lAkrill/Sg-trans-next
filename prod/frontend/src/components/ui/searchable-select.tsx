@@ -146,7 +146,7 @@ export const SearchableSelect = React.forwardRef<
         {isOpen && (
           <div
             className={cn(
-              'absolute top-full left-0 right-0 z-50 mt-1 rounded-md border border-input bg-background shadow-lg',
+              'absolute top-full left-0 right-0 z-[100] mt-1 rounded-md border border-input bg-background shadow-lg',
               'animate-in fade-in-0 zoom-in-95 slide-in-from-top-2'
             )}
           >
@@ -184,11 +184,12 @@ export const SearchableSelect = React.forwardRef<
                         type="button"
                         onClick={() => handleSelect(option.value)}
                         className={cn(
-                          'w-full px-3 py-2 text-left text-sm',
+                          'w-full px-3 py-2 text-left text-sm whitespace-normal break-words',
                           'hover:bg-accent hover:text-accent-foreground',
                           value === option.value &&
                             'bg-primary text-primary-foreground'
                         )}
+                        title={option.label}
                       >
                         {option.label}
                       </button>
