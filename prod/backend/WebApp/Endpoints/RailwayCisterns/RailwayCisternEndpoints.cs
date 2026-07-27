@@ -125,13 +125,7 @@ public static class RailwayCisternEndpoints
                     .Select(rc => rc.ToRailwayCisternDetailDTO())
                     .ToList();
 
-                var models = await context.WagonModels.ToListAsync();
-                var personalCisRepairPeriods = await context.PersonalCisRepairPeriods.ToListAsync();
-                var milageCisterns = await context.MilageCisterns.ToListAsync();
-                foreach (var cistern in cisterns)
-                {
-                    ApplyComputedRepairFields(cistern, models, personalCisRepairPeriods, milageCisterns);
-                }
+                await PopulateComputedFieldsAsync(context, cisterns);
 
                 return Results.Ok(cisterns);
             })
@@ -171,13 +165,7 @@ public static class RailwayCisternEndpoints
                     .Select(rc => rc.ToRailwayCisternDetailDTO())
                     .ToList();
 
-                var models = await context.WagonModels.ToListAsync();
-                var personalCisRepairPeriods = await context.PersonalCisRepairPeriods.ToListAsync();
-                var milageCisterns = await context.MilageCisterns.ToListAsync();
-                foreach (var cistern in cisterns)
-                {
-                    ApplyComputedRepairFields(cistern, models, personalCisRepairPeriods, milageCisterns);
-                }
+                await PopulateComputedFieldsAsync(context, cisterns);
 
                 var response = new ResponseForPagination(cisterns,
                     totalCount,
@@ -218,13 +206,7 @@ public static class RailwayCisternEndpoints
                     .Select(rc => rc.ToRailwayCisternDetailDTO())
                     .ToList();
 
-                var models = await context.WagonModels.ToListAsync();
-                var personalCisRepairPeriods = await context.PersonalCisRepairPeriods.ToListAsync();
-                var milageCisterns = await context.MilageCisterns.ToListAsync();
-                foreach (var cistern in cisterns)
-                {
-                    ApplyComputedRepairFields(cistern, models, personalCisRepairPeriods, milageCisterns);
-                }
+                await PopulateComputedFieldsAsync(context, cisterns);
 
                 return Results.Ok(cisterns);
             })
@@ -285,9 +267,8 @@ public static class RailwayCisternEndpoints
                 var dto = cistern.ToRailwayCisternDetailDTO();
                 var model = cistern.Model != null ? await context.WagonModels.FirstOrDefaultAsync(m => m.Id == cistern.Model.Id) : null;
                 var pers = await context.PersonalCisRepairPeriods.FirstOrDefaultAsync(p => p.CisternId == cistern.Id);
-                var milage = await context.MilageCisterns.Where(m => m.CisternId == cistern.Id).OrderByDescending(m => m.InputDate).FirstOrDefaultAsync();
-
-                ApplyComputedRepairFields(dto, model, pers, milage);
+            
+                ApplyComputedRepairFields(dto, model, pers);
 
                 return Results.Ok(dto);
             })
@@ -681,21 +662,23 @@ public static class RailwayCisternEndpoints
                         }
                     }
 
-                    cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest, cistern.ExtensionServiceLifeDate);
-                    cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, IntermediateTest, cistern.ExtensionServiceLifeDate);
-                    cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, PPRRepair, cistern.ExtensionServiceLifeDate);
-                    cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, MajorRep, cistern.ExtensionServiceLifeDate);
-                    if (cistern.PeriodDepotRepair < cistern.PeriodMajorRepair)
-                    {
-                        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep, cistern.ExtensionServiceLifeDate);
-                        cistern.PlanPeriodDepotRepairStatus += "  (от капитального)";
-                    }
-                    else
-                    {
-                        cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep, cistern.ExtensionServiceLifeDate);
-                    }
+                    // Phase 5 Optimization: Pre-compute serviceDate once
+                    var serviceDate = cistern.ExtensionServiceLifeDate.HasValue 
+                        ? cistern.ExtensionServiceLifeDate.Value 
+                        : cistern.BuildDate.AddYears(cistern.ServiceLifeYears);
 
-                    //???????????????????????????????????
+                    cistern.PlanPeriodPeriodicTest = PlanDateOptimized(cistern.PeriodPeriodicTest, cistern.BuildDate, serviceDate, periodictest);
+                    cistern.PlanPeriodIntermediateTest = PlanDateOptimized(cistern.PeriodIntermediateTest, cistern.BuildDate, serviceDate, IntermediateTest);
+                    cistern.PlanPeriodPPRRepair = PlanDateOptimized(cistern.PeriodPPRRepair, cistern.BuildDate, serviceDate, PPRRepair);
+                    cistern.PlanPeriodMajorRepair = PlanDateOptimized(cistern.PeriodMajorRepair, cistern.BuildDate, serviceDate, MajorRep);
+                    
+                    var depotBase = cistern.PeriodDepotRepair < cistern.PeriodMajorRepair 
+                        ? cistern.PeriodMajorRepair 
+                        : cistern.PeriodDepotRepair;
+                    cistern.PlanPeriodDepotRepair = PlanDateOptimized(depotBase, cistern.BuildDate, serviceDate, DepoRep);
+                    if (cistern.PeriodDepotRepair < cistern.PeriodMajorRepair)
+                        cistern.PlanPeriodDepotRepairStatus += "  (от капитального)";
+
                     if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
                     {
                         cistern.PlanPeriodDepotRepair = milage.RepairDate;
@@ -705,13 +688,17 @@ public static class RailwayCisternEndpoints
                         }
                     }
 
-                    if (milage == null || milage.RepairDate < cistern.PlanPeriodDepotRepair || milage.RepairTypeId == MajorRepairType)
+                    if (cistern.PlanPeriodMajorRepair.HasValue &&
+                        (milage == null || milage.RepairDate < cistern.PlanPeriodDepotRepair || milage.RepairTypeId == MajorRepairType))
                     {
                         DateOnly? nextDepot = cistern.PlanPeriodDepotRepair, prevDepot = cistern.PlanPeriodDepotRepair;
-                        while (nextDepot < cistern.PlanPeriodMajorRepair)
+                        var maxIterations = 10;
+                        var iterations = 0;
+                        while (nextDepot < cistern.PlanPeriodMajorRepair && iterations < maxIterations)
                         {
                             prevDepot = nextDepot;
-                            nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, DepoRep, cistern.ExtensionServiceLifeDate);
+                            nextDepot = nextDepot.Value.AddYears(DepoRep);
+                            iterations++;
                         }
 
                         int diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
@@ -920,30 +907,48 @@ public static class RailwayCisternEndpoints
 
     private static readonly Guid MajorRepairType = new Guid("423e276f-4caa-4e58-99a4-28339703f6bf");
 
+    private static async Task PopulateComputedFieldsAsync(ApplicationDbContext context, List<RailwayCisternDetailDTO> cisterns)
+    {
+        if (cisterns == null || cisterns.Count == 0)
+            return;
+
+        var cisternIds = cisterns.Select(c => c.Id).ToList();
+
+        // Load only the models needed for these cisterns
+        var modelIds = cisterns.Where(c => c.Model != null).Select(c => c.Model!.Id).Distinct().ToList();
+        var models = modelIds.Any() 
+            ? await context.WagonModels.Where(m => modelIds.Contains(m.Id)).ToListAsync()
+            : new List<WagonModel>();
+
+        // Load only the repair periods for these cisterns
+        var personalCisRepairPeriods = await context.PersonalCisRepairPeriods
+            .Where(p => cisternIds.Contains(p.CisternId))
+            .ToListAsync();
+
+        foreach (var cistern in cisterns)
+        {
+            ApplyComputedRepairFields(cistern, models, personalCisRepairPeriods);
+        }
+    }
+
+
     private static void ApplyComputedRepairFields(
         RailwayCisternDetailDTO cistern,
         List<WagonModel> models,
-        List<PersonalCisRepairPeriod> personalCisRepairPeriods,
-        List<MilageCistern> milageCisterns)
+        List<PersonalCisRepairPeriod> personalCisRepairPeriods)
     {
         var model = cistern.Model != null ? models.FirstOrDefault(m => m.Id == cistern.Model.Id) : null;
         var pers = personalCisRepairPeriods.FirstOrDefault(p => p.CisternId == cistern.Id);
-        var milage = milageCisterns
-            .Where(m => m.CisternId == cistern.Id)
-            .OrderByDescending(m => m.InputDate)
-            .FirstOrDefault();
 
-        ApplyComputedRepairFields(cistern, model, pers, milage);
+        ApplyComputedRepairFields(cistern, model, pers);
     }
 
     private static void ApplyComputedRepairFields(
         RailwayCisternDetailDTO cistern,
         WagonModel? model,
-        PersonalCisRepairPeriod? pers,
-        MilageCistern? milage)
+        PersonalCisRepairPeriod? pers)
     {
-        cistern.LastMilage = milage?.ToMilageCisternDTO();
-
+        var milage = cistern.LastMilage;
         var periodictest = 8;
         var intermediateTest = 4;
         var pprRepair = 3;
@@ -973,19 +978,20 @@ public static class RailwayCisternEndpoints
                 depoRep = pers.DepoRep.Value;
         }
 
-        cistern.PlanPeriodPeriodicTest = PlanDate(cistern.PeriodPeriodicTest, cistern.BuildDate, cistern.ServiceLifeYears, periodictest, cistern.ExtensionServiceLifeDate);
-        cistern.PlanPeriodIntermediateTest = PlanDate(cistern.PeriodIntermediateTest, cistern.BuildDate, cistern.ServiceLifeYears, intermediateTest, cistern.ExtensionServiceLifeDate);
-        cistern.PlanPeriodPPRRepair = PlanDate(cistern.PeriodPPRRepair, cistern.BuildDate, cistern.ServiceLifeYears, pprRepair, cistern.ExtensionServiceLifeDate);
-        cistern.PlanPeriodMajorRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, majorRep, cistern.ExtensionServiceLifeDate);
-        if (cistern.PeriodDepotRepair < cistern.PeriodMajorRepair)
-        {
-            cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodMajorRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep, cistern.ExtensionServiceLifeDate);
-        }
-        else
-        {
-            cistern.PlanPeriodDepotRepair = PlanDate(cistern.PeriodDepotRepair, cistern.BuildDate, cistern.ServiceLifeYears, depoRep, cistern.ExtensionServiceLifeDate);
-        }
+        // Pre-compute serviceDate once instead of recalculating it 6 times
+        var serviceDate = cistern.ExtensionServiceLifeDate.HasValue 
+            ? cistern.ExtensionServiceLifeDate.Value 
+            : cistern.BuildDate.AddYears(cistern.ServiceLifeYears);
 
+        cistern.PlanPeriodPeriodicTest = PlanDateOptimized(cistern.PeriodPeriodicTest, cistern.BuildDate, serviceDate, periodictest);
+        cistern.PlanPeriodIntermediateTest = PlanDateOptimized(cistern.PeriodIntermediateTest, cistern.BuildDate, serviceDate, intermediateTest);
+        cistern.PlanPeriodPPRRepair = PlanDateOptimized(cistern.PeriodPPRRepair, cistern.BuildDate, serviceDate, pprRepair);
+        cistern.PlanPeriodMajorRepair = PlanDateOptimized(cistern.PeriodMajorRepair, cistern.BuildDate, serviceDate, majorRep);
+        
+        var depotBase = cistern.PeriodDepotRepair < cistern.PeriodMajorRepair 
+            ? cistern.PeriodMajorRepair 
+            : cistern.PeriodDepotRepair;
+        cistern.PlanPeriodDepotRepair = PlanDateOptimized(depotBase, cistern.BuildDate, serviceDate, depoRep);
 
         if (milage != null && milage.RepairDate < cistern.PlanPeriodDepotRepair)
         {
@@ -1001,10 +1007,13 @@ public static class RailwayCisternEndpoints
         {
             var nextDepot = cistern.PlanPeriodDepotRepair;
             var prevDepot = cistern.PlanPeriodDepotRepair;
-            while (nextDepot < cistern.PlanPeriodMajorRepair)
+            var maxIterations = 10;
+            var iterations = 0;
+            while (nextDepot < cistern.PlanPeriodMajorRepair && iterations < maxIterations)
             {
                 prevDepot = nextDepot;
-                nextDepot = PlanDate(nextDepot, cistern.BuildDate, cistern.ServiceLifeYears, depoRep);
+                nextDepot = nextDepot.Value.AddYears(depoRep);
+                iterations++;
             }
 
             var diff = cistern.PlanPeriodMajorRepair.Value.DayNumber - prevDepot.Value.DayNumber;
@@ -1030,6 +1039,23 @@ public static class RailwayCisternEndpoints
         {
            serviceDate =  extensionServiceLifeDate.Value;
         }
+
+        if (serviceDate <= date)
+            date = serviceDate;
+
+        return date;
+    }
+
+    /// <summary>
+    /// Optimized version that pre-computes serviceDate to avoid recalculation in loops.
+    /// </summary>
+    private static DateOnly PlanDateOptimized(DateOnly? repairDate, DateOnly CommissioningDate, DateOnly serviceDate, int years)
+    {
+        DateOnly date = CommissioningDate;
+        if (repairDate.HasValue)
+            date = repairDate.Value;
+        
+        date = date.AddYears(years);
 
         if (serviceDate <= date)
             date = serviceDate;
