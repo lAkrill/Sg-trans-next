@@ -27,8 +27,8 @@ public static class RailwayCisternStatusDTOMapper
             Id = status.Id,
             Name = status.Name,
             UpdatedAt = status.UpdatedAt,
-            FirstName = status.Creator.FirstName,
-            LastName = status.Creator.LastName
+            FirstName = status.Creator?.FirstName ?? string.Empty,
+            LastName = status.Creator?.LastName ?? string.Empty
         };
     }
 
