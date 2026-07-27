@@ -30,10 +30,10 @@ export function CisternHeader({ cisternId, cisternNumber, manufacturerName, type
         </div>
       </div>
       <div className="flex gap-2">
-        <Button variant="outline">
+        {/* <Button variant="outline">
           <FileText className="h-4 w-4 mr-2" />
           Экспорт
-        </Button>
+        </Button> */}
         <Button>
           <Link href={`/cisterns/${cisternId}/edit`} className="flex items-center">
             <Wrench className="h-4 w-4 mr-2" />

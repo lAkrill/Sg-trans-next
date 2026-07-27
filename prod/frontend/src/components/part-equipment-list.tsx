@@ -305,7 +305,7 @@ const WheelPairsTable = ({
                 Документ <br />
                 (договор, дата){" "}
               </TableHead>
-              <TableHead className="text-center">
+              <TableHead className="print-hide text-center">
                 Отметка
                 <br />
                 несоответствия
@@ -357,7 +357,7 @@ const WheelPairsTable = ({
                     {formatLocaleDate(equipment.lastEquipment.documentDate)}
                     <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="print-hide text-center">
                     <div className="flex justify-center">
                       <Checkbox
                         checked={!!nonConformityMarks[equipment.equipmentTypeId]}
@@ -419,7 +419,7 @@ const TruckPartsTable = ({
                 Документ <br />
                 (договор, дата){" "}
               </TableHead>
-              <TableHead className="text-center">
+              <TableHead className="print-hide text-center">
                 Отметка
                 <br />
                 несоответствия
@@ -467,7 +467,7 @@ const TruckPartsTable = ({
                     {formatLocaleDate(equipment.lastEquipment.documentDate)}
                     <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="print-hide text-center">
                     <div className="flex justify-center">
                       <Checkbox
                         checked={!!nonConformityMarks[equipment.equipmentTypeId]}
@@ -537,7 +537,7 @@ const CouplerEquipmentTable = ({
                 Документ <br />
                 (договор, дата){" "}
               </TableHead>
-              <TableHead className="text-center">
+              <TableHead className="print-hide text-center">
                 Отметка
                 <br />
                 несоответствия
@@ -584,7 +584,7 @@ const CouplerEquipmentTable = ({
                     {formatLocaleDate(equipment.lastEquipment.documentDate)}
                     <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="print-hide text-center">
                     <div className="flex justify-center">
                       <Checkbox
                         checked={!!nonConformityMarks[equipment.equipmentTypeId]}
@@ -625,7 +625,7 @@ const FitmentEquipmentTable = ({
               <TableHead>Место работы</TableHead>
               <TableHead>Документ</TableHead>
               <TableHead>Дата привязки</TableHead>
-              <TableHead className="text-center">
+              <TableHead className="print-hide text-center">
                 Отметка
                 <br />
                 несоответствия
@@ -652,7 +652,7 @@ const FitmentEquipmentTable = ({
                     <TableCell>{formatFitmentDepot(equipment)}</TableCell>
                     <TableCell>{formatFitmentDocument(equipment)}</TableCell>
                     <TableCell>{formatDateValue(equipment.date, "ru-RU", "—")}</TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="print-hide text-center">
                       <div className="flex justify-center">
                         <Checkbox
                           checked={!!nonConformityMarks[markId]}
@@ -926,6 +926,16 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
     return fullName ? `${fullName} (${user.email})` : user.email;
   };
 
+  const handleExportPdf = () => {
+    document.body.classList.add("printing-part-equipment");
+    const cleanup = () => {
+      document.body.classList.remove("printing-part-equipment");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+  };
+
   if (errorAll || errorLast || errorAllFitments || errorLastFitments) {
     return (
       <Card>
@@ -941,15 +951,17 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="print-hide flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Лист комплектации</h3>
-          <p className="text-sm text-gray-600">Информация об установленном оборудовании и истории изменений</p>
+          <p className="text-sm text-gray-600">
+            Информация об установленном оборудовании и истории изменений
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExportPdf}>
             <Download className="h-4 w-4 mr-2" />
-            Экспорт
+            Экспорт в PDF
           </Button>
           <Button variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -959,7 +971,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="print-hide">
           <TabsTrigger value="current" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Текущая комплектация
@@ -971,7 +983,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
         </TabsList>
 
         {/* Поиск */}
-        <div className="flex w-full items-center justify-between gap-4">
+        <div className="print-hide flex w-full items-center justify-between gap-4">
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -986,6 +998,15 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
             Сообщить о несоответствии
           </Button>
         </div>
+
+        <div id="part-equipment-print-root">
+          <div className="print-only mb-4">
+            <h3 className="text-lg font-semibold">Лист комплектации</h3>
+            <p className="mt-1 text-sm text-gray-700">
+              Вагон № {cistern?.number || "—"}
+              {activeTab === "current" ? " · Текущая комплектация" : " · Полная история"}
+            </p>
+          </div>
 
         {/* Текущая комплектация */}
         <TabsContent value="current">
@@ -1200,6 +1221,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
             </Card>
           </div>
         </TabsContent>
+        </div>
       </Tabs>
 
       <Dialog open={reportDialogOpen} onOpenChange={handleReportDialogChange}>

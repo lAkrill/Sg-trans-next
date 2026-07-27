@@ -113,16 +113,18 @@ export default function CisternPassportPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <CisternHeader
-        cisternId={cistern.id}
-        cisternNumber={cistern.number}
-        manufacturerName={cistern.manufacturer?.name}
-        typeName={cistern.type?.name}
-      />
+      <div className="dashboard-print-chrome">
+        <CisternHeader
+          cisternId={cistern.id}
+          cisternNumber={cistern.number}
+          manufacturerName={cistern.manufacturer?.name}
+          typeName={cistern.type?.name}
+        />
+      </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as CisternTab)} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="dashboard-print-chrome grid w-full grid-cols-5">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Train className="h-4 w-4" />
             Основная информация

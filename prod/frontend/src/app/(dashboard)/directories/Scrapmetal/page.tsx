@@ -43,6 +43,7 @@ import {
   ChevronsRight,
   Recycle,
   Loader2,
+  ListChecks,
 } from "lucide-react";
 import {
   useScrapmetal,
@@ -53,6 +54,7 @@ import {
   useAllParts,
   usePartTypes,
   useCreateDocument,
+  useCurrentUser,
 } from "@/hooks";
 import {
   DEFAULT_SCRAPMETAL_SORT,
@@ -64,12 +66,22 @@ import {
   type ScrapmetalSortConfig,
   type ScrapmetalSortField,
 } from "@/components/scrapmetal-filter";
+import {
+  ScrapmetalPartsPickerDialog,
+  type ScrapmetalWriteOffDocumentForm,
+} from "@/components/scrapmetal-parts-picker-dialog";
+import {
+  buildScrapmetalPeriodReport,
+  ScrapmetalPeriodReportTable,
+  type ScrapmetalPeriodReportData,
+} from "@/components/scrapmetal-period-report";
 import { getDocumentTypeLabel, DOCUMENT_TYPE_OPTIONS } from "@/components/documents-filter";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/formatDate";
 import type {
   CreateDocumentDTO,
   CreateScrapmetalDTO,
+  PartDTO,
   ScrapmetalDTO,
   UpdateScrapmetalDTO,
 } from "@/types/directories";
@@ -94,8 +106,30 @@ const EMPTY_FORM: ScrapmetalFormState = {
 
 const CODE_OPTIONS = [
   { value: "0", label: "Передача" },
-  { value: "1", label: "Факт." },
+  { value: "1", label: "Факт" },
 ] as const;
+
+const QUARTER_OPTIONS = [
+  { value: "all", label: "Весь год" },
+  { value: "1", label: "I квартал" },
+  { value: "2", label: "II квартал" },
+  { value: "3", label: "III квартал" },
+  { value: "4", label: "IV квартал" },
+] as const;
+
+const getCurrentQuarter = (date = new Date()) => Math.floor(date.getMonth() / 3) + 1;
+
+const REPORT_YEAR_OPTIONS = Array.from({ length: 8 }, (_, index) => {
+  const year = new Date().getFullYear() - index;
+  return { value: String(year), label: String(year) };
+});
+
+const FACT_CODE_VALUE = "1";
+const TRANSFER_CODE_VALUE = "0";
+
+const isFactCode = (code: string | number | null | undefined) => String(code ?? "") === FACT_CODE_VALUE;
+const isTransferCode = (code: string | number | null | undefined) =>
+  String(code ?? TRANSFER_CODE_VALUE) === TRANSFER_CODE_VALUE;
 
 /** Типы документов для металлолома */
 const SCRAPMETAL_DOCUMENT_TYPES = [3, 4] as const;
@@ -134,6 +168,11 @@ const EMPTY_DOCUMENT_FORM: CreateDocumentDTO = {
   price: null,
   note: "",
   file: "",
+};
+
+const formatUserAuthor = (user?: { firstName?: string | null; lastName?: string | null } | null) => {
+  if (!user) return "";
+  return [user.lastName, user.firstName].filter(Boolean).join(" ").trim();
 };
 
 const formatCodeLabel = (code: number | string | null | undefined) => {
@@ -292,7 +331,7 @@ const toOptionalGuid = (value: string) => {
 };
 
 const buildPayload = (formData: ScrapmetalFormState): CreateScrapmetalDTO => ({
-  partId: toOptionalGuid(formData.partId),
+  partId: isFactCode(formData.code) ? null : toOptionalGuid(formData.partId),
   weight: Number(formData.weight) || 0,
   date: formData.date,
   code: Number.parseInt(formData.code, 10) || 0,
@@ -319,18 +358,24 @@ export default function ScrapmetalPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isCreateDocumentOpen, setIsCreateDocumentOpen] = useState(false);
+  const [isPartsPickerOpen, setIsPartsPickerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ScrapmetalDTO | null>(null);
   const [formData, setFormData] = useState<ScrapmetalFormState>(EMPTY_FORM);
   const [documentFormData, setDocumentFormData] = useState<CreateDocumentDTO>(EMPTY_DOCUMENT_FORM);
   const [documentFormError, setDocumentFormError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAddingFromPicker, setIsAddingFromPicker] = useState(false);
   const [isCreatingDocument, setIsCreatingDocument] = useState(false);
+  const [reportYear, setReportYear] = useState(String(new Date().getFullYear()));
+  const [reportQuarter, setReportQuarter] = useState(String(getCurrentQuarter()));
+  const [periodReport, setPeriodReport] = useState<ScrapmetalPeriodReportData | null>(null);
 
   const { data: items = [], isLoading, error } = useScrapmetal();
   const { data: documents = [], isLoading: documentsLoading } = useAllDocuments();
   const { data: parts = [], isLoading: partsLoading } = useAllParts();
   const { data: partTypes = [] } = usePartTypes();
+  const { data: currentUser } = useCurrentUser();
   const createMutation = useCreateScrapmetal();
   const updateMutation = useUpdateScrapmetal();
   const deleteMutation = useDeleteScrapmetal();
@@ -604,13 +649,74 @@ export default function ScrapmetalPage() {
     setIsCreateOpen(true);
   };
 
+  const handleBuildPeriodReport = () => {
+    const year = Number(reportYear);
+    const quarter =
+      reportQuarter === "all" ? ("all" as const) : (Number(reportQuarter) as 1 | 2 | 3 | 4);
+
+    setPeriodReport(
+      buildScrapmetalPeriodReport({
+        items,
+        parts,
+        year,
+        quarter,
+      })
+    );
+  };
+
+  const handleAddSelectedParts = async (
+    selectedParts: PartDTO[],
+    document: ScrapmetalWriteOffDocumentForm
+  ) => {
+    if (!selectedParts.length || isAddingFromPicker) return;
+
+    setIsAddingFromPicker(true);
+
+    try {
+      let documentId = document.documentId;
+
+      if (!documentId) {
+        documentId = await createDocumentMutation.mutateAsync({
+          number: document.number,
+          type: DEFAULT_SCRAPMETAL_DOCUMENT_TYPE,
+          date: document.date,
+          author: document.author || null,
+          price: null,
+          note: null,
+          file: null,
+        });
+      }
+
+      for (const part of selectedParts) {
+        const weight =
+          (part.partType?.id ? partTypeWeightById.get(part.partType.id) : undefined) ??
+          (Number.isFinite(part.partType?.weight) ? Number(part.partType.weight) : 0);
+
+        await createMutation.mutateAsync({
+          partId: part.id,
+          weight: weight ?? 0,
+          date: document.date,
+          code: 0,
+          note: null,
+          documentId,
+        });
+      }
+      setIsPartsPickerOpen(false);
+    } catch (addError) {
+      console.error("Ошибка при добавлении выбранных деталей в металлолом:", addError);
+    } finally {
+      setIsAddingFromPicker(false);
+    }
+  };
+
   const openEditDialog = (item: ScrapmetalDTO) => {
+    const code = String(item.code ?? 0);
     setEditingItem(item);
     setFormData({
-      partId: item.partId ?? "",
+      partId: isFactCode(code) ? "" : (item.partId ?? ""),
       weight: String(item.weight ?? 0),
       date: item.date?.slice(0, 10) ?? "",
-      code: String(item.code ?? 0),
+      code,
       note: item.note ?? "",
       documentId: item.documentId ?? "",
     });
@@ -636,6 +742,8 @@ export default function ScrapmetalPage() {
   };
 
   const handlePartChange = (partId: string) => {
+    if (isFactCode(formData.code)) return;
+
     setFormData((prev) => ({
       ...prev,
       partId,
@@ -643,11 +751,26 @@ export default function ScrapmetalPage() {
     }));
   };
 
+  const handleCodeChange = (code: string) => {
+    setFormData((prev) => {
+      if (isFactCode(code)) {
+        return {
+          ...prev,
+          code,
+          partId: "",
+          weight: prev.partId ? "0" : prev.weight,
+        };
+      }
+      return { ...prev, code };
+    });
+  };
+
   const handleDocumentChange = (documentId: string) => {
     if (documentId === CREATE_NEW_DOCUMENT_VALUE) {
       setDocumentFormData({
         ...EMPTY_DOCUMENT_FORM,
         date: formData.date || new Date().toISOString().slice(0, 10),
+        author: formatUserAuthor(currentUser),
       });
       setDocumentFormError(null);
       setIsCreateDocumentOpen(true);
@@ -715,7 +838,11 @@ export default function ScrapmetalPage() {
     }
   };
 
-  const isFormValid = () => Boolean(formData.date);
+  const isFormValid = () => {
+    if (!formData.date) return false;
+    if (isTransferCode(formData.code) && !formData.partId.trim()) return false;
+    return true;
+  };
 
   const handleCreate = async () => {
     if (!isFormValid() || isSubmitting) return;
@@ -858,14 +985,37 @@ export default function ScrapmetalPage() {
   const formFields = (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="partId">Деталь</Label>
+        <Label htmlFor="code">Тип записи</Label>
+        <Select value={formData.code} onValueChange={handleCodeChange}>
+          <SelectTrigger id="code">
+            <SelectValue placeholder="Выберите тип записи" />
+          </SelectTrigger>
+          <SelectContent>
+            {CODE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="partId">
+          Деталь
+          {isTransferCode(formData.code) && <span className="text-red-500"> *</span>}
+        </Label>
         <SearchableSelect
           value={formData.partId}
           onChange={handlePartChange}
           options={partOptions}
-          placeholder="Выберите деталь"
+          placeholder={
+            isFactCode(formData.code)
+              ? "Недоступно для типа «Факт»"
+              : "Выберите деталь"
+          }
           searchPlaceholder="Введите серийный номер, клеймо или тип"
           isLoading={partsLoading}
+          disabled={isFactCode(formData.code)}
         />
       </div>
       <div>
@@ -889,21 +1039,6 @@ export default function ScrapmetalPage() {
           value={formData.date}
           onChange={(e) => updateFormField("date", e.target.value)}
         />
-      </div>
-      <div>
-        <Label htmlFor="code">Тип записи</Label>
-        <Select value={formData.code} onValueChange={(value) => updateFormField("code", value)}>
-          <SelectTrigger id="code">
-            <SelectValue placeholder="Выберите тип записи" />
-          </SelectTrigger>
-          <SelectContent>
-            {CODE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
       <div>
         <Label htmlFor="documentId">Документ</Label>
@@ -1013,6 +1148,10 @@ export default function ScrapmetalPage() {
             filteredCount={totalCount}
             totalCount={allCount}
           />
+          <Button variant="outline" onClick={() => setIsPartsPickerOpen(true)}>
+            <ListChecks className="h-4 w-4 mr-2" />
+            Выбрать из списка деталей
+          </Button>
           <Button onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
             Добавить запись
@@ -1113,8 +1252,63 @@ export default function ScrapmetalPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Отчет за период</CardTitle>
+          <CardDescription>Выберите год и квартал для формирования отчета</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="report-year">Год</Label>
+              <Select value={reportYear} onValueChange={setReportYear}>
+                <SelectTrigger id="report-year" className="w-[140px]">
+                  <SelectValue placeholder="Год" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REPORT_YEAR_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="report-quarter">Квартал</Label>
+              <Select value={reportQuarter} onValueChange={setReportQuarter}>
+                <SelectTrigger id="report-quarter" className="w-[180px]">
+                  <SelectValue placeholder="Квартал" />
+                </SelectTrigger>
+                <SelectContent>
+                  {QUARTER_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="button" onClick={handleBuildPeriodReport}>
+              Отчет за период
+            </Button>
+          </div>
+          {periodReport && <ScrapmetalPeriodReportTable report={periodReport} />}
+        </CardContent>
+      </Card>
+
+      <ScrapmetalPartsPickerDialog
+        open={isPartsPickerOpen}
+        onOpenChange={setIsPartsPickerOpen}
+        onAddSelected={handleAddSelectedParts}
+        isSubmitting={isAddingFromPicker}
+        defaultAuthor={formatUserAuthor(currentUser)}
+        documents={documents}
+        documentsLoading={documentsLoading}
+      />
+
       <Dialog open={isCreateOpen} onOpenChange={handleCreateDialogChange}>
-        <DialogContent className="overflow-visible sm:max-w-lg">
+        <DialogContent className="w-[80vw] max-w-[80vw] sm:max-w-[80vw] max-h-[80vh] overflow-visible">
           <DialogHeader>
             <DialogTitle>Добавить запись металлолома</DialogTitle>
             <DialogDescription>
@@ -1145,7 +1339,7 @@ export default function ScrapmetalPage() {
       </Dialog>
 
       <Dialog open={isEditOpen} onOpenChange={handleEditDialogChange}>
-        <DialogContent className="overflow-visible sm:max-w-lg">
+        <DialogContent className="w-[80vw] max-w-[80vw] sm:max-w-[80vw] max-h-[80vh] overflow-visible">
           <DialogHeader>
             <DialogTitle>Редактировать запись металлолома</DialogTitle>
             <DialogDescription>

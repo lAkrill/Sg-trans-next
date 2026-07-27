@@ -748,6 +748,26 @@ public static class RailwayCisternFilterEndpoints
                 query = query.Where(rc => rc.ServiceLifeYears <= filters.ServiceLifeYears.To);
         }
 
+        // Расчётный конец срока эксплуатации:
+        // ExtensionServiceLifeDate ?? BuildDate.AddYears(ServiceLifeYears)
+        if (filters.ServiceEndDate != null)
+        {
+            if (filters.ServiceEndDate.From.HasValue)
+            {
+                var from = filters.ServiceEndDate.From.Value;
+                query = query.Where(rc =>
+                    (rc.ExtensionServiceLifeDate.HasValue && rc.ExtensionServiceLifeDate >= from) ||
+                    (!rc.ExtensionServiceLifeDate.HasValue && rc.BuildDate.AddYears(rc.ServiceLifeYears) >= from));
+            }
+            if (filters.ServiceEndDate.To.HasValue)
+            {
+                var to = filters.ServiceEndDate.To.Value;
+                query = query.Where(rc =>
+                    (rc.ExtensionServiceLifeDate.HasValue && rc.ExtensionServiceLifeDate <= to) ||
+                    (!rc.ExtensionServiceLifeDate.HasValue && rc.BuildDate.AddYears(rc.ServiceLifeYears) <= to));
+            }
+        }
+
         if (filters.PeriodMajorRepair != null)
         {
             if (filters.PeriodMajorRepair.From.HasValue)

@@ -218,7 +218,9 @@ const NumberRangeInput: React.FC<NumberRangeInputProps> = ({ label, value, onCha
   );
 };
 
-const years = Array.from({ length: 50 }, (_, i) => new Date().getFullYear() - i);
+const currentYear = new Date().getFullYear();
+/** Годы для диапазонов дат: прошлые (постройка) и будущие (конец срока эксплуатации) */
+const years = Array.from({ length: 101 }, (_, i) => currentYear + 50 - i);
 const months = [
   { value: "01", label: "Январь" },
   { value: "02", label: "Февраль" },
@@ -666,6 +668,20 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                     value={filters.serviceLifeYears ?? {}}
                     onChange={(value) => updateFilter("serviceLifeYears", value)}
                     onClear={() => updateFilter("serviceLifeYears", undefined)}
+                  />
+
+                  <DateRangeInput
+                    label="Конец срока эксплуатации"
+                    value={filters.serviceEndDate ?? {}}
+                    onChange={(value) => updateFilter("serviceEndDate", value)}
+                    onClear={() => updateFilter("serviceEndDate", undefined)}
+                  />
+
+                  <DateRangeInput
+                    label="Продление срока эксплуатации"
+                    value={filters.extensionServiceLifeDate ?? {}}
+                    onChange={(value) => updateFilter("extensionServiceLifeDate", value)}
+                    onClear={() => updateFilter("extensionServiceLifeDate", undefined)}
                   />
 
                   <div className="flex flex-col gap-2">

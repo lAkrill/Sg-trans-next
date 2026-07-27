@@ -45,6 +45,11 @@ public class FilterCriteria
     public List<string>? Rents { get; set; }
     public List<Guid>? AffiliationIds { get; set; }
     public IntRange? ServiceLifeYears { get; set; }
+    /// <summary>
+    /// Расчётный конец срока эксплуатации:
+    /// ExtensionServiceLifeDate ?? BuildDate.AddYears(ServiceLifeYears)
+    /// </summary>
+    public DateRange? ServiceEndDate { get; set; }
     public DateRange? PeriodMajorRepair { get; set; }
     public DateRange? PeriodPeriodicTest { get; set; }
     public DateRange? PeriodIntermediateTest { get; set; }

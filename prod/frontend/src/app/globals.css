@@ -210,3 +210,65 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Печать листа комплектации (window.print → «Сохранить как PDF») */
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body.printing-part-equipment {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Убираем ограничения layout, мешающие печати */
+  body.printing-part-equipment .dashboard-shell,
+  body.printing-part-equipment .dashboard-shell-main,
+  body.printing-part-equipment .dashboard-shell-content {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* Сайдбар, шапка приложения, шапка/табы паспорта и прочий UI */
+  body.printing-part-equipment .print-hide,
+  body.printing-part-equipment .dashboard-print-chrome {
+    display: none !important;
+  }
+
+  /* contents-обёртки: скрываем и их потомков явно */
+  body.printing-part-equipment .dashboard-print-chrome * {
+    display: none !important;
+  }
+
+  body.printing-part-equipment .print-only {
+    display: block !important;
+  }
+
+  body.printing-part-equipment #part-equipment-print-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  body.printing-part-equipment #part-equipment-print-root table {
+    width: 100% !important;
+    break-inside: auto;
+  }
+
+  body.printing-part-equipment #part-equipment-print-root tr {
+    break-inside: avoid;
+  }
+}

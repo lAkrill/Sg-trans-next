@@ -307,6 +307,9 @@ export interface FilterCriteria {
   rents?: string[];
   affiliationIds?: string[];
   serviceLifeYears?: NumberRange;
+  /** Расчётный конец срока эксплуатации (extensionServiceLifeDate ?? buildDate + serviceLifeYears) */
+  serviceEndDate?: DateRange;
+  extensionServiceLifeDate?: DateRange;
   periodMajorRepair?: NumberRange;
   periodPeriodicTest?: NumberRange;
   periodIntermediateTest?: NumberRange;
@@ -328,7 +331,6 @@ export interface SortCriteria {
 export interface RailwayCisternFilterSortDTO {
   filters?: FilterCriteria;
   sortFields?: SortCriteria[];
-  selectedColumns?: string[];
   page?: number;
   pageSize?: number;
 }
@@ -336,7 +338,6 @@ export interface RailwayCisternFilterSortDTO {
 export interface RailwayCisternFilterSortWithoutPaginationDTO {
   filters?: FilterCriteria;
   sortFields?: SortCriteria[];
-  selectedColumns?: string[];
 }
 
 // Saved filters

@@ -146,7 +146,7 @@ export const SearchableSelect = React.forwardRef<
         {isOpen && (
           <div
             className={cn(
-              'absolute top-full left-0 right-0 z-[100] mt-1 rounded-md border border-input bg-background shadow-lg',
+              'absolute top-full left-0 right-0 z-[200] mt-1 rounded-md border border-input bg-background shadow-lg',
               'animate-in fade-in-0 zoom-in-95 slide-in-from-top-2'
             )}
           >
@@ -167,7 +167,7 @@ export const SearchableSelect = React.forwardRef<
             </div>
 
             {/* Options List */}
-            <div className="max-h-48 overflow-y-auto">
+            <div className="max-h-60 overflow-y-auto">
               {isLoading ? (
                 <div className="px-3 py-2 text-center text-sm text-muted-foreground">
                   Загрузка...

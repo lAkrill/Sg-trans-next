@@ -55,11 +55,6 @@ type DisplayCistern = RailwayCisternDetailDTO | RailwayCisternListDTO;
 
 const SERVICE_END_DATE_COLUMN = "serviceenddate";
 const EXTENSION_SERVICE_LIFE_DATE_COLUMN = "extensionservicelifedate";
-const SERVICE_END_DATE_SOURCE_COLUMNS = [
-  "builddate",
-  "servicelifeyears",
-  EXTENSION_SERVICE_LIFE_DATE_COLUMN,
-] as const;
 
 const DEFAULT_SORT_FIELDS: SortCriteria[] = [
   { fieldName: "railwaycisternstatus.name", descending: true },
@@ -86,17 +81,33 @@ const countActiveFilterCriteria = (filters: FilterCriteria): number => {
   return count;
 };
 
-/** Computed columns → source fields required from filter API */
-const toApiSelectedColumns = (columns: string[]): string[] => {
-  const result = new Set<string>();
-  for (const column of columns) {
-    if (column === SERVICE_END_DATE_COLUMN) {
-      SERVICE_END_DATE_SOURCE_COLUMNS.forEach((source) => result.add(source));
-    } else {
-      result.add(column);
+/** Очистка фильтров под POST /api/railway-cisterns/filter (без пустых строк/диапазонов). */
+const sanitizeFiltersForApi = (filters: FilterCriteria): FilterCriteria | undefined => {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null || value === "") continue;
+
+    if (Array.isArray(value)) {
+      if (value.length > 0) result[key] = value;
+      continue;
     }
+
+    if (typeof value === "object") {
+      const range: Record<string, unknown> = {};
+      for (const [rangeKey, rangeValue] of Object.entries(value)) {
+        if (rangeValue !== undefined && rangeValue !== null && rangeValue !== "") {
+          range[rangeKey] = rangeValue;
+        }
+      }
+      if (Object.keys(range).length > 0) result[key] = range;
+      continue;
+    }
+
+    result[key] = value;
   }
-  return Array.from(result);
+
+  return Object.keys(result).length > 0 ? (result as FilterCriteria) : undefined;
 };
 
 const parseLocalDate = (value: string | undefined): Date | null => {
@@ -296,16 +307,15 @@ export default function CisternsPage() {
   // Debounce search term for API calls
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  // Build filter request for advanced filters
+  // Build filter request for POST /api/railway-cisterns/filter
   const filterRequest: RailwayCisternFilterSortDTO = useMemo(
     () => ({
-      filters: advancedFilters,
+      filters: sanitizeFiltersForApi(advancedFilters),
       sortFields: sortFields,
-      selectedColumns: toApiSelectedColumns(visibleColumns),
       page: filter.page,
       pageSize: filter.pageSize,
     }),
-    [advancedFilters, sortFields, visibleColumns, filter.page, filter.pageSize]
+    [advancedFilters, sortFields, filter.page, filter.pageSize]
   );
 
   const { data: cisternsData, isLoading, error } = useCisterns(isSearchMode || isFilterMode ? undefined : filter);
