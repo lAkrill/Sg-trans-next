@@ -46,7 +46,7 @@ public static class DocumentEndpoints
                     Author = d.Author,
                     Price = d.Price,
                     Note = d.Note,
-                    File = d.File
+                    FileName = d.File
                 })
                 .ToListAsync();
 
@@ -80,7 +80,7 @@ public static class DocumentEndpoints
                     Author = d.Author,
                     Price = d.Price,
                     Note = d.Note,
-                    File = d.File
+                    FileName = d.File
                 })
                 .ToListAsync();
 
@@ -105,7 +105,7 @@ public static class DocumentEndpoints
                     Author = d.Author,
                     Price = d.Price,
                     Note = d.Note,
-                    File = d.File
+                    FileName = d.File
                 })
                 .FirstOrDefaultAsync();
 
