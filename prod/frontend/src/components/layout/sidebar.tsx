@@ -137,19 +137,14 @@ const sidebarItems: SidebarItem[] = [
     icon: Cog,
   },
   {
-    title: "Документы",
-    href: "/directories/documents",
-    icon: FileText,
-  },
-  {
-    title: "Нормативные документы",
-    href: "/directories/documentsRegulatory",
-    icon: FileText,
-  },
-  {
     title: "Арматура",
     href: "/directories/fitments",
     icon: Cog,
+  },
+  {
+    title: "Документы",
+    href: "/directories/documents",
+    icon: FileText,
   },
   {
     title: "Ремонты",
@@ -176,6 +171,11 @@ const sidebarItems: SidebarItem[] = [
     title: "Импорт данных",
     href: "/import",
     icon: Import,
+  },
+  {
+    title: "Нормативные документы",
+    href: "/directories/documentsRegulatory",
+    icon: FileText,
   },
 ];
 

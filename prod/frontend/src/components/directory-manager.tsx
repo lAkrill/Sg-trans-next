@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { 
   Card, 
   CardContent, 
@@ -35,7 +36,10 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Paperclip,
+  X,
 } from "lucide-react";
+import { filesApi } from "@/api/files";
 
 // Generic types for directory items
 export interface BaseDirectoryItem {
@@ -44,13 +48,25 @@ export interface BaseDirectoryItem {
   updatedAt?: string;
 }
 
+const DEFAULT_FILE_ACCEPT = ".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf";
+const DEFAULT_FILE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".pdf"] as const;
+const DEFAULT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
 // Configuration interface for directory fields
 export interface DirectoryFieldConfig {
   key: string;
   label: string;
-  type: "text" | "number" | "email" | "date" | "custom";
+  type: "text" | "number" | "email" | "date" | "custom" | "file";
   required?: boolean;
   placeholder?: string;
+  /** Accept attribute for file inputs */
+  accept?: string;
+  /** Hint text under the file upload control */
+  fileHint?: string;
+  /** Server directory for uploaded files */
+  fileDirectory?: string;
+  /** Max file size in bytes (default 10 MB) */
+  maxFileSizeBytes?: number;
   customComponent?: React.ComponentType<{
     value: unknown;
     onChange: (value: unknown) => void;
@@ -254,10 +270,101 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<T | null>(null);
   const [formData, setFormData] = useState<CreateT>(config.createInitialData());
+  const [pendingFiles, setPendingFiles] = useState<Record<string, File | null>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const fileFields = config.fields.filter((field) => field.type === "file");
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || isUploading;
+
+  const formatStoredFileName = (value: unknown) => {
+    if (typeof value !== "string" || !value.trim()) return "";
+    const normalized = value.replace(/\\/g, "/");
+    const slashIndex = normalized.lastIndexOf("/");
+    return slashIndex >= 0 ? normalized.slice(slashIndex + 1) : normalized;
+  };
+
+  const resetFileState = () => {
+    setPendingFiles({});
+    setFormError(null);
+    setIsUploading(false);
+  };
+
+  const isAllowedFile = (file: File, accept?: string) => {
+    const lowerName = file.name.toLowerCase();
+    if (!accept) {
+      return DEFAULT_FILE_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+    }
+
+    const tokens = accept
+      .split(",")
+      .map((token) => token.trim().toLowerCase())
+      .filter(Boolean);
+
+    return tokens.some((token) => {
+      if (token.startsWith(".")) {
+        return lowerName.endsWith(token);
+      }
+      if (token.endsWith("/*")) {
+        return file.type.startsWith(token.slice(0, -1));
+      }
+      return file.type === token;
+    });
+  };
+
+  const handleFileFieldChange = (field: DirectoryFieldConfig, event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+
+    if (!file) return;
+
+    const maxSize = field.maxFileSizeBytes ?? DEFAULT_MAX_FILE_SIZE_BYTES;
+    if (!isAllowedFile(file, field.accept)) {
+      setFormError(`Недопустимый формат файла для поля «${field.label}»`);
+      return;
+    }
+    if (file.size > maxSize) {
+      setFormError(`Размер файла «${field.label}» не должен превышать ${Math.round(maxSize / (1024 * 1024))} МБ`);
+      return;
+    }
+
+    setFormError(null);
+    setPendingFiles((prev) => ({ ...prev, [field.key]: file }));
+  };
+
+  const clearFileField = (fieldKey: string) => {
+    setPendingFiles((prev) => ({ ...prev, [fieldKey]: null }));
+    updateFormField(fieldKey, null);
+    setFormError(null);
+  };
+
+  const uploadPendingFiles = async (data: CreateT): Promise<CreateT> => {
+    if (fileFields.length === 0) return data;
+
+    const nextData = { ...(data as Record<string, unknown>) };
+
+    for (const field of fileFields) {
+      const pending = pendingFiles[field.key];
+      if (!pending) continue;
+
+      const directory = field.fileDirectory || "Uploads";
+      const extension = pending.name.includes(".")
+        ? pending.name.slice(pending.name.lastIndexOf(".")).toLowerCase()
+        : "";
+      const uniqueFileName = `${uuidv4()}${extension}`;
+      const uploaded = await filesApi.upload(pending, {
+        directory,
+        fileName: uniqueFileName,
+      });
+      nextData[field.key] = `${directory}/${uploaded.fileName}`;
+    }
+
+    return nextData as CreateT;
+  };
 
   const isDateField = (fieldKey: string) => {
     const key = fieldKey.toLowerCase();
@@ -340,37 +447,68 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
   useEffect(() => {
     if (isCreateOpen) {
       setFormData(config.createInitialData());
+      resetFileState();
     }
   }, [config, isCreateOpen]);
 
-  const handleCreate = async () => {
-    try {
-      await createMutation.mutateAsync(formData);
-      setIsCreateOpen(false);
+  const handleCreateDialogChange = (open: boolean) => {
+    setIsCreateOpen(open);
+    if (!open) {
       setFormData(config.createInitialData());
+      resetFileState();
+    }
+  };
+
+  const handleEditDialogChange = (open: boolean) => {
+    setIsEditOpen(open);
+    if (!open) {
+      setEditingItem(null);
+      setFormData(config.createInitialData());
+      resetFileState();
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!isFormValid() || isSubmitting) return;
+
+    setFormError(null);
+    setIsUploading(true);
+    try {
+      const payload = await uploadPendingFiles(formData);
+      await createMutation.mutateAsync(payload);
+      handleCreateDialogChange(false);
     } catch (error) {
       console.error("Error creating item:", error);
+      setFormError("Не удалось сохранить запись. Проверьте файлы и попробуйте ещё раз.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleEdit = (item: T) => {
     setEditingItem(item);
     setFormData(config.mapToFormData(item));
+    resetFileState();
     setIsEditOpen(true);
   };
 
   const handleUpdate = async () => {
-    if (!editingItem) return;
+    if (!editingItem || !isFormValid() || isSubmitting) return;
+
+    setFormError(null);
+    setIsUploading(true);
     try {
+      const payload = await uploadPendingFiles(formData);
       await updateMutation.mutateAsync({
         id: editingItem.id,
-        data: formData as unknown as UpdateT,
+        data: payload as unknown as UpdateT,
       });
-      setIsEditOpen(false);
-      setEditingItem(null);
-      setFormData(config.createInitialData());
+      handleEditDialogChange(false);
     } catch (error) {
       console.error("Error updating item:", error);
+      setFormError("Не удалось сохранить запись. Проверьте файлы и попробуйте ещё раз.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -397,9 +535,92 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
     return config.fields
       .filter((field) => field.required)
       .every((field) => {
+        if (field.type === "file") {
+          const pending = pendingFiles[field.key];
+          const stored = (formData as Record<string, unknown>)[field.key];
+          return Boolean(pending || (typeof stored === "string" && stored.trim()));
+        }
         const value = (formData as Record<string, unknown>)[field.key];
         return value !== undefined && value !== null && value !== "";
       });
+  };
+
+  const renderField = (field: DirectoryFieldConfig, idPrefix: string) => {
+    const fieldId = `${idPrefix}-${field.key}`;
+    const fieldValue = (formData as Record<string, unknown>)[field.key];
+
+    return (
+      <div key={fieldId}>
+        <Label htmlFor={fieldId}>
+          {field.label}
+          {field.required && <span className="text-red-500 ml-1">*</span>}
+        </Label>
+        {field.type === "custom" && field.customComponent ? (
+          <field.customComponent
+            value={fieldValue || ""}
+            onChange={(value) => updateFormField(field.key, value)}
+            disabled={isSubmitting}
+          />
+        ) : field.type === "file" ? (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" asChild disabled={isSubmitting}>
+                <label htmlFor={fieldId} className="cursor-pointer">
+                  <Paperclip className="mr-2 h-4 w-4" />
+                  {pendingFiles[field.key] || fieldValue ? "Заменить файл" : "Загрузить файл"}
+                </label>
+              </Button>
+              <Input
+                id={fieldId}
+                type="file"
+                accept={field.accept || DEFAULT_FILE_ACCEPT}
+                className="hidden"
+                onChange={(event) => handleFileFieldChange(field, event)}
+                disabled={isSubmitting}
+              />
+              <span className="text-xs text-muted-foreground">
+                {field.fileHint || "PNG, JPG, JPEG, PDF до 10 МБ"}
+              </span>
+            </div>
+            {(pendingFiles[field.key] || fieldValue) && (
+              <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                <span className="truncate">
+                  {pendingFiles[field.key]?.name || formatStoredFileName(fieldValue) || "Файл"}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearFileField(field.key)}
+                  disabled={isSubmitting}
+                  aria-label={`Удалить файл ${field.label}`}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Input
+            id={fieldId}
+            type={field.type === "date" || isDateField(field.key) ? "date" : field.type}
+            step={field.type === "number" ? "0.01" : undefined}
+            value={
+              field.type === "date" || isDateField(field.key)
+                ? getDateInputValue(fieldValue)
+                : String(fieldValue ?? "")
+            }
+            onChange={(e) => {
+              const value =
+                field.type === "number" ? (e.target.value ? parseFloat(e.target.value) : 0) : e.target.value;
+              updateFormField(field.key, value);
+            }}
+            placeholder={field.placeholder}
+            disabled={isSubmitting}
+          />
+        )}
+      </div>
+    );
   };
 
   if (error) {
@@ -445,57 +666,28 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
           />
         </div>
 
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <Dialog open={isCreateOpen} onOpenChange={handleCreateDialogChange}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
               Добавить
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Добавить {config.title.toLowerCase()}</DialogTitle>
               <DialogDescription>Создайте новую запись в справочнике.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              {config.fields.map((field) => (
-                <div key={field.key}>
-                  <Label htmlFor={field.key}>
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
-                  {field.type === "custom" && field.customComponent ? (
-                    <field.customComponent
-                      value={(formData as Record<string, unknown>)[field.key] || ""}
-                      onChange={(value) => updateFormField(field.key, value)}
-                    />
-                  ) : (
-                    <Input
-                      id={field.key}
-                      type={field.type === "date" || isDateField(field.key) ? "date" : field.type}
-                      step={field.type === "number" ? "0.01" : undefined}
-                      value={
-                        field.type === "date" || isDateField(field.key)
-                          ? getDateInputValue((formData as Record<string, unknown>)[field.key])
-                          : String((formData as Record<string, unknown>)[field.key] ?? "")
-                      }
-                      onChange={(e) => {
-                        const value =
-                          field.type === "number" ? (e.target.value ? parseFloat(e.target.value) : 0) : e.target.value;
-                        updateFormField(field.key, value);
-                      }}
-                      placeholder={field.placeholder}
-                    />
-                  )}
-                </div>
-              ))}
+              {config.fields.map((field) => renderField(field, "create"))}
+              {formError && <p className="text-sm text-red-600">{formError}</p>}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+              <Button variant="outline" onClick={() => handleCreateDialogChange(false)} disabled={isSubmitting}>
                 Отмена
               </Button>
-              <Button onClick={handleCreate} disabled={createMutation.isPending || !isFormValid()}>
-                {createMutation.isPending ? "Создание..." : "Создать"}
+              <Button onClick={handleCreate} disabled={isSubmitting || !isFormValid()}>
+                {isUploading ? "Загрузка..." : createMutation.isPending ? "Создание..." : "Создать"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -590,51 +782,22 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
       </Card>
 
       {/* Edit Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
+      <Dialog open={isEditOpen} onOpenChange={handleEditDialogChange}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Редактировать {config.title.toLowerCase()}</DialogTitle>
             <DialogDescription>Измените данные записи в справочнике.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {config.fields.map((field) => (
-              <div key={`edit-${field.key}`}>
-                <Label htmlFor={`edit-${field.key}`}>
-                  {field.label}
-                  {field.required && <span className="text-red-500 ml-1">*</span>}
-                </Label>
-                {field.type === "custom" && field.customComponent ? (
-                  <field.customComponent
-                    value={(formData as Record<string, unknown>)[field.key] || ""}
-                    onChange={(value) => updateFormField(field.key, value)}
-                  />
-                ) : (
-                  <Input
-                    id={`edit-${field.key}`}
-                    type={field.type === "date" || isDateField(field.key) ? "date" : field.type}
-                    step={field.type === "number" ? "0.01" : undefined}
-                    value={
-                      field.type === "date" || isDateField(field.key)
-                        ? getDateInputValue((formData as Record<string, unknown>)[field.key])
-                        : String((formData as Record<string, unknown>)[field.key] ?? "")
-                    }
-                    onChange={(e) => {
-                      const value =
-                        field.type === "number" ? (e.target.value ? parseFloat(e.target.value) : 0) : e.target.value;
-                      updateFormField(field.key, value);
-                    }}
-                    placeholder={field.placeholder}
-                  />
-                )}
-              </div>
-            ))}
+            {config.fields.map((field) => renderField(field, "edit"))}
+            {formError && <p className="text-sm text-red-600">{formError}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+            <Button variant="outline" onClick={() => handleEditDialogChange(false)} disabled={isSubmitting}>
               Отмена
             </Button>
-            <Button onClick={handleUpdate} disabled={updateMutation.isPending || !isFormValid()}>
-              {updateMutation.isPending ? "Сохранение..." : "Сохранить"}
+            <Button onClick={handleUpdate} disabled={isSubmitting || !isFormValid()}>
+              {isUploading ? "Загрузка..." : updateMutation.isPending ? "Сохранение..." : "Сохранить"}
             </Button>
           </DialogFooter>
         </DialogContent>

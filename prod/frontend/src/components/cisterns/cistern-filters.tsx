@@ -43,6 +43,7 @@ import {
 import {
   useManufacturers,
   useWagonTypes,
+  useWagonModels,
   useOwners,
   useRegistrars,
   useAffiliations,
@@ -364,6 +365,7 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
   // Directory data for selects
   const { data: manufacturers = [] } = useManufacturers();
   const { data: types = [] } = useWagonTypes(); // Типы вагонов
+  const { data: models = [] } = useWagonModels(); // Модели вагонов
   const { data: owners = [] } = useOwners();
   const { data: registrars = [] } = useRegistrars();
   const { data: affiliations = [] } = useAffiliations();
@@ -597,6 +599,17 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                       value={filters.typeIds || []}
                       onChange={(value) => updateFilter("typeIds", value.length > 0 ? value : undefined)}
                       onClear={() => updateFilter("typeIds", undefined)}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="model">Модель</Label>
+                    <MultiSelect
+                      placeholder="Выберите модели"
+                      options={models.map((m) => ({ id: m.id, name: m.name }))}
+                      value={filters.modelIds || []}
+                      onChange={(value) => updateFilter("modelIds", value.length > 0 ? value : undefined)}
+                      onClear={() => updateFilter("modelIds", undefined)}
                     />
                   </div>
 

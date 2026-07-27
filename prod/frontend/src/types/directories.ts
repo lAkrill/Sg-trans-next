@@ -343,6 +343,9 @@ export interface WagonModelDTO extends BaseEntity {
   intermediateTest: number;
   periodicTest: number;
   pprRep: number;
+  fileImage?: string | null;
+  fileRE?: string | null;
+  fileTU?: string | null;
   firstName: string;
   lastName: string;
 }
@@ -354,6 +357,9 @@ export interface CreateWagonModelDTO {
   intermediateTest: number;
   periodicTest: number;
   pprRep: number;
+  fileImage?: string | null;
+  fileRE?: string | null;
+  fileTU?: string | null;
 }
 
 export interface UpdateWagonModelDTO {
@@ -363,6 +369,9 @@ export interface UpdateWagonModelDTO {
   intermediateTest: number;
   periodicTest: number;
   pprRep: number;
+  fileImage?: string | null;
+  fileRE?: string | null;
+  fileTU?: string | null;
 }
 
 // FitmentType (Тип арматуры)
@@ -449,15 +458,6 @@ export interface UpdateFitmentDTO {
   locationCisternId: string | null;
 }
 
-export interface UpdateWagonModelDTO {
-  name: string;
-  majorRep: number;
-  depoRep: number;
-  intermediateTest: number;
-  periodicTest: number;
-  pprRep: number;
-}
-
 // PersonalWagonDateRep (Персональные периоды ремонта вагона)
 export interface PersonalWagonDateRepDTO extends BaseEntity {
   cisternId: string;
@@ -528,6 +528,7 @@ export interface PartDTO extends BaseEntity {
   documentId?: string;
   document?: DocumentDTO;
   extendedUntil?: string;
+  file?: string;
 }
 
 // Fitments (Арматура)
@@ -609,6 +610,7 @@ export interface CreatePartDTO {
   serviceLifeYears: number | null;
   extendedUntil: string | null;
   model: string | null;
+  file: string | null;
 }
 
 export interface UpdatePartDTO {
@@ -624,6 +626,7 @@ export interface UpdatePartDTO {
   serviceLifeYears: number | null;
   extendedUntil: string | null;
   model: string | null;
+  file: string | null;
 }
 
 export interface CreateWheelPairDTO {
