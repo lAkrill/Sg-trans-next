@@ -85,14 +85,14 @@ public static class RailwayCisternDTOMapper
         {
             Id = cistern.Id,
             Number = cistern.Number,
-            ManufacturerName = cistern.Manufacturer.Name,
+            ManufacturerName = cistern.Manufacturer?.Name ?? string.Empty,
             BuildDate = cistern.BuildDate,
-            TypeName = cistern.Type.Name,
-            ModelName = cistern.Model?.Name,
-            OwnerName = cistern.Owner?.Name,
+            TypeName = cistern.Type?.Name ?? string.Empty,
+            ModelName = cistern.Model?.Name ?? string.Empty,
+            OwnerName = cistern.Owner?.Name ?? string.Empty,
             RegistrationNumber = cistern.RegistrationNumber,
             RegistrationDate = cistern.RegistrationDate,
-            AffiliationValue = cistern.Affiliation.Value
+            AffiliationValue = cistern.Affiliation?.Value ?? string.Empty
         };
     }
 
@@ -102,16 +102,18 @@ public static class RailwayCisternDTOMapper
         {
             Id = cistern.Id,
             Number = cistern.Number,
-            Manufacturer = new ManufacturerDTO
-            {
-                Id = cistern.Manufacturer.Id,
-                Name = cistern.Manufacturer.Name,
-                Country = cistern.Manufacturer.Country,
-                ShortName = cistern.Manufacturer.ShortName,
-                Code = cistern.Manufacturer.Code,
-                CreatedAt = cistern.Manufacturer.CreatedAt,
-                UpdatedAt = cistern.Manufacturer.UpdatedAt
-            },
+            Manufacturer = cistern.Manufacturer != null
+                ? new ManufacturerDTO
+                {
+                    Id = cistern.Manufacturer.Id,
+                    Name = cistern.Manufacturer.Name,
+                    Country = cistern.Manufacturer.Country,
+                    ShortName = cistern.Manufacturer.ShortName,
+                    Code = cistern.Manufacturer.Code,
+                    CreatedAt = cistern.Manufacturer.CreatedAt,
+                    UpdatedAt = cistern.Manufacturer.UpdatedAt
+                }
+                : new ManufacturerDTO(),
             BuildDate = cistern.BuildDate,
             TareWeight = cistern.TareWeight,
             LoadCapacity = cistern.LoadCapacity,
@@ -120,12 +122,14 @@ public static class RailwayCisternDTOMapper
             Volume = cistern.Volume,
             FillingVolume = cistern.FillingVolume,
             InitialTareWeight = cistern.InitialTareWeight,
-            Type = new WagonTypeDTO
-            {
-                Id = cistern.Type.Id,
-                Name = cistern.Type.Name,
-                Type = cistern.Type.Type
-            },
+            Type = cistern.Type != null
+                ? new WagonTypeDTO
+                {
+                    Id = cistern.Type.Id,
+                    Name = cistern.Type.Name,
+                    Type = cistern.Type.Type
+                }
+                : new WagonTypeDTO(),
             Model = cistern.Model != null
                 ? new WagonModelDTO
                 {
@@ -136,10 +140,14 @@ public static class RailwayCisternDTOMapper
                     IntermediateTest = cistern.Model.IntermediateTest,
                     PeriodicTest = cistern.Model.PeriodicTest,
                     PPRRep = cistern.Model.PPRRep,
+                    Weight = cistern.Model.Weight,
+                    FileImage = cistern.Model.FileImage,
+                    FileTU = cistern.Model.FileTU,
+                    FileRE = cistern.Model.FileRE,
                     UpdatedAt = cistern.Model.UpdatedAt,
-                    Email = cistern.Model.Creator?.Email,
-                    FirstName = cistern.Model.Creator?.FirstName,
-                    LastName = cistern.Model.Creator?.LastName
+                    Email = cistern.Model.Creator?.Email ?? string.Empty,
+                    FirstName = cistern.Model.Creator?.FirstName ?? string.Empty,
+                    LastName = cistern.Model.Creator?.LastName ?? string.Empty
                 }
                 : null,
             CommissioningDate = cistern.CommissioningDate,
@@ -152,7 +160,7 @@ public static class RailwayCisternDTOMapper
                     Id = cistern.Registrar.Id,
                     Name = cistern.Registrar.Name
                 }
-                : null,
+                : new RegistrarDTO(),
             Notes = cistern.Notes,
             Owner = cistern.Owner != null
                 ? new OwnerDTO
@@ -166,18 +174,20 @@ public static class RailwayCisternDTOMapper
                     CreatedAt = cistern.Owner.CreatedAt,
                     UpdatedAt = cistern.Owner.UpdatedAt
                 }
-                : null,
+                : new OwnerDTO(),
             TechConditions = cistern.TechConditions,
             Pripiska = cistern.Pripiska,
             ReRegistrationDate = cistern.ReRegistrationDate,
             Pressure = cistern.Pressure,
             TestPressure = cistern.TestPressure,
             Rent = cistern.Rent,
-            Affiliation = new AffiliationDTO
-            {
-                Id = cistern.Affiliation.Id,
-                Value = cistern.Affiliation.Value
-            },
+            Affiliation = cistern.Affiliation != null
+                ? new AffiliationDTO
+                {
+                    Id = cistern.Affiliation.Id,
+                    Value = cistern.Affiliation.Value
+                }
+                : new AffiliationDTO(),
             ServiceLifeYears = cistern.ServiceLifeYears,
             PeriodMajorRepair = cistern.PeriodMajorRepair,
             PeriodPeriodicTest = cistern.PeriodPeriodicTest,
@@ -194,7 +204,9 @@ public static class RailwayCisternDTOMapper
             UpdatedAt = cistern.UpdatedAt,
             Vessels = cistern.Vessels?.Select(v => v.ToVesselListDTO()).ToList(),
             LastMilage = cistern.MilageCisterns?.OrderByDescending(m => m.InputDate).FirstOrDefault()?.ToMilageCisternDTO(),
-            RailwayCisternStatus = cistern.RailwayCisternStatus.ToRailwayCisternStatusDTO(),
+            RailwayCisternStatus = cistern.RailwayCisternStatus != null
+                ? cistern.RailwayCisternStatus.ToRailwayCisternStatusDTO()
+                : new RailwayCisternStatusDTO(),
             ReRegistrationNextDate = cistern.ReRegistrationNextDate,
             ExtensionServiceLifeDate = cistern.ExtensionServiceLifeDate
         };

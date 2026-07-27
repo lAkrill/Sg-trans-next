@@ -82,20 +82,8 @@ public static class VesselEndpoint
                         WagonModelId = v.WagonModelId,
                         Pressure = v.Pressure,
                         Capacity = v.Capacity,
-                        RailwayCisternListDto = v.RailwayCistern != null
-                            ? new RailwayCisternListDTO()
-                            {
-                                Id = v.RailwayCistern.Id,
-                                Number = v.RailwayCistern.Number,
-                                ManufacturerName = v.RailwayCistern.Manufacturer.Name,
-                                BuildDate = v.RailwayCistern.BuildDate,
-                                TypeName = v.RailwayCistern.Type.Name,
-                                ModelName = v.RailwayCistern.Model.Name,
-                                OwnerName = v.RailwayCistern.Owner.Name,
-                                RegistrationNumber = v.RailwayCistern.RegistrationNumber,
-                                RegistrationDate = v.RailwayCistern.RegistrationDate,
-                                AffiliationValue = v.RailwayCistern.Affiliation.Value
-                            }
+                        RailwayCisternListDto =  v.RailwayCistern != null
+                            ? v.RailwayCistern.ToRailwayCisternListDTO()
                             : null
                     })
                     .FirstOrDefaultAsync();
