@@ -83,6 +83,9 @@ import type {
   DocumentsRegulatoryDTO,
   CreateDocumentsRegulatoryDTO,
   UpdateDocumentsRegulatoryDTO,
+  ScrapmetalDTO,
+  CreateScrapmetalDTO,
+  UpdateScrapmetalDTO,
   StationDTO,
   CreateStationDTO,
   UpdateStationDTO,
@@ -118,6 +121,28 @@ const normalizeDocumentsRegulatoryDto = (
     date: String(raw.date ?? raw.Date ?? ''),
     file: (raw.file ?? raw.File ?? raw.fileName ?? raw.FileName ?? null) as string | null,
     url: (raw.url ?? raw.Url ?? null) as string | null,
+    updatedAt: (raw.updatedAt ?? raw.UpdatedAt ?? undefined) as string | undefined,
+    creatorId: (raw.creatorId ?? raw.CreatorId ?? undefined) as string | undefined,
+  };
+};
+
+const normalizeGuid = (value: unknown): string | null => {
+  if (value === null || value === undefined || value === '') return null;
+  return String(value);
+};
+
+const normalizeScrapmetalDto = (
+  item: Record<string, unknown> | ScrapmetalDTO
+): ScrapmetalDTO => {
+  const raw = item as Record<string, unknown>;
+  return {
+    id: String(raw.id ?? raw.Id ?? ''),
+    partId: normalizeGuid(raw.partId ?? raw.PartId),
+    weight: Number(raw.weight ?? raw.Weight ?? 0),
+    date: String(raw.date ?? raw.Date ?? ''),
+    code: Number(raw.code ?? raw.Code ?? 0),
+    note: (raw.note ?? raw.Note ?? null) as string | null,
+    documentId: normalizeGuid(raw.documentId ?? raw.DocumentId),
     updatedAt: (raw.updatedAt ?? raw.UpdatedAt ?? undefined) as string | undefined,
     creatorId: (raw.creatorId ?? raw.CreatorId ?? undefined) as string | undefined,
   };
@@ -372,6 +397,16 @@ export const partsApi = {
     return response.data;
   },
 
+  getAllWithoutPagination: async (typeId?: string): Promise<PartDTO[]> => {
+    const params = new URLSearchParams();
+    if (typeId) {
+      params.append('typeId', typeId);
+    }
+    const query = params.toString();
+    const response = await api.get(`/api/parts/all${query ? `?${query}` : ''}`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
+
   getById: async (id: string): Promise<PartDTO> => {
     const response = await api.get(`/api/parts/${id}`);
     return response.data;
@@ -614,6 +649,39 @@ export const documentsRegulatoryApi = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/api/documents-regulatory/${id}`);
+  },
+};
+
+// Scrapmetal API
+export const scrapmetalApi = {
+  getAll: async (): Promise<ScrapmetalDTO[]> => {
+    const response = await api.get('/api/scrapmetal/all');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(normalizeScrapmetalDto);
+  },
+
+  getById: async (id: string): Promise<ScrapmetalDTO> => {
+    const response = await api.get(`/api/scrapmetal/${id}`);
+    return normalizeScrapmetalDto(response.data);
+  },
+
+  getByDocumentId: async (documentId: string): Promise<ScrapmetalDTO[]> => {
+    const response = await api.get(`/api/scrapmetal/by-document/${documentId}`);
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(normalizeScrapmetalDto);
+  },
+
+  create: async (data: CreateScrapmetalDTO): Promise<ScrapmetalDTO> => {
+    const response = await api.post('/api/scrapmetal', data);
+    return normalizeScrapmetalDto(response.data);
+  },
+
+  update: async (id: string, data: UpdateScrapmetalDTO): Promise<void> => {
+    await api.put(`/api/scrapmetal/${id}`, data);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/api/scrapmetal/${id}`);
   },
 };
 

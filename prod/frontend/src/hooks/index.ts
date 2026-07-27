@@ -24,6 +24,7 @@ export * from './fitmentsFilter.hook';
 export * from './part-installations.hook';
 export * from './documents.hook';
 export * from './documentsRegulatory.hook';
+export * from './scrapmetal.hook';
 export * from './vessels.hook';
 
 export * from './auth.hook';

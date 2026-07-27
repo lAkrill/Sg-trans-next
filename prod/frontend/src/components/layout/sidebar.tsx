@@ -25,6 +25,7 @@ import {
   Droplet,
   Import,
   Tags,
+  Recycle,
 } from "lucide-react";
 import { useCurrentUser, useVersion } from "@/hooks";
 import { Role } from "@/types/auth";
@@ -176,6 +177,11 @@ const sidebarItems: SidebarItem[] = [
     title: "Нормативные документы",
     href: "/directories/documentsRegulatory",
     icon: FileText,
+  },
+  {
+    title: "Металлолом",
+    href: "/directories/Scrapmetal",
+    icon: Recycle,
   },
 ];
 

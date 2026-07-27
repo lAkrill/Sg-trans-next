@@ -101,6 +101,37 @@ export interface UpdateDocumentsRegulatoryDTO {
   url?: string | null;
 }
 
+// Scrapmetal (Металлолом)
+export interface ScrapmetalDTO {
+  id: string;
+  partId?: string | null;
+  weight: number;
+  date: string;
+  code: number;
+  note?: string | null;
+  documentId?: string | null;
+  updatedAt?: string;
+  creatorId?: string;
+}
+
+export interface CreateScrapmetalDTO {
+  partId?: string | null;
+  weight: number;
+  date: string;
+  code: number;
+  note?: string | null;
+  documentId?: string | null;
+}
+
+export interface UpdateScrapmetalDTO {
+  partId?: string | null;
+  weight: number;
+  date: string;
+  code: number;
+  note?: string | null;
+  documentId?: string | null;
+}
+
 // Station (Станция)
 export interface StationDTO {
   id: string;

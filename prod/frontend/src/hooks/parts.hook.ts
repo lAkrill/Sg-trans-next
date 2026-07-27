@@ -13,6 +13,7 @@ import type {
 // Query keys
 export const partsKeys = {
   all: ['directories', 'parts'] as const,
+  allWithoutPagination: () => [...partsKeys.all, 'all'] as const,
   byId: (id: string) => [...partsKeys.all, id] as const,
   filtered: (pageNumber: number, pageSize: number, typeId?: string) => 
     [...partsKeys.all, { pageNumber, pageSize, typeId }] as const,
@@ -23,6 +24,13 @@ export const useParts = (pageNumber = 1, pageSize = 10, typeId?: string) => {
   return useQuery({
     queryKey: partsKeys.filtered(pageNumber, pageSize, typeId),
     queryFn: () => partsApi.getAll(pageNumber, pageSize, typeId),
+  });
+};
+
+export const useAllParts = (typeId?: string) => {
+  return useQuery({
+    queryKey: [...partsKeys.allWithoutPagination(), typeId ?? null],
+    queryFn: () => partsApi.getAllWithoutPagination(typeId),
   });
 };
 
