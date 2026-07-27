@@ -1,5 +1,6 @@
 "use client";
 
+import { createElement } from "react";
 import { Train } from "lucide-react";
 import {
   useWagonModels,
@@ -10,6 +11,7 @@ import {
 import type { WagonModelDTO, CreateWagonModelDTO, UpdateWagonModelDTO } from "@/types/directories";
 import type { DirectoryConfig } from "@/components/directory-manager";
 import { DirectoryConfig as BaseDirectoryConfig } from "./types";
+import { ViewFileButton } from "@/components/view-file-button";
 
 // Базовая конфигурация полей
 export const wagonModelsBaseConfig: BaseDirectoryConfig = {
@@ -63,18 +65,57 @@ export const wagonModelsBaseConfig: BaseDirectoryConfig = {
   ],
 };
 
+const WAGON_MODEL_FILE_DIRECTORY = "WagonModels";
+const WAGON_MODEL_IMAGE_ACCEPT = ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp";
+const WAGON_MODEL_DOC_ACCEPT = ".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf";
+
+const wagonModelFileFields = [
+  {
+    key: "fileImage",
+    label: "Изображение",
+    type: "file" as const,
+    accept: WAGON_MODEL_IMAGE_ACCEPT,
+    fileDirectory: WAGON_MODEL_FILE_DIRECTORY,
+    fileHint: "PNG, JPG, JPEG, WEBP до 10 МБ",
+  },
+  {
+    key: "fileRE",
+    label: "Руководство",
+    type: "file" as const,
+    accept: WAGON_MODEL_DOC_ACCEPT,
+    fileDirectory: WAGON_MODEL_FILE_DIRECTORY,
+    fileHint: "PNG, JPG, JPEG, PDF до 10 МБ",
+  },
+  {
+    key: "fileTU",
+    label: "Технические условия",
+    type: "file" as const,
+    accept: WAGON_MODEL_DOC_ACCEPT,
+    fileDirectory: WAGON_MODEL_FILE_DIRECTORY,
+    fileHint: "PNG, JPG, JPEG, PDF до 10 МБ",
+  },
+];
+
+const renderViewFileButton = (value: unknown) =>
+  createElement(ViewFileButton, { value, directory: WAGON_MODEL_FILE_DIRECTORY });
+
 // Конфигурация для DirectoryManager
 export const wagonModelsConfig: DirectoryConfig<WagonModelDTO, CreateWagonModelDTO, UpdateWagonModelDTO> = {
   title: wagonModelsBaseConfig.displayName,
   description: wagonModelsBaseConfig.description,
   icon: Train,
-  fields: wagonModelsBaseConfig.fields.map((field) => ({
-    key: field.key,
-    label: field.label,
-    type: field.type === "boolean" || field.type === "select" || field.type === "textarea" ? "text" : field.type,
-    required: field.required,
-    placeholder: field.placeholder,
-  })),
+  fields: [
+    ...wagonModelsBaseConfig.fields.map((field) => ({
+      key: field.key,
+      label: field.label,
+      type: (field.type === "boolean" || field.type === "select" || field.type === "textarea"
+        ? "text"
+        : field.type) as "text" | "number",
+      required: field.required,
+      placeholder: field.placeholder,
+    })),
+    ...wagonModelFileFields,
+  ],
   hooks: {
     useGetAll: useWagonModels,
     useCreate: useCreateWagonModel,
@@ -90,6 +131,21 @@ export const wagonModelsConfig: DirectoryConfig<WagonModelDTO, CreateWagonModelD
     { key: "periodicTest", label: "Периодическое испытание" },
     { key: "pprRep", label: "ППР ремонт" },
     {
+      key: "fileImage",
+      label: "Изображение",
+      render: renderViewFileButton,
+    },
+    {
+      key: "fileRE",
+      label: "Руководство",
+      render: renderViewFileButton,
+    },
+    {
+      key: "fileTU",
+      label: "Технические условия",
+      render: renderViewFileButton,
+    },
+    {
       key: "firstName",
       label: "Фамилия, имя",
       render: (_value, item) => `${item.lastName ?? ""} ${item.firstName ?? ""}`.trim() || "—",
@@ -102,6 +158,9 @@ export const wagonModelsConfig: DirectoryConfig<WagonModelDTO, CreateWagonModelD
     intermediateTest: 0,
     periodicTest: 0,
     pprRep: 0,
+    fileImage: null,
+    fileRE: null,
+    fileTU: null,
   }),
   mapToFormData: (item: WagonModelDTO) => ({
     name: item.name,
@@ -110,5 +169,8 @@ export const wagonModelsConfig: DirectoryConfig<WagonModelDTO, CreateWagonModelD
     intermediateTest: item.intermediateTest,
     periodicTest: item.periodicTest,
     pprRep: item.pprRep,
+    fileImage: item.fileImage ?? null,
+    fileRE: item.fileRE ?? null,
+    fileTU: item.fileTU ?? null,
   }),
 };

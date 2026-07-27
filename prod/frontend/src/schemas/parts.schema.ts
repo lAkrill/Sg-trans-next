@@ -20,6 +20,7 @@ export const createPartSchema = basePartSchema.extend({
   serviceLifeYears: z.number().int().positive("Срок службы должен быть положительным"),
   extendedUntil: z.string().optional(),
   model: z.string().optional(),
+  file: z.string().optional(),
 }).refine(
   (data) => {
     const hasDepot = !!data.depotId;

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { type DefaultValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -25,8 +27,9 @@ import {
   FormLabel,
   FormMessage,
   SearchableSelect,
+  Label,
 } from "@/components/ui";
-import { ArrowLeft, Save, Settings } from "lucide-react";
+import { ArrowLeft, Paperclip, Save, Settings, X } from "lucide-react";
 import Link from "next/link";
 import {
   usePartTypeOptions,
@@ -37,10 +40,21 @@ import {
   useCisternIdAndNumbers,
 } from "@/hooks";
 import { DepotSearchSelect } from "@/components/depots/DepotSearchSelect";
+import { filesApi } from "@/api/files";
 import { createPartSchema, type CreatePartFormData } from "@/schemas/parts.schema";
 import type { CreatePartDTO } from "@/types/directories";
 
 type PartFormRecord = Record<string, unknown>;
+
+const PART_FILE_DIRECTORY = "Parts";
+const ALLOWED_PART_FILE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".pdf"] as const;
+const ALLOWED_PART_FILE_ACCEPT = ".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf";
+const MAX_PART_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+const isAllowedPartFile = (file: File) => {
+  const lowerName = file.name.toLowerCase();
+  return ALLOWED_PART_FILE_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+};
 
 const createPartDefaultValues: DefaultValues<CreatePartFormData> = {
   partTypeId: "",
@@ -56,6 +70,7 @@ const createPartDefaultValues: DefaultValues<CreatePartFormData> = {
   serviceLifeYears: undefined,
   extendedUntil: "",
   model: "",
+  file: "",
 };
 
 function nullableString(value: unknown): string | null {
@@ -96,6 +111,7 @@ function buildCreatePartPayload(data: PartFormRecord): CreatePartDTO {
     serviceLifeYears: nullableNumber(data.serviceLifeYears),
     extendedUntil: nullableString(data.extendedUntil),
     model: nullableString(data.model),
+    file: nullableString(data.file),
   };
 }
 
@@ -103,6 +119,9 @@ export default function CreatePartPage() {
   const router = useRouter();
 
   const createPartMutation = useCreatePart();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
 
   // Directory options
   const { data: partTypeOptions = [] } = usePartTypeOptions();
@@ -126,6 +145,8 @@ export default function CreatePartPage() {
   });
 
   const locationCode = form.watch("code");
+  const formFile = form.watch("file");
+  const isSubmitting = createPartMutation.isPending || isUploadingFile;
 
   useEffect(() => {
     if (locationCode === 0) {
@@ -144,19 +165,82 @@ export default function CreatePartPage() {
     }
   }, [form, locationCode]);
 
-  const onSubmit = async (data: CreatePartFormData) => {
-    try {
-      await createPartMutation.mutateAsync(buildCreatePartPayload(data));
+  const handlePartFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
 
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    if (!isAllowedPartFile(file)) {
+      setFileError("Допустимые форматы файла: PNG, JPG, JPEG, PDF");
+      setSelectedFile(null);
+      return;
+    }
+
+    if (file.size > MAX_PART_FILE_SIZE_BYTES) {
+      setFileError("Размер файла не должен превышать 10 МБ");
+      setSelectedFile(null);
+      return;
+    }
+
+    setFileError(null);
+    setSelectedFile(file);
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setFileError(null);
+    form.setValue("file", "");
+  };
+
+  const uploadPartFileIfNeeded = async () => {
+    if (!selectedFile) {
+      return form.getValues("file") || null;
+    }
+
+    const extension = selectedFile.name.includes(".")
+      ? selectedFile.name.slice(selectedFile.name.lastIndexOf(".")).toLowerCase()
+      : "";
+    const uniqueFileName = `${uuidv4()}${extension}`;
+    const uploaded = await filesApi.upload(selectedFile, {
+      directory: PART_FILE_DIRECTORY,
+      fileName: uniqueFileName,
+    });
+
+    return `${PART_FILE_DIRECTORY}/${uploaded.fileName}`;
+  };
+
+  const onSubmit = async (data: CreatePartFormData) => {
+    setFileError(null);
+    setIsUploadingFile(true);
+
+    try {
+      const filePath = await uploadPartFileIfNeeded();
+      await createPartMutation.mutateAsync(
+        buildCreatePartPayload({ ...data, file: filePath })
+      );
+
+      toast.success("Деталь успешно добавлена");
       router.push("/directories/parts");
     } catch (error) {
       console.error("Error creating part:", error);
-      alert("Ошибка при создании детали");
+      toast.error(
+        selectedFile
+          ? "Ошибка при загрузке файла или создании детали"
+          : "Ошибка при создании детали"
+      );
+    } finally {
+      setIsUploadingFile(false);
     }
   };
 
   const handleClearForm = () => {
     form.reset(createPartDefaultValues);
+    setSelectedFile(null);
+    setFileError(null);
   };
 
   return (
@@ -476,6 +560,45 @@ export default function CreatePartPage() {
                     </FormItem>
                   )}
                 />
+
+                <div className="space-y-2 md:col-span-3">
+                  <Label htmlFor="part-file">Файл</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" variant="outline" asChild disabled={isSubmitting}>
+                      <label htmlFor="part-file" className="cursor-pointer">
+                        <Paperclip className="mr-2 h-4 w-4" />
+                        {selectedFile || formFile ? "Заменить файл" : "Загрузить файл"}
+                      </label>
+                    </Button>
+                    <Input
+                      id="part-file"
+                      type="file"
+                      accept={ALLOWED_PART_FILE_ACCEPT}
+                      className="hidden"
+                      onChange={handlePartFileChange}
+                      disabled={isSubmitting}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      PNG, JPG, JPEG, PDF до 10 МБ
+                    </span>
+                  </div>
+                  {(selectedFile || formFile) && (
+                    <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                      <span className="truncate">{selectedFile?.name || formFile}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearSelectedFile}
+                        disabled={isSubmitting}
+                        aria-label="Удалить файл"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                  {fileError && <p className="text-sm text-red-600">{fileError}</p>}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -492,12 +615,9 @@ export default function CreatePartPage() {
                   Отмена
                 </Button>
               </Link>
-              <Button
-                type="submit"
-                disabled={createPartMutation.isPending}
-              >
+              <Button type="submit" disabled={isSubmitting}>
                 <Save className="h-4 w-4 mr-2" />
-                Сохранить
+                {isUploadingFile ? "Загрузка..." : "Сохранить"}
               </Button>
             </div>
           </div>

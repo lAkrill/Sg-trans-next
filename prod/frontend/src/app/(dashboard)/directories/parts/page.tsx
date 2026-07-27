@@ -414,6 +414,13 @@ export default function PartsPage() {
     return yearData.year.toString();
   };
 
+  const formatFileName = (fileValue?: string | null) => {
+    if (!fileValue) return "—";
+    const normalized = fileValue.replace(/\\/g, "/");
+    const parts = normalized.split("/");
+    return parts[parts.length - 1] || fileValue;
+  };
+
   const handleExport = useCallback(
     async (type: "pdf" | "doc" | "xls") => {
       type ExportColumn = {
@@ -443,6 +450,7 @@ export default function PartsPage() {
           status: part.status?.name ?? "—",
           notes: part.notes || "—",
           model: part.model || "—",
+          file: formatFileName(part.file),
         };
 
         const filtered: Record<string, string> = {};
@@ -686,6 +694,7 @@ export default function PartsPage() {
                     {isColumnVisible("status") && <TableHead>Статус</TableHead>}
                     {isColumnVisible("notes") && <TableHead>Примечания</TableHead>}
                     {isColumnVisible("model") && <TableHead>Модель</TableHead>}
+                    {isColumnVisible("file") && <TableHead>Файл</TableHead>}
                     <TableHead className="w-[1%] whitespace-nowrap text-right">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -733,6 +742,9 @@ export default function PartsPage() {
                       )}
                       {isColumnVisible("model") && (
                         <TableCell>{part.model || "—"}</TableCell>
+                      )}
+                      {isColumnVisible("file") && (
+                        <TableCell>{formatFileName(part.file)}</TableCell>
                       )}
                       <TableCell className="w-[1%] whitespace-nowrap">
                         <div className="flex w-max justify-end gap-2">

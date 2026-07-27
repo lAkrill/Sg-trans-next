@@ -71,9 +71,12 @@ export const PART_COLUMN_OPTIONS = [
   { value: 'status', label: 'Статус' },
   { value: 'notes', label: 'Примечания' },
   { value: 'model', label: 'Модель' },
+  { value: 'file', label: 'Файл' },
 ] as const;
 
-export const DEFAULT_PART_VISIBLE_COLUMNS = PART_COLUMN_OPTIONS.map((option) => option.value);
+export const DEFAULT_PART_VISIBLE_COLUMNS = PART_COLUMN_OPTIONS
+  .filter((option) => option.value !== 'file')
+  .map((option) => option.value);
 
 const initialFilters: PartFilterCriteria = {
   partTypeIds: [],

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { type DefaultValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -26,8 +28,9 @@ import {
   FormMessage,
   SearchableSelect,
   Skeleton,
+  Label,
 } from "@/components/ui";
-import { ArrowLeft, Save, Settings } from "lucide-react";
+import { ArrowLeft, Paperclip, Save, Settings, X } from "lucide-react";
 import Link from "next/link";
 import {
   usePartTypeOptions,
@@ -39,6 +42,7 @@ import {
   useAllDocuments,
   useCisternIdAndNumbers,
 } from "@/hooks";
+import { filesApi } from "@/api/files";
 import { createPartSchema, type CreatePartFormData } from "@/schemas/parts.schema";
 import type {
   PartDTO,
@@ -47,6 +51,23 @@ import type {
 
 type PartFormRecord = Record<string, unknown>;
 type DateOnlyValue = string | { year: number; month: number; day: number } | null | undefined;
+
+const PART_FILE_DIRECTORY = "Parts";
+const ALLOWED_PART_FILE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".pdf"] as const;
+const ALLOWED_PART_FILE_ACCEPT = ".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf";
+const MAX_PART_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+const isAllowedPartFile = (file: File) => {
+  const lowerName = file.name.toLowerCase();
+  return ALLOWED_PART_FILE_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+};
+
+const formatPartFileName = (fileValue: string | null | undefined) => {
+  if (!fileValue) return "";
+  const normalized = fileValue.replace(/\\/g, "/");
+  const parts = normalized.split("/");
+  return parts[parts.length - 1] || fileValue;
+};
 
 const editPartDefaultValues: DefaultValues<CreatePartFormData> = {
   partTypeId: "",
@@ -62,6 +83,7 @@ const editPartDefaultValues: DefaultValues<CreatePartFormData> = {
   serviceLifeYears: undefined,
   extendedUntil: "",
   model: "",
+  file: "",
 };
 
 /** Строковые value для Radix Select: value="0" часто не отображается в триггере. */
@@ -193,6 +215,7 @@ function buildPartDefaultValues(part: PartDTO): DefaultValues<CreatePartFormData
     serviceLifeYears: getServiceLifeYears(part),
     extendedUntil: convertDateOnlyToString(flatPart.extendedUntil),
     model: flatPart.model || "",
+    file: part.file || "",
   };
 }
 
@@ -210,6 +233,7 @@ function buildUpdatePartPayload(data: PartFormRecord): UpdatePartDTO {
     serviceLifeYears: nullableNumber(data.serviceLifeYears),
     extendedUntil: nullableString(data.extendedUntil),
     model: nullableString(data.model),
+    file: nullableString(data.file),
   };
 }
 
@@ -234,6 +258,9 @@ export default function EditPartPage() {
   const { data: part, isLoading, error } = usePartById(partId);
 
   const updatePartMutation = useUpdatePart();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
 
   const { data: partTypeOptions = [] } = usePartTypeOptions();
   const { data: stampNumberOptions = [] } = useStampNumberOptions();
@@ -290,30 +317,94 @@ export default function EditPartPage() {
   });
 
   const locationCode = form.watch("code") ?? 0;
+  const formFile = form.watch("file");
 
   useEffect(() => {
     if (!part) return;
     form.reset(buildPartDefaultValues(part));
+    setSelectedFile(null);
+    setFileError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [part?.id]);
 
-  const isUpdating = updatePartMutation.isPending;
+  const isUpdating = updatePartMutation.isPending || isUploadingFile;
+
+  const handlePartFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    if (!isAllowedPartFile(file)) {
+      setFileError("Допустимые форматы файла: PNG, JPG, JPEG, PDF");
+      setSelectedFile(null);
+      return;
+    }
+
+    if (file.size > MAX_PART_FILE_SIZE_BYTES) {
+      setFileError("Размер файла не должен превышать 10 МБ");
+      setSelectedFile(null);
+      return;
+    }
+
+    setFileError(null);
+    setSelectedFile(file);
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setFileError(null);
+    form.setValue("file", "");
+  };
+
+  const uploadPartFileIfNeeded = async () => {
+    if (!selectedFile) {
+      return form.getValues("file") || null;
+    }
+
+    const extension = selectedFile.name.includes(".")
+      ? selectedFile.name.slice(selectedFile.name.lastIndexOf(".")).toLowerCase()
+      : "";
+    const uniqueFileName = `${uuidv4()}${extension}`;
+    const uploaded = await filesApi.upload(selectedFile, {
+      directory: PART_FILE_DIRECTORY,
+      fileName: uniqueFileName,
+    });
+
+    return `${PART_FILE_DIRECTORY}/${uploaded.fileName}`;
+  };
 
   const onSubmit = async (data: CreatePartFormData) => {
+    setFileError(null);
+    setIsUploadingFile(true);
+
     try {
-      const payload = buildUpdatePartPayload(data);
+      const filePath = await uploadPartFileIfNeeded();
+      const payload = buildUpdatePartPayload({ ...data, file: filePath });
       await updatePartMutation.mutateAsync({ id: partId, data: payload });
 
+      toast.success("Деталь успешно обновлена");
       router.push(partsListHref);
     } catch (updateError) {
       console.error("Error updating part:", updateError);
-      alert("Ошибка при обновлении детали");
+      toast.error(
+        selectedFile
+          ? "Ошибка при загрузке файла или обновлении детали"
+          : "Ошибка при обновлении детали"
+      );
+    } finally {
+      setIsUploadingFile(false);
     }
   };
 
   const handleResetForm = () => {
     if (part) {
       form.reset(buildPartDefaultValues(part));
+      setSelectedFile(null);
+      setFileError(null);
     }
   };
 
@@ -682,6 +773,47 @@ export default function EditPartPage() {
                     </FormItem>
                   )}
                 />
+
+                <div className="space-y-2 md:col-span-3">
+                  <Label htmlFor="part-edit-file">Файл</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" variant="outline" asChild disabled={isUpdating}>
+                      <label htmlFor="part-edit-file" className="cursor-pointer">
+                        <Paperclip className="mr-2 h-4 w-4" />
+                        {selectedFile || formFile ? "Заменить файл" : "Загрузить файл"}
+                      </label>
+                    </Button>
+                    <Input
+                      id="part-edit-file"
+                      type="file"
+                      accept={ALLOWED_PART_FILE_ACCEPT}
+                      className="hidden"
+                      onChange={handlePartFileChange}
+                      disabled={isUpdating}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      PNG, JPG, JPEG, PDF до 10 МБ
+                    </span>
+                  </div>
+                  {(selectedFile || formFile) && (
+                    <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                      <span className="truncate">
+                        {selectedFile?.name || formatPartFileName(formFile)}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearSelectedFile}
+                        disabled={isUpdating}
+                        aria-label="Удалить файл"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                  {fileError && <p className="text-sm text-red-600">{fileError}</p>}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -699,7 +831,7 @@ export default function EditPartPage() {
               </Link>
               <Button type="submit" disabled={isUpdating}>
                 <Save className="h-4 w-4 mr-2" />
-                Сохранить
+                {isUploadingFile ? "Загрузка..." : "Сохранить"}
               </Button>
             </div>
           </div>

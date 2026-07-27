@@ -9,3 +9,4 @@ export { ManufacturerCard } from './manufacturer-card';
 export { OwnerCard } from './owner-card';
 export { SafetyInfoCard } from './safety-info-card';
 export { VesselCard } from './vessel-card';
+export { ModelImageCard } from './model-image-card';
