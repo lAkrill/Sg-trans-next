@@ -582,7 +582,7 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                 {field.fileHint || "PNG, JPG, JPEG, PDF до 10 МБ"}
               </span>
             </div>
-            {(pendingFiles[field.key] || fieldValue) && (
+            {Boolean(pendingFiles[field.key] || fieldValue) && (
               <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
                 <span className="truncate">
                   {pendingFiles[field.key]?.name || formatStoredFileName(fieldValue) || "Файл"}
