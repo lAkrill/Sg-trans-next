@@ -64,6 +64,27 @@ const editPartDefaultValues: DefaultValues<CreatePartFormData> = {
   model: "",
 };
 
+/** Строковые value для Radix Select: value="0" часто не отображается в триггере. */
+const LOCATION_SELECT_VALUES = {
+  none: "none",
+  depot: "depot",
+  wagon: "wagon",
+} as const;
+
+type LocationSelectValue = (typeof LOCATION_SELECT_VALUES)[keyof typeof LOCATION_SELECT_VALUES];
+
+function toLocationSelectValue(code: number | null | undefined): LocationSelectValue {
+  if (code === 1) return LOCATION_SELECT_VALUES.depot;
+  if (code === 2) return LOCATION_SELECT_VALUES.wagon;
+  return LOCATION_SELECT_VALUES.none;
+}
+
+function fromLocationSelectValue(value: string): number {
+  if (value === LOCATION_SELECT_VALUES.depot) return 1;
+  if (value === LOCATION_SELECT_VALUES.wagon) return 2;
+  return 0;
+}
+
 function convertDateOnlyToString(value: DateOnlyValue): string {
   if (!value) return "";
   if (typeof value === "string" && value) return value.split("T")[0] || value;
@@ -123,11 +144,28 @@ function manufactureYearDate(value: unknown): string | null {
   return null;
 }
 
+function parseLocationCode(raw: unknown): number | undefined {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
 function getLocationCode(part: PartDTO): number {
-  if (typeof part.code === "number") return part.code;
+  const parsed = parseLocationCode(part.code);
+  // Явный код вагона/депо — приоритет
+  if (parsed === 1 || parsed === 2) return parsed;
+  // Если code пустой/0 — выводим из связанных сущностей
   if (part.currentLocation?.id) return 2;
   if (part.depot?.id) return 1;
-  return 0;
+  return parsed ?? 0;
+}
+
+function formatDepotLabel(depot: { shortName?: string; name: string; code?: string }): string {
+  const name = depot.shortName || depot.name;
+  return depot.code ? `${name} (${depot.code})` : name;
 }
 
 function getServiceLifeYears(part: PartDTO): number | undefined {
@@ -142,9 +180,9 @@ function buildPartDefaultValues(part: PartDTO): DefaultValues<CreatePartFormData
   };
 
   return {
-    partTypeId: part.partType.id,
-    stampNumberId: part.stampNumber.id,
-    statusId: part.status.id,
+    partTypeId: part.partType?.id || "",
+    stampNumberId: part.stampNumber?.id || "",
+    statusId: part.status?.id || "",
     depotId: part.depot?.id || "",
     currentLocation: part.currentLocation?.id || "",
     serialNumber: part.serialNumber || "",
@@ -235,46 +273,29 @@ export default function EditPartPage() {
   );
   const mergedCisternOptions = mergeCurrentOption(
     cisternOptions,
-    part?.currentLocation
-      ? { value: part.currentLocation.id, label: part.currentLocation.number }
+    part?.currentLocation?.id
+      ? { value: part.currentLocation.id, label: part.currentLocation.number || part.currentLocation.id }
       : null
   );
   const mergedDepotOptions = mergeCurrentOption(
     depotOptions,
-    part?.depot
-      ? { value: part.depot.id, label: part.depot.shortName || part.depot.name }
+    part?.depot?.id
+      ? { value: part.depot.id, label: formatDepotLabel(part.depot) }
       : null
   );
 
   const form = useForm<CreatePartFormData>({
     resolver: zodResolver(createPartSchema),
-    defaultValues: editPartDefaultValues,
+    defaultValues: part ? buildPartDefaultValues(part) : editPartDefaultValues,
   });
 
-  const locationCode = form.watch("code");
+  const locationCode = form.watch("code") ?? 0;
 
   useEffect(() => {
-    if (part) {
-      form.reset(buildPartDefaultValues(part));
-    }
-  }, [form, part]);
-
-  useEffect(() => {
-    if (locationCode === 0) {
-      form.setValue("currentLocation", "");
-      form.setValue("depotId", "");
-      return;
-    }
-
-    if (locationCode === 2) {
-      form.setValue("depotId", "");
-      return;
-    }
-
-    if (locationCode === 1) {
-      form.setValue("currentLocation", "");
-    }
-  }, [form, locationCode]);
+    if (!part) return;
+    form.reset(buildPartDefaultValues(part));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [part?.id]);
 
   const isUpdating = updatePartMutation.isPending;
 
@@ -438,7 +459,7 @@ export default function EditPartPage() {
                     return (
                       <FormItem>
                         <FormLabel>Клеймо *</FormLabel>
-                        <Select onValueChange={field.onChange} value={stampNumberValue}>
+                        <Select disabled value={stampNumberValue}>
                           <FormControl>
                             <SelectTrigger className="w-full">
                               <span className="truncate">
@@ -467,7 +488,7 @@ export default function EditPartPage() {
                     <FormItem>
                       <FormLabel>Заводской номер *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Введите заводской номер" {...field} />
+                        <Input placeholder="Введите заводской номер" {...field} disabled />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -486,9 +507,7 @@ export default function EditPartPage() {
                           placeholder="Введите год производства"
                           {...field}
                           value={field.value || ""}
-                          onChange={(event) =>
-                            field.onChange(event.target.value ? parseInt(event.target.value) : undefined)
-                          }
+                          disabled
                         />
                       </FormControl>
                       <FormMessage />
@@ -503,8 +522,20 @@ export default function EditPartPage() {
                     <FormItem>
                       <FormLabel>Местоположение</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        value={String(field.value ?? 0)}
+                        key={`location-code-${part.id}`}
+                        onValueChange={(value) => {
+                          const code = fromLocationSelectValue(value);
+                          field.onChange(code);
+                          if (code === 0) {
+                            form.setValue("currentLocation", "");
+                            form.setValue("depotId", "");
+                          } else if (code === 2) {
+                            form.setValue("depotId", "");
+                          } else if (code === 1) {
+                            form.setValue("currentLocation", "");
+                          }
+                        }}
+                        value={toLocationSelectValue(field.value)}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full">
@@ -512,9 +543,9 @@ export default function EditPartPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="0">Не установлена</SelectItem>
-                          <SelectItem value="2">Вагон</SelectItem>
-                          <SelectItem value="1">Депо</SelectItem>
+                          <SelectItem value={LOCATION_SELECT_VALUES.none}>Не установлена</SelectItem>
+                          <SelectItem value={LOCATION_SELECT_VALUES.wagon}>Вагон</SelectItem>
+                          <SelectItem value={LOCATION_SELECT_VALUES.depot}>Депо</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

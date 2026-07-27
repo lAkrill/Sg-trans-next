@@ -150,11 +150,29 @@ const CATEGORY_LABELS = {
   fitments: "Арматура",
 } as const;
 
+/** Год из даты/строки; для "0", пустых и Invalid Date — "—". */
+const formatYear = (value?: string | number | null): string => {
+  if (value == null || value === "" || value === 0 || value === "0") return "—";
+  const raw = String(value).trim();
+  if (/^\d{4}$/.test(raw)) return raw;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "—";
+  const year = date.getFullYear();
+  return Number.isNaN(year) ? "—" : String(year);
+};
+
+const formatLocaleDate = (value?: string | null): string => {
+  if (!value || value === "0") return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("ru-RU");
+};
+
 const getPartDetails = (equipment: LastEquipmentDTO) => {
   const part = equipment.lastEquipment.part;
   const stamp = part?.stampInfo?.value || "—";
   const serial = part?.serialNumber || "—";
-  const year = part?.manufactureYear ? new Date(part.manufactureYear).getFullYear() : "—";
+  const year = formatYear(part?.manufactureYear);
   return `${stamp}; ${serial}; ${year}`;
 };
 
@@ -323,17 +341,11 @@ const WheelPairsTable = ({
                     <span>
                       {equipment.lastEquipment.part?.stampInfo?.value || "—"};{" "}
                       {equipment.lastEquipment.part?.serialNumber || "—"};{" "}
-                      {equipment.lastEquipment.part?.manufactureYear
-                        ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear()
-                        : "—"}{" "}
+                      {formatYear(equipment.lastEquipment.part?.manufactureYear)}{" "}
                     </span>
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.jobDepot?.code || "—"}</TableCell>
-                  <TableCell>
-                    {equipment.lastEquipment.jobDate
-                      ? new Date(equipment.lastEquipment.jobDate).getFullYear()
-                      : "—"}
-                  </TableCell>
+                  <TableCell>{formatYear(equipment.lastEquipment.jobDate)}</TableCell>
                   <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
                   <TableCell>
                     {equipment.lastEquipment.thicknessLeft && equipment.lastEquipment.thicknessRight
@@ -342,9 +354,7 @@ const WheelPairsTable = ({
                   </TableCell>
                   <TableCell>
                     {equipment.lastEquipment.document?.number || "—"};{" "}
-                    {equipment.lastEquipment.documentDate
-                      ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU")
-                      : "—"}
+                    {formatLocaleDate(equipment.lastEquipment.documentDate)}
                     <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
                   <TableCell className="text-center">
@@ -445,26 +455,16 @@ const TruckPartsTable = ({
                     <span>
                       {equipment.lastEquipment.part?.stampInfo?.value || "—"};{" "}
                       {equipment.lastEquipment.part?.serialNumber || "—"};{" "}
-                      {equipment.lastEquipment.part?.manufactureYear
-                        ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear()
-                        : "—"}{" "}
+                      {formatYear(equipment.lastEquipment.part?.manufactureYear)}{" "}
                     </span>
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.jobDepot?.code || "—"}</TableCell>
-                  <TableCell>
-                    {equipment.lastEquipment.jobDate
-                      ? equipment.lastEquipment.jobDate != "0"
-                        ? new Date(equipment.lastEquipment.jobDate).getFullYear()
-                        : "—"
-                      : "—"}
-                  </TableCell>
+                  <TableCell>{formatYear(equipment.lastEquipment.jobDate)}</TableCell>
                   <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
                   <TableCell>{equipment.lastEquipment.truckType || "—"}</TableCell>
                   <TableCell>
                     {equipment.lastEquipment.document?.number || "—"};{" "}
-                    {equipment.lastEquipment.documentDate
-                      ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU")
-                      : "—"}
+                    {formatLocaleDate(equipment.lastEquipment.documentDate)}
                     <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
                   <TableCell className="text-center">
@@ -494,9 +494,10 @@ const CouplerEquipmentTable = ({
   nonConformityMarks,
   onToggleNonConformity,
 }: NonConformityTableProps) => {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "—";
+  const formatMonthYear = (dateString?: string) => {
+    if (!dateString || dateString === "0") return "—";
     const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "—";
     return `${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}`;
   };
 
@@ -572,19 +573,15 @@ const CouplerEquipmentTable = ({
                     <span>
                       {equipment.lastEquipment.part?.stampInfo?.value || "—"};{" "}
                       {equipment.lastEquipment.part?.serialNumber || "—"};{" "}
-                      {equipment.lastEquipment.part?.manufactureYear
-                        ? new Date(equipment.lastEquipment.part?.manufactureYear).getFullYear()
-                        : "—"}{" "}
+                      {formatYear(equipment.lastEquipment.part?.manufactureYear)}{" "}
                     </span>
                   </TableCell>
                   <TableCell>{equipment.lastEquipment.jobDepot?.code || "—"}</TableCell>
-                  <TableCell>{formatDate(equipment.lastEquipment.documentDate)}</TableCell>
+                  <TableCell>{formatMonthYear(equipment.lastEquipment.documentDate)}</TableCell>
                   <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
                   <TableCell>
                     {equipment.lastEquipment.document?.number || "—"};{" "}
-                    {equipment.lastEquipment.documentDate
-                      ? new Date(equipment.lastEquipment.documentDate).toLocaleDateString("ru-RU")
-                      : "—"}
+                    {formatLocaleDate(equipment.lastEquipment.documentDate)}
                     <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
                   <TableCell className="text-center">
@@ -719,10 +716,7 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
     }
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("ru-RU");
-  };
+  const formatDate = (dateString?: string) => formatLocaleDate(dateString);
 
   const toggleNonConformity = (equipmentTypeId: string, checked: boolean) => {
     setNonConformityMarks((prev) => ({

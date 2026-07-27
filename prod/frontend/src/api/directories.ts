@@ -80,6 +80,9 @@ import type {
   CreateDocumentDTO,
   UpdateDocumentDTO,
   PaginatedDocumentsResponse,
+  DocumentsRegulatoryDTO,
+  CreateDocumentsRegulatoryDTO,
+  UpdateDocumentsRegulatoryDTO,
   StationDTO,
   CreateStationDTO,
   UpdateStationDTO,
@@ -89,6 +92,36 @@ import type {
   CreateCisternStatusDTO,
 } from '@/types/directories';
 import { CreateVesselDTO, PaginatedVesselsResponse, UpdateVesselDto, VesselDTO } from '@/types/vessels';
+
+const normalizeDocumentDto = (item: Record<string, unknown> | DocumentDTO): DocumentDTO => {
+  const raw = item as Record<string, unknown>;
+  return {
+    id: String(raw.id ?? raw.Id ?? ''),
+    number: String(raw.number ?? raw.Number ?? ''),
+    type: (raw.type ?? raw.Type ?? null) as number | null,
+    date: String(raw.date ?? raw.Date ?? ''),
+    author: (raw.author ?? raw.Author ?? null) as string | null,
+    price: (raw.price ?? raw.Price ?? null) as number | null,
+    note: (raw.note ?? raw.Note ?? null) as string | null,
+    file: (raw.file ?? raw.File ?? raw.fileName ?? raw.FileName ?? null) as string | null,
+  };
+};
+
+const normalizeDocumentsRegulatoryDto = (
+  item: Record<string, unknown> | DocumentsRegulatoryDTO
+): DocumentsRegulatoryDTO => {
+  const raw = item as Record<string, unknown>;
+  return {
+    id: String(raw.id ?? raw.Id ?? ''),
+    name: String(raw.name ?? raw.Name ?? ''),
+    number: (raw.number ?? raw.Number ?? null) as string | null,
+    date: String(raw.date ?? raw.Date ?? ''),
+    file: (raw.file ?? raw.File ?? raw.fileName ?? raw.FileName ?? null) as string | null,
+    url: (raw.url ?? raw.Url ?? null) as string | null,
+    updatedAt: (raw.updatedAt ?? raw.UpdatedAt ?? undefined) as string | undefined,
+    creatorId: (raw.creatorId ?? raw.CreatorId ?? undefined) as string | undefined,
+  };
+};
 
 // Generic CRUD operations for directories
 const createDirectoryApi = <T, CreateT, UpdateT>(endpoint: string) => ({
@@ -525,17 +558,22 @@ export const documentsApi = {
       pageSize: pageSize.toString(),
     });
     const response = await api.get(`/api/documents?${params.toString()}`);
-    return response.data;
+    const data = response.data as PaginatedDocumentsResponse;
+    return {
+      ...data,
+      items: Array.isArray(data?.items) ? data.items.map(normalizeDocumentDto) : [],
+    };
   },
 
   getAllWithoutPagination: async (): Promise<DocumentDTO[]> => {
     const response = await api.get('/api/documents/all');
-    return response.data;
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(normalizeDocumentDto);
   },
 
   getById: async (id: string): Promise<DocumentDTO> => {
     const response = await api.get(`/api/documents/${id}`);
-    return response.data;
+    return normalizeDocumentDto(response.data);
   },
 
   create: async (data: CreateDocumentDTO): Promise<string> => {
@@ -549,6 +587,33 @@ export const documentsApi = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/api/documents/${id}`);
+  },
+};
+
+// Documents Regulatory API
+export const documentsRegulatoryApi = {
+  getAll: async (): Promise<DocumentsRegulatoryDTO[]> => {
+    const response = await api.get('/api/documents-regulatory/all');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(normalizeDocumentsRegulatoryDto);
+  },
+
+  getById: async (id: string): Promise<DocumentsRegulatoryDTO> => {
+    const response = await api.get(`/api/documents-regulatory/${id}`);
+    return normalizeDocumentsRegulatoryDto(response.data);
+  },
+
+  create: async (data: CreateDocumentsRegulatoryDTO): Promise<DocumentsRegulatoryDTO> => {
+    const response = await api.post('/api/documents-regulatory', data);
+    return normalizeDocumentsRegulatoryDto(response.data);
+  },
+
+  update: async (id: string, data: UpdateDocumentsRegulatoryDTO): Promise<void> => {
+    await api.put(`/api/documents-regulatory/${id}`, data);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/api/documents-regulatory/${id}`);
   },
 };
 

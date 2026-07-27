@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Skeleton, Badge } from "@/components/ui";
 import { ArrowLeft, History, FileText, Wrench, Building2, Calendar, Truck } from "lucide-react";
 import { usePartById, usePartInstallationHistory } from "@/hooks";
+import { PartHistoryChangesCard } from "@/components/part/history-changes-card";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -191,6 +192,9 @@ export default function PartHistoryPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* История изменений технических характеристик */}
+      <PartHistoryChangesCard partId={partId} />
 
       {/* История комплектации */}
       <Card>

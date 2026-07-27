@@ -68,8 +68,6 @@ export default function PartsPage() {
     currentLocationIds: [],
     statusIds: [],
     models: [],
-    documentNumbers: [],
-    documentTypes: [],
   });
   const [visibleColumns, setVisibleColumns] = useState<string[]>([...DEFAULT_PART_VISIBLE_COLUMNS]);
   const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);

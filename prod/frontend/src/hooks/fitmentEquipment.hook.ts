@@ -50,8 +50,7 @@ export const useLastFitmentEquipmentsByCistern = (cisternId: string) => {
   return useQuery({
     queryKey: fitmentEquipmentKeys.lastByCistern(cisternId),
     queryFn: () => fitmentEquipmentApi.getLastByCistern(cisternId),
-    // Временно отключено
-    enabled: false && !!cisternId,
+    enabled: !!cisternId,
   });
 };
 

@@ -39,6 +39,13 @@ export const partTypesBaseConfig: BaseDirectoryConfig = {
       required: false,
       placeholder: "Введите описание",
     },
+    {
+      key: "weight",
+      label: "Средний вес (списание)",
+      type: "number",
+      required: false,
+      placeholder: "Введите вес",
+    },
   ],
 };
 
@@ -65,11 +72,13 @@ export const partTypesConfig: DirectoryConfig<PartTypeDTO, CreatePartTypeDTO, Up
     { key: "name", label: "Название" },
     { key: "code", label: "Код" },
     { key: "description", label: "Описание" },
+    { key: "weight", label: "Средний вес (списание)" },
   ],
-  createInitialData: () => ({ name: "", code: 0, description: "" }),
+  createInitialData: () => ({ name: "", code: 0, description: "", weight: 0 }),
   mapToFormData: (item: PartTypeDTO) => ({
     name: item.name,
     code: item.code,
     description: item.description,
+    weight: item.weight ?? 0,
   }),
 };

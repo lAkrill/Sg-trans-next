@@ -59,7 +59,7 @@ interface FitmentsFilterProps {
   children?: React.ReactNode;
 }
 
-const sortFieldOptions = [
+export const FITMENT_COLUMN_OPTIONS = [
   { value: 'fitmentType', label: 'Тип' },
   { value: 'model', label: 'Модель' },
   { value: 'serialNumber', label: 'Номер' },
@@ -74,6 +74,21 @@ const sortFieldOptions = [
   { value: 'manufacturer', label: 'Производитель' },
   { value: 'updatedAt', label: 'Дата обновления' },
   { value: 'createdId', label: 'Пользователь' },
+] as const;
+
+export const DEFAULT_FITMENT_VISIBLE_COLUMNS = [
+  'fitmentType',
+  'model',
+  'serialNumber',
+  'passportNumber',
+  'buildDate',
+  'lastRepairDate',
+  'periodRep',
+  'serviceLifeYears',
+  'extendedDate',
+  'code',
+  'locationFitment',
+  'updatedAt',
 ];
 
 const initialFilters: FitmentFilterCriteria = {
@@ -765,7 +780,7 @@ export function FitmentsFilter({
                   <CardTitle className="text-base">Видимые столбцы</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 space-y-2">
-                  {sortFieldOptions.map((option) => (
+                  {FITMENT_COLUMN_OPTIONS.map((option) => (
                     <div key={option.value} className="flex items-center space-x-2">
                       <Checkbox
                         id={`column-${option.value}`}

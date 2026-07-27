@@ -21,7 +21,10 @@ public static class ActionLogEndpoints
             .RequireAuthorization()
             .WithTags("ActionLog");
 
-        group.MapGet("/", async ([FromServices] ApplicationDbContext context, [FromQuery] int skip = 0, [FromQuery] int take = 50) =>
+        group.MapGet("/", async (
+            [FromServices] ApplicationDbContext context,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50) =>
         {
             var query = context.Set<WebApp.Data.Entities.Audit.ActionLog>()
                 .AsNoTracking()

@@ -14,6 +14,7 @@ import type {
 } from "@/types/directories";
 import type { DirectoryConfig } from "@/components/directory-manager";
 import { DirectoryConfig as BaseDirectoryConfig } from "./types";
+import { PersonalWagonCisternSelect } from "@/components/cistern-select";
 
 export const personalWagonDateRepsBaseConfig: BaseDirectoryConfig = {
   name: "personalWagonDateReps",
@@ -22,11 +23,11 @@ export const personalWagonDateRepsBaseConfig: BaseDirectoryConfig = {
   description: "Справочник персональных периодов ремонта вагона",
   fields: [
     {
-      key: "number",
+      key: "cisternId",
       label: "Номер вагона",
-      type: "text",
+      type: "custom",
       required: true,
-      placeholder: "Введите номер вагона",
+      customComponent: PersonalWagonCisternSelect,
     },
     {
       key: "majorRep",
@@ -77,9 +78,15 @@ export const personalWagonDateRepsConfig: DirectoryConfig<
   fields: personalWagonDateRepsBaseConfig.fields.map((field) => ({
     key: field.key,
     label: field.label,
-    type: field.type === "boolean" || field.type === "select" || field.type === "textarea" ? "text" : field.type,
+    type:
+      field.type === "custom"
+        ? "custom"
+        : field.type === "boolean" || field.type === "select" || field.type === "textarea"
+          ? "text"
+          : field.type,
     required: field.required,
     placeholder: field.placeholder,
+    customComponent: field.customComponent,
   })),
   hooks: {
     useGetAll: usePersonalWagonDateReps,
@@ -95,10 +102,10 @@ export const personalWagonDateRepsConfig: DirectoryConfig<
     { key: "intermediateTest", label: "Промежуточное испытание" },
     { key: "periodicTest", label: "Периодическое испытание" },
     { key: "pprRep", label: "ППР ремонт" },
-
   ],
   createInitialData: () => ({
     cisternNum: "",
+    cisternId: "",
     majorRep: 0,
     depoRep: 0,
     intermediateTest: 0,
@@ -107,6 +114,7 @@ export const personalWagonDateRepsConfig: DirectoryConfig<
   }),
   mapToFormData: (item: PersonalWagonDateRepDTO) => ({
     cisternNum: item.cisternNum,
+    cisternId: item.cisternId,
     majorRep: item.majorRep,
     depoRep: item.depoRep,
     intermediateTest: item.intermediateTest,
