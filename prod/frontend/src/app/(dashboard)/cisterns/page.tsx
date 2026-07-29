@@ -41,6 +41,7 @@ import {
 } from "@/hooks";
 import { cisternsApi } from "@/api/cisterns";
 import { CisternFilters } from "@/components/cisterns/cistern-filters";
+import { getCisternColumnLabel } from "@/lib/cisterns/columns";
 import type {
   CisternsFilter,
   RailwayCisternDetailDTO,
@@ -55,6 +56,83 @@ type DisplayCistern = RailwayCisternDetailDTO | RailwayCisternListDTO;
 
 const SERVICE_END_DATE_COLUMN = "serviceenddate";
 const EXTENSION_SERVICE_LIFE_DATE_COLUMN = "extensionservicelifedate";
+const RE_REGISTRATION_DATE_COLUMN = "reregistrationdate";
+const RE_REGISTRATION_NEXT_DATE_COLUMN = "reregistrationnextdate";
+
+/** Ключи столбцов (lowercase) → свойства DTO (camelCase) */
+const COLUMN_PROPERTY_ALIASES: Record<string, string> = {
+  [RE_REGISTRATION_DATE_COLUMN]: "reRegistrationDate",
+  [RE_REGISTRATION_NEXT_DATE_COLUMN]: "reRegistrationNextDate",
+  [EXTENSION_SERVICE_LIFE_DATE_COLUMN]: "extensionServiceLifeDate",
+  builddate: "buildDate",
+  commissioningdate: "commissioningDate",
+  registrationdate: "registrationDate",
+  createdat: "createdAt",
+  updatedat: "updatedAt",
+  axlecount: "axleCount",
+  fillingvolume: "fillingVolume",
+  loadcapacity: "loadCapacity",
+  tareweight: "tareWeight",
+  tareweight2: "tareWeight2",
+  tareweight3: "tareWeight3",
+  initialtareweight: "initialTareWeight",
+  serialnumber: "serialNumber",
+  registrationnumber: "registrationNumber",
+  dangerclass: "dangerClass",
+  servicelifeyears: "serviceLifeYears",
+  techconditions: "techConditions",
+  testpressure: "testPressure",
+  periodmajorrepair: "periodMajorRepair",
+  periodperiodictest: "periodPeriodicTest",
+  periodintermediatetest: "periodIntermediateTest",
+  perioddepotrepair: "periodDepotRepair",
+};
+
+const isDateLikeField = (field: string, propertyName: string): boolean => {
+  const key = `${field} ${propertyName}`.toLowerCase();
+  return key.includes("date") || key.includes("period");
+};
+
+const resolveRecordProperty = (
+  record: Record<string, unknown>,
+  field: string
+): { propertyName: string; value: unknown } | null => {
+  const aliased = COLUMN_PROPERTY_ALIASES[field];
+  if (aliased && aliased in record) {
+    return { propertyName: aliased, value: record[aliased] };
+  }
+
+  if (!field.includes(".")) {
+    const matchedKey = Object.keys(record).find(
+      (key) => key.toLowerCase() === field.toLowerCase()
+    );
+    if (matchedKey) {
+      return { propertyName: matchedKey, value: record[matchedKey] };
+    }
+  }
+
+  const toCamelCase = (str: string) =>
+    str
+      .split(".")
+      .map((part, index) =>
+        index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)
+      )
+      .join("");
+
+  const propertyName = aliased ?? toCamelCase(field);
+  if (propertyName in record) {
+    return { propertyName, value: record[propertyName] };
+  }
+
+  return null;
+};
+
+const formatDisplayDate = (value: string): string => {
+  const parsed = parseLocalDate(value);
+  return parsed
+    ? parsed.toLocaleDateString("ru-RU")
+    : new Date(value).toLocaleDateString("ru-RU");
+};
 
 const DEFAULT_SORT_FIELDS: SortCriteria[] = [
   { fieldName: "railwaycisternstatus.name", descending: true },
@@ -191,6 +269,11 @@ const getServiceEndDateRowClass = (cistern: DisplayCistern): string | undefined 
 
 // Helper function to safely get display values
 const getDisplayValue = (cistern: DisplayCistern, field: string): string => {
+  const value = getRawDisplayValue(cistern, field);
+  return value.trim() === "" ? "-" : value;
+};
+
+const getRawDisplayValue = (cistern: DisplayCistern, field: string): string => {
   if (field === SERVICE_END_DATE_COLUMN) {
     return formatServiceEndDate(cistern);
   }
@@ -198,24 +281,16 @@ const getDisplayValue = (cistern: DisplayCistern, field: string): string => {
     return formatExtensionServiceLifeDate(cistern);
   }
 
-  // Convert field name to camelCase property name
-  const toCamelCase = (str: string) => {
-    return str
-      .split(".")
-      .map((part, index) => (index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)))
-      .join("");
-  };
-
-  const propertyName = toCamelCase(field);
+  const record = cistern as unknown as Record<string, unknown>;
+  const resolved = resolveRecordProperty(record, field);
 
   // Try to get value from the object directly (for dynamic objects from filter API)
-  if (cistern && typeof cistern === "object" && propertyName in cistern) {
-    const value = (cistern as unknown as Record<string, unknown>)[propertyName];
-    if (value == null) return "";
+  if (resolved) {
+    const { propertyName, value } = resolved;
+    if (value == null || value === "") return "";
 
-    // Format dates
-    if (field.includes("date") && typeof value === "string") {
-      return new Date(value).toLocaleDateString("ru-RU");
+    if (typeof value === "string" && isDateLikeField(field, propertyName)) {
+      return formatDisplayDate(value);
     }
 
     return String(value);
@@ -224,17 +299,19 @@ const getDisplayValue = (cistern: DisplayCistern, field: string): string => {
   const detailCistern = cistern as RailwayCisternDetailDTO;
   switch (field) {
     case "number":
-      return detailCistern.number;
+      return detailCistern.number || "";
     case "manufacturer.name":
       return detailCistern.manufacturer?.name || "";
     case "builddate":
-      return new Date(detailCistern.buildDate).toLocaleDateString("ru-RU");
+      return detailCistern.buildDate ? formatDisplayDate(detailCistern.buildDate) : "";
     case "type.name":
       return detailCistern.type?.name || "";
     case "model.name":
       return detailCistern.model?.name || "";
     case "owner.name":
       return detailCistern.owner?.name || "";
+    case "registrar.name":
+      return detailCistern.registrar?.name || "";
     case "railwaycisternstatus.name":
       return detailCistern.railwayCisternStatus?.name || "";
     case "affiliation.value":
@@ -263,14 +340,40 @@ const getDisplayValue = (cistern: DisplayCistern, field: string): string => {
       return detailCistern.length?.toString() || "";
     case "commissioningdate":
       return detailCistern.commissioningDate
-        ? new Date(detailCistern.commissioningDate).toLocaleDateString("ru-RU")
+        ? formatDisplayDate(detailCistern.commissioningDate)
         : "";
     case "registrationdate":
-      return detailCistern.registrationDate ? new Date(detailCistern.registrationDate).toLocaleDateString("ru-RU") : "";
+      return detailCistern.registrationDate
+        ? formatDisplayDate(detailCistern.registrationDate)
+        : "";
+    case RE_REGISTRATION_DATE_COLUMN:
+      return detailCistern.reRegistrationDate
+        ? formatDisplayDate(detailCistern.reRegistrationDate)
+        : "";
+    case RE_REGISTRATION_NEXT_DATE_COLUMN:
+      return detailCistern.reRegistrationNextDate
+        ? formatDisplayDate(detailCistern.reRegistrationNextDate)
+        : "";
+    case "periodmajorrepair":
+      return detailCistern.periodMajorRepair
+        ? formatDisplayDate(detailCistern.periodMajorRepair)
+        : "";
+    case "periodperiodictest":
+      return detailCistern.periodPeriodicTest
+        ? formatDisplayDate(detailCistern.periodPeriodicTest)
+        : "";
+    case "periodintermediatetest":
+      return detailCistern.periodIntermediateTest
+        ? formatDisplayDate(detailCistern.periodIntermediateTest)
+        : "";
+    case "perioddepotrepair":
+      return detailCistern.periodDepotRepair
+        ? formatDisplayDate(detailCistern.periodDepotRepair)
+        : "";
     case "createdat":
-      return detailCistern.createdAt ? new Date(detailCistern.createdAt).toLocaleDateString("ru-RU") : "";
+      return detailCistern.createdAt ? formatDisplayDate(detailCistern.createdAt) : "";
     case "updatedat":
-      return detailCistern.updatedAt ? new Date(detailCistern.updatedAt).toLocaleDateString("ru-RU") : "";
+      return detailCistern.updatedAt ? formatDisplayDate(detailCistern.updatedAt) : "";
     default:
       return "";
   }
@@ -775,61 +878,7 @@ export default function CisternsPage() {
                         key={column}
                         className={column === "type.name" ? "w-[16rem] min-w-[16rem]" : undefined}
                       >
-                        {column === "number"
-                          ? "Номер"
-                          : column === "manufacturer.name"
-                          ? "Производитель"
-                          : column === "builddate"
-                          ? <>Дата <br />постройки</>
-                          : column === "serviceenddate"
-                          ? <>Конец срока<br />эксплуатации</>
-                          : column === "extensionservicelifedate"
-                          ? <>Продление срока<br />эксплуатации</>
-                          : column === "type.name"
-                          ? "Тип"
-                          : column === "model.name"
-                          ? "Модель"
-                          : column === "owner.name"
-                          ? "Собственник"
-                          : column === "railwaycisternstatus.name"
-                          ? "Статус"
-                          : column === "affiliation.value"
-                          ? "Принадлежность"
-                          : column === "axlecount"
-                          ? "Количество осей"
-                          : column === "volume"
-                          ? "Объем"
-                          : column === "fillingvolume"
-                          ? <>Объем<br />заполнения</>
-                          : column === "loadcapacity"
-                          ? "Грузоподъемность"
-                          : column === "tareweight"
-                          ? "Тара"
-                          : column === "substance"
-                          ? "Вещество"
-                          : column === "serialnumber"
-                          ? "Серийный номер"
-                          : column === "registrationnumber"
-                          ? <>Регистрационный<br />номер</>
-                          : column === "dangerclass"
-                          ? <>Класс<br />опасности</>
-                          : column === "servicelife"
-                          ? <>Срок службы<br />(лет)</>
-                          : column === "length"
-                          ? "Длина"
-                          : column === "commissioningdate"
-                          ? <>Дата ввода<br />в эксплуатацию</>
-                          : column === "registrationdate"
-                          ? <>Дата <br />регистрации</>
-                          : column === "createdat"
-                          ? <>Дата <br />создания</>
-                          : column === "updatedat"
-                          ? <>Дата <br />обновления</>
-                          : column === "servicelifeyears"
-                          ? <>Срок службы<br />(лет)</>
-                          : column === "notes"
-                          ? "Заметки"
-                          : column}
+                        {getCisternColumnLabel(column)}
                       </TableHead>
                     ))}
                     <TableHead className="text-right">Действия</TableHead>

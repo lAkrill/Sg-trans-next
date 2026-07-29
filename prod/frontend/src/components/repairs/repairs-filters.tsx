@@ -6,6 +6,7 @@ import {
   Button,
   Input,
   Label,
+  Textarea,
   Select,
   SelectContent,
   SelectItem,
@@ -371,6 +372,14 @@ const parseCommaList = (s: string): string[] =>
     .map((x) => x.trim())
     .filter(Boolean);
 
+/** Номера вагонов: с новой строки и/или через запятую */
+function parseWagonNumbersList(s: string): string[] {
+  return s
+    .split(/[\n\r,]+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 export type RepairsFilterTableType = "in" | "out";
 
 interface RepairsFiltersProps {
@@ -426,12 +435,56 @@ export function RepairsFilters({
   onlyUnmatchedRepairsDisabled = false,
 }: RepairsFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [numbersText, setNumbersText] = useState("");
+  const [roadNamesText, setRoadNamesText] = useState("");
+  const [vu23Text, setVu23Text] = useState("");
+  const [stationNamesText, setStationNamesText] = useState("");
+  const [vu36Text, setVu36Text] = useState("");
 
   const { data: depots = [] } = useDepots();
   const { data: repairTypes = [] } = useRepairTypes();
 
   const sortOptions =
     filterTableType === "in" ? REPAIRS_IN_SORT_OPTIONS : REPAIRS_OUT_SORT_OPTIONS;
+
+  const syncListTexts = useCallback(
+    (tableType: RepairsFilterTableType) => {
+      const nums =
+        tableType === "in" ? filtersIn.cisternNumbers : filtersOut.cisternNumbers;
+      const roads =
+        tableType === "in" ? filtersIn.roadNames : filtersOut.roadNames;
+      setNumbersText(nums?.join("\n") ?? "");
+      setRoadNamesText(roads?.join(", ") ?? "");
+      setVu23Text(filtersIn.vu23?.join(", ") ?? "");
+      setStationNamesText(filtersIn.stationNames?.join(", ") ?? "");
+      setVu36Text(filtersOut.vu36?.join(", ") ?? "");
+    },
+    [
+      filtersIn.cisternNumbers,
+      filtersIn.roadNames,
+      filtersIn.vu23,
+      filtersIn.stationNames,
+      filtersOut.cisternNumbers,
+      filtersOut.roadNames,
+      filtersOut.vu36,
+    ]
+  );
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      setIsOpen(open);
+      if (open) syncListTexts(filterTableType);
+    },
+    [filterTableType, syncListTexts]
+  );
+
+  const handleFilterTableTypeChange = useCallback(
+    (t: RepairsFilterTableType) => {
+      onFilterTableTypeChange(t);
+      if (isOpen) syncListTexts(t);
+    },
+    [isOpen, onFilterTableTypeChange, syncListTexts]
+  );
 
   const updateFilterIn = useCallback(
     <K extends keyof RepairsInFilterCriteria>(
@@ -452,6 +505,41 @@ export function RepairsFilters({
     },
     [filtersOut, onFiltersOutChange]
   );
+
+  const handleNumbersChange = useCallback(
+    (text: string) => {
+      setNumbersText(text);
+      const list = parseWagonNumbersList(text);
+      if (filterTableType === "in") {
+        updateFilterIn("cisternNumbers", list.length ? list : undefined);
+      } else {
+        updateFilterOut("cisternNumbers", list.length ? list : undefined);
+      }
+    },
+    [filterTableType, updateFilterIn, updateFilterOut]
+  );
+
+  const handleRoadNamesChange = useCallback(
+    (text: string) => {
+      setRoadNamesText(text);
+      const list = parseCommaList(text);
+      if (filterTableType === "in") {
+        updateFilterIn("roadNames", list.length ? list : undefined);
+      } else {
+        updateFilterOut("roadNames", list.length ? list : undefined);
+      }
+    },
+    [filterTableType, updateFilterIn, updateFilterOut]
+  );
+
+  const handleClear = useCallback(() => {
+    setNumbersText("");
+    setRoadNamesText("");
+    setVu23Text("");
+    setStationNamesText("");
+    setVu36Text("");
+    onClearFilters();
+  }, [onClearFilters]);
 
   const addSortField = useCallback(() => {
     const defaultField =
@@ -479,7 +567,7 @@ export function RepairsFilters({
   );
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         <Button variant="outline" className="relative">
           <Filter className="h-4 w-4 mr-2" />
@@ -495,7 +583,7 @@ export function RepairsFilters({
         <SheetHeader className="flex-shrink-0">
           <SheetTitle className="flex items-center justify-between">
             <span>Фильтры ремонтов</span>
-            <Button variant="outline" size="sm" onClick={onClearFilters}>
+            <Button variant="outline" size="sm" onClick={handleClear}>
               Очистить
             </Button>
           </SheetTitle>
@@ -511,7 +599,9 @@ export function RepairsFilters({
                 <CardContent className="pt-0">
                   <Select
                     value={filterTableType}
-                    onValueChange={(v) => onFilterTableTypeChange(v as RepairsFilterTableType)}
+                    onValueChange={(v) =>
+                      handleFilterTableTypeChange(v as RepairsFilterTableType)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -572,31 +662,20 @@ export function RepairsFilters({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col gap-2">
-                    <Label>№ Вагона (через запятую)</Label>
-                    <Input
-                      placeholder="Например: 12345678, 87654321"
-                      value={
-                        (filterTableType === "in"
-                          ? filtersIn.cisternNumbers
-                          : filtersOut.cisternNumbers
-                        )?.join(", ") ?? ""
+                    <Label>Номера вагонов (с новой строки или через запятую)</Label>
+                    <Textarea
+                      placeholder={
+                        "По одному номеру в строке, например:\n12345678\n87654321\n\nили в одну строку: 12345678, 87654321"
                       }
-                      onChange={(e) => {
-                        const list = parseCommaList(e.target.value);
-                        if (filterTableType === "in") {
-                          updateFilterIn(
-                            "cisternNumbers",
-                            list.length ? list : undefined
-                          );
-                        } else {
-                          updateFilterOut(
-                            "cisternNumbers",
-                            list.length ? list : undefined
-                          );
-                        }
-                      }}
-                      className="h-8"
+                      value={numbersText}
+                      onChange={(e) => handleNumbersChange(e.target.value)}
+                      rows={5}
+                      className="min-h-[5.5rem] resize-y text-sm font-mono"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Можно вводить номера столбиком (Enter) или списком через запятую — можно
+                      смешивать.
+                    </p>
                   </div>
 
                   <div className="flex flex-col gap-2">
@@ -671,26 +750,8 @@ export function RepairsFilters({
                     <Label>Дороги (названия через запятую)</Label>
                     <Input
                       placeholder="Например: ОЖД, СЖД"
-                      value={
-                        (filterTableType === "in"
-                          ? filtersIn.roadNames
-                          : filtersOut.roadNames
-                        )?.join(", ") ?? ""
-                      }
-                      onChange={(e) => {
-                        const list = parseCommaList(e.target.value);
-                        if (filterTableType === "in") {
-                          updateFilterIn(
-                            "roadNames",
-                            list.length ? list : undefined
-                          );
-                        } else {
-                          updateFilterOut(
-                            "roadNames",
-                            list.length ? list : undefined
-                          );
-                        }
-                      }}
+                      value={roadNamesText}
+                      onChange={(e) => handleRoadNamesChange(e.target.value)}
                       className="h-8"
                     />
                   </div>
@@ -701,15 +762,16 @@ export function RepairsFilters({
                         <Label>ВУ23 (через запятую)</Label>
                         <Input
                           placeholder="Коды ВУ23"
-                          value={filtersIn.vu23?.join(", ") ?? ""}
-                          onChange={(e) =>
+                          value={vu23Text}
+                          onChange={(e) => {
+                            const text = e.target.value;
+                            setVu23Text(text);
+                            const list = parseCommaList(text);
                             updateFilterIn(
                               "vu23",
-                              parseCommaList(e.target.value).length
-                                ? parseCommaList(e.target.value)
-                                : undefined
-                            )
-                          }
+                              list.length ? list : undefined
+                            );
+                          }}
                           className="h-8"
                         />
                       </div>
@@ -717,15 +779,16 @@ export function RepairsFilters({
                         <Label>Станции (названия через запятую)</Label>
                         <Input
                           placeholder="Названия станций"
-                          value={filtersIn.stationNames?.join(", ") ?? ""}
-                          onChange={(e) =>
+                          value={stationNamesText}
+                          onChange={(e) => {
+                            const text = e.target.value;
+                            setStationNamesText(text);
+                            const list = parseCommaList(text);
                             updateFilterIn(
                               "stationNames",
-                              parseCommaList(e.target.value).length
-                                ? parseCommaList(e.target.value)
-                                : undefined
-                            )
-                          }
+                              list.length ? list : undefined
+                            );
+                          }}
                           className="h-8"
                         />
                       </div>
@@ -744,15 +807,16 @@ export function RepairsFilters({
                         <Label>ВУ36 (через запятую)</Label>
                         <Input
                           placeholder="Коды ВУ36"
-                          value={filtersOut.vu36?.join(", ") ?? ""}
-                          onChange={(e) =>
+                          value={vu36Text}
+                          onChange={(e) => {
+                            const text = e.target.value;
+                            setVu36Text(text);
+                            const list = parseCommaList(text);
                             updateFilterOut(
                               "vu36",
-                              parseCommaList(e.target.value).length
-                                ? parseCommaList(e.target.value)
-                                : undefined
-                            )
-                          }
+                              list.length ? list : undefined
+                            );
+                          }}
                           className="h-8"
                         />
                       </div>

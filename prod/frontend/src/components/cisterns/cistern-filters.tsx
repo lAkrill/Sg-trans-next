@@ -6,6 +6,7 @@ import {
   Button,
   Input,
   Label,
+  Textarea,
   Select,
   SelectContent,
   SelectItem,
@@ -47,6 +48,7 @@ import {
   useOwners,
   useRegistrars,
   useAffiliations,
+  useCisternStatuses,
   useFilterTypes,
   useSavedFiltersByType,
   useCreateSavedFilter,
@@ -54,6 +56,7 @@ import {
 } from "@/hooks";
 import type { FilterCriteria, SortCriteria, SavedFilter } from "@/types/cisterns";
 import type { FilterTypeDTO } from "@/types/directories";
+import { CISTERN_COLUMN_OPTIONS } from "@/lib/cisterns/columns";
 import { cn } from "@/lib/utils";
 
 interface CisternFiltersProps {
@@ -88,6 +91,14 @@ interface DateRangeInputProps {
   value: { from?: string; to?: string };
   onChange: (value: { from?: string; to?: string }) => void;
   onClear?: () => void;
+}
+
+/** Номера вагонов: с новой строки и/или через запятую */
+function parseWagonNumbersList(s: string): string[] {
+  return s
+    .split(/[\n\r,]+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
 const MultiSelect: React.FC<MultiSelectProps> = ({ placeholder, options, value, onChange, onClear }) => {
@@ -350,6 +361,7 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [filterName, setFilterName] = useState("");
   const [selectedSavedFilter, setSelectedSavedFilter] = useState<string>("");
+  const [numbersText, setNumbersText] = useState("");
 
   // API hooks
   const createSavedFilterMutation = useCreateSavedFilter();
@@ -371,6 +383,19 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
   const { data: owners = [] } = useOwners();
   const { data: registrars = [] } = useRegistrars();
   const { data: affiliations = [] } = useAffiliations();
+  const { data: cisternStatuses = [] } = useCisternStatuses();
+
+  const syncNumbersText = useCallback((nextFilters: FilterCriteria) => {
+    setNumbersText(nextFilters.numbers?.join("\n") ?? "");
+  }, []);
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      setIsOpen(open);
+      if (open) syncNumbersText(filters);
+    },
+    [filters, syncNumbersText]
+  );
 
   const updateFilter = useCallback(
     <K extends keyof FilterCriteria>(key: K, value: FilterCriteria[K]) => {
@@ -378,6 +403,20 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
     },
     [filters, onFiltersChange]
   );
+
+  const handleNumbersChange = useCallback(
+    (text: string) => {
+      setNumbersText(text);
+      const list = parseWagonNumbersList(text);
+      updateFilter("numbers", list.length ? list : undefined);
+    },
+    [updateFilter]
+  );
+
+  const handleClear = useCallback(() => {
+    setNumbersText("");
+    onClearFilters();
+  }, [onClearFilters]);
 
   const addSortField = useCallback(() => {
     onSortFieldsChange([...sortFields, { fieldName: "number", descending: false }]);
@@ -419,6 +458,7 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
   const handleLoadSavedFilter = (savedFilter: SavedFilter) => {
     if (savedFilter.filters) {
       onFiltersChange(savedFilter.filters);
+      syncNumbersText(savedFilter.filters);
     }
     if (savedFilter.sortFields) {
       onSortFieldsChange(savedFilter.sortFields);
@@ -437,55 +477,14 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
     }
   };
 
-  const sortFieldOptions = [
-    { value: "number", label: "Номер" },
-    { value: "manufacturer.name", label: "Производитель" },
-    { value: "builddate", label: "Дата постройки" },
-    { value: "serviceenddate", label: "Конец срока эксплуатации" },
-    { value: "extensionservicelifedate", label: "Продление срока эксплуатации" },
-    { value: "tareweight", label: "Тара" },
-    { value: "loadcapacity", label: "Грузоподъемность" },
-    { value: "length", label: "Длина" },
-    { value: "axlecount", label: "Количество осей" },
-    { value: "volume", label: "Объем" },
-    { value: "fillingvolume", label: "Заполняемый объем" },
-    { value: "initialtareweight", label: "Начальный вес тары" },
-    { value: "type.name", label: "Тип" },
-    { value: "model.name", label: "Модель" },
-    { value: "commissioningdate", label: "Дата ввода в эксплуатацию" },
-    { value: "serialnumber", label: "Серийный номер" },
-    { value: "registrationnumber", label: "Регистрационный номер" },
-    { value: "registrationdate", label: "Дата регистрации" },
-    { value: "registrar.name", label: "Регистратор" },
-    { value: "notes", label: "Примечания" },
-    { value: "owner.name", label: "Собственник" },
-    { value: "railwaycisternstatus.name", label: "Статус" },
-    { value: "techconditions", label: "Техническое состояние" },
-    { value: "pripiska", label: "Приписка" },
-    { value: "reregistrationdate", label: "Дата перерегистрации" },
-    { value: "pressure", label: "Давление" },
-    { value: "testpressure", label: "Испытательное давление" },
-    { value: "rent", label: "Аренда" },
-    { value: "affiliation.value", label: "Принадлежность" },
-    { value: "servicelifeyears", label: "Срок службы (лет)" },
-    { value: "periodmajorrepair", label: "Период капитального ремонта" },
-    { value: "periodperiodictest", label: "Период периодического освидетельствования" },
-    { value: "periodintermediatetest", label: "Период промежуточного освидетельствования" },
-    { value: "perioddepotrepair", label: "Период депонентского ремонта" },
-    { value: "dangerclass", label: "Класс опасности" },
-    { value: "substance", label: "Вещество" },
-    { value: "tareweight2", label: "Тара 2" },
-    { value: "tareweight3", label: "Тара 3" },
-    { value: "createdat", label: "Дата создания" },
-    { value: "updatedat", label: "Дата обновления" },
-  ];
+  const sortFieldOptions = CISTERN_COLUMN_OPTIONS;
 
   const sortableFieldOptions = sortFieldOptions.filter(
     (option) => option.value !== "serviceenddate"
   );
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         <Button variant="outline" className="relative">
           <Filter className="h-4 w-4 mr-2" />
@@ -536,7 +535,7 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                   </DialogContent>
                 </Dialog>
               )}
-              <Button variant="outline" size="sm" onClick={onClearFilters}>
+              <Button variant="outline" size="sm" onClick={handleClear}>
                 Очистить
               </Button>
             </div>
@@ -560,28 +559,35 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                   <CardTitle className="text-base">Основная информация</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* <div className="flex flex-col gap-2">
-                    <Label htmlFor="number-prefix">Номер (префикс)</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="number-prefix"
-                        value={filters.numberPrefix ?? ""}
-                        onChange={(e) => updateFilter("numberPrefix", e.target.value || undefined)}
-                        placeholder="Введите начало номера"
-                        className="h-8"
-                      />
-                      {filters.numberPrefix && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateFilter("numberPrefix", undefined)}
-                          className="h-8 w-8 p-0 flex-shrink-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div> */}
+                  <div className="flex flex-col gap-2">
+                    <Label>Номера вагонов (с новой строки или через запятую)</Label>
+                    <Textarea
+                      placeholder={
+                        "По одному номеру в строке, например:\n12345678\n87654321\n\nили в одну строку: 12345678, 87654321"
+                      }
+                      value={numbersText}
+                      onChange={(e) => handleNumbersChange(e.target.value)}
+                      rows={5}
+                      className="min-h-[5.5rem] resize-y text-sm font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Можно вводить номера столбиком (Enter) или списком через запятую — можно
+                      смешивать.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="cistern-status">Статус</Label>
+                    <MultiSelect
+                      placeholder="Выберите статусы"
+                      options={cisternStatuses.map((s) => ({ id: s.id, name: s.name }))}
+                      value={filters.cisternStatusIds || []}
+                      onChange={(value) =>
+                        updateFilter("cisternStatusIds", value.length > 0 ? value : undefined)
+                      }
+                      onClear={() => updateFilter("cisternStatusIds", undefined)}
+                    />
+                  </div>
 
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="manufacturer">Производитель</Label>
@@ -750,6 +756,20 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                       onClear={() => updateFilter("affiliationIds", undefined)}
                     />
                   </div>
+
+                  <DateRangeInput
+                    label="Перерегистрация"
+                    value={filters.reRegistrationDate ?? {}}
+                    onChange={(value) => updateFilter("reRegistrationDate", value)}
+                    onClear={() => updateFilter("reRegistrationDate", undefined)}
+                  />
+
+                  <DateRangeInput
+                    label="Следующая перерегистрация"
+                    value={filters.reRegistrationNextDate ?? {}}
+                    onChange={(value) => updateFilter("reRegistrationNextDate", value)}
+                    onClear={() => updateFilter("reRegistrationNextDate", undefined)}
+                  />
                 </CardContent>
               </Card>
             </div>

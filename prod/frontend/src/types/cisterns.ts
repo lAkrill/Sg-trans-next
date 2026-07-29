@@ -157,6 +157,8 @@ export interface RailwayCisternListDTO {
   registrationDate: string;
   affiliationValue: string;
   axleCount: number;
+  reRegistrationDate?: string;
+  reRegistrationNextDate?: string;
 }
 
 export interface CreateRailwayCisternDTO {
@@ -282,6 +284,7 @@ export interface NumberRange {
 export interface FilterCriteria {
   numbers?: string[];
   numberPrefix?: string;
+  cisternStatusIds?: string[];
   manufacturerIds?: string[];
   buildDate?: DateRange;
   tareWeight?: NumberRange;
@@ -302,6 +305,7 @@ export interface FilterCriteria {
   techConditions?: string[];
   prispiski?: string[];
   reRegistrationDate?: DateRange;
+  reRegistrationNextDate?: DateRange;
   pressure?: NumberRange;
   testPressure?: NumberRange;
   rents?: string[];
