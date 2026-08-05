@@ -18,6 +18,7 @@ public class FitmentEquipmentConfiguration : IEntityTypeConfiguration<FitmentEqu
         entity.HasOne(fe => fe.RailwayCistern)
             .WithMany()
             .HasForeignKey(fe => fe.RailwayCisternsId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.NoAction);
 
         entity.HasOne(fe => fe.Fitment)

@@ -34,6 +34,8 @@ const getOperationLabel = (operation: number) => {
       return { text: "Снятие", variant: "destructive" as const };
     case 2:
       return { text: "Установка", variant: "default" as const };
+    case 3:
+      return { text: "ТО", variant: "secondary" as const };
     default:
       return { text: "Не указана", variant: "secondary" as const };
   }
@@ -67,11 +69,20 @@ const formatDocument = (item: FitmentEquipmentDTO) => {
   return `${number} (${author}; ${date})`;
 };
 
-export function FitmentEquipmentsTable() {
+interface FitmentEquipmentsTableProps {
+  /** Если задано — показывать только записи с указанными operation */
+  operations?: number[];
+  title?: string;
+}
+
+export function FitmentEquipmentsTable({
+  operations,
+  title = "Список привязок арматуры",
+}: FitmentEquipmentsTableProps) {
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const { data, isLoading, error } = useFitmentEquipments(pageNumber, pageSize);
+  const { data, isLoading, error } = useFitmentEquipments(pageNumber, pageSize, operations);
 
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
@@ -210,7 +221,7 @@ export function FitmentEquipmentsTable() {
     <Card>
       <CardHeader>
         <div className="flex gap-2 items-center">
-          <CardTitle>Список привязок арматуры</CardTitle>
+          <CardTitle>{title}</CardTitle>
           <CardDescription>Всего записей: {totalCount}</CardDescription>
         </div>
       </CardHeader>

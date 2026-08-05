@@ -43,6 +43,7 @@ import {
 } from "@/components/fitments-filter";
 import { FitmentEquipmentsTable } from "@/components/fitment-equipments-table";
 import { BindFitmentDialog } from "@/components/bind-fitment-dialog";
+import { AddFitmentMaintenanceDialog } from "@/components/add-fitment-maintenance-dialog";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/formatDate";
 import type {
@@ -59,6 +60,7 @@ export default function FitmentsPage() {
   const [isFiltered, setIsFiltered] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [bindFitmentOpen, setBindFitmentOpen] = useState(false);
+  const [maintenanceOpen, setMaintenanceOpen] = useState(false);
   const [currentFilters, setCurrentFilters] = useState<FitmentFilterCriteria>({
     fitmentTypeIds: [],
     serialNumbers: [],
@@ -450,10 +452,9 @@ export default function FitmentsPage() {
       </div>
 
       <Tabs defaultValue="fitments" className="space-y-3">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="fitments">
-            Арматура
-            </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="fitments">Арматура</TabsTrigger>
+          <TabsTrigger value="maintenance">Техническое обслуживание</TabsTrigger>
           <TabsTrigger value="bindings">Привязка арматуры</TabsTrigger>
         </TabsList>
 
@@ -662,6 +663,29 @@ export default function FitmentsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="maintenance" className="space-y-3">
+          <div className="flex flex-col gap-1 ml-2">
+            Техническое обслуживание арматуры
+          </div>
+
+          <div className="flex justify-end items-center gap-4">
+            <Button onClick={() => setMaintenanceOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Добавить запись
+            </Button>
+          </div>
+
+          <FitmentEquipmentsTable
+            operations={[3]}
+            title="Список технического обслуживания"
+          />
+
+          <AddFitmentMaintenanceDialog
+            open={maintenanceOpen}
+            onOpenChange={setMaintenanceOpen}
+          />
+        </TabsContent>
+
         <TabsContent value="bindings" className="space-y-3">
           <div className="flex flex-col gap-1 ml-2">
             Справочник привязок арматуры
@@ -674,7 +698,7 @@ export default function FitmentsPage() {
             </Button>
           </div>
 
-          <FitmentEquipmentsTable />
+          <FitmentEquipmentsTable operations={[1, 2]} />
 
           <BindFitmentDialog
             open={bindFitmentOpen}

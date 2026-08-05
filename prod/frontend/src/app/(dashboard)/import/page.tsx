@@ -100,7 +100,7 @@ const manualPartsImportInitialValues: ManualPartsImportFormData = {
   partsId: "",
   jobDepotsId: "",
   jobDate: "",
-  jobTypeId: "",
+  jobTypeId: "0",
   thicknessLeft: "0",
   thicknessRight: "0",
   truckType: "0",
@@ -133,6 +133,22 @@ const formatPartManufactureYear = (
     return manufactureYear.match(/^\d{4}/)?.[0] || manufactureYear;
   }
   return String(manufactureYear.year);
+};
+
+const isBolsterPartType = (partTypeName?: string) => {
+  if (!partTypeName) return false;
+  const name = partTypeName.toLowerCase();
+  return (
+    name.includes("надрессор") ||
+    name.includes("надрисор") ||
+    name.includes("bolster")
+  );
+};
+
+const isWheelPairPartType = (partTypeName?: string) => {
+  if (!partTypeName) return false;
+  const name = partTypeName.toLowerCase();
+  return name.includes("колес") || name.includes("wheel");
 };
 
 const formatRussianDate = (date?: string) => {
@@ -205,12 +221,18 @@ export default function ImportPage() {
       return response.data;
     },
   });
+  const selectedPartTypeId = equipmentTypes?.find(
+    (equipmentType) => equipmentType.id === manualPartsImportForm.equipmentTypeId
+  )?.partTypeId;
   const { data: parts, isLoading: partsLoading } = useQuery<PartDTO[]>({
-    queryKey: ["manual-parts-import", "parts"],
+    queryKey: ["manual-parts-import", "parts", selectedPartTypeId ?? null],
     queryFn: async () => {
-      const response = await api.get<PartDTO[]>("/api/parts/all");
-      return response.data;
+      const response = await api.get<PartDTO[]>("/api/parts/all", {
+        params: { typeId: selectedPartTypeId },
+      });
+      return Array.isArray(response.data) ? response.data : [];
     },
+    enabled: !!selectedPartTypeId,
   });
   const cisternOptions =
     cisternIdAndNumbers?.map((cistern) => ({
@@ -254,6 +276,24 @@ export default function ImportPage() {
         part.manufactureYear
       )})`,
     })) || [];
+  const selectedEquipmentType = equipmentTypes?.find(
+    (equipmentType) => equipmentType.id === manualPartsImportForm.equipmentTypeId
+  );
+  const selectedPart = parts?.find((part) => part.id === manualPartsImportForm.partsId);
+  const selectedTypeNames = [
+    selectedEquipmentType?.name,
+    selectedEquipmentType?.partTypeName,
+    selectedPart?.partType?.name,
+  ];
+  const isBolsterSelected = selectedTypeNames.some(isBolsterPartType);
+  const isWheelPairSelected = selectedTypeNames.some(isWheelPairPartType);
+  const visibleManualPartsImportFields = manualPartsImportFields.filter((field) => {
+    if (field.name === "truckType") return isBolsterSelected;
+    if (field.name === "thicknessLeft" || field.name === "thicknessRight") {
+      return isWheelPairSelected;
+    }
+    return true;
+  });
 
   const getUploadErrorMessage = (err: unknown) => {
     if (!err || typeof err !== "object" || !("response" in err)) return null;
@@ -329,11 +369,37 @@ export default function ImportPage() {
     value: string
   ) => {
     setManualPartsImportStatus(null);
-    setManualPartsImportForm((current) => ({
-      ...current,
-      [field]: value,
-      ...(field === "operation" && value !== "2" ? { railwayCisternsId: "" } : {}),
-    }));
+    setManualPartsImportForm((current) => {
+      const nextForm = {
+        ...current,
+        [field]: value,
+        ...(field === "operation" && value !== "2" ? { railwayCisternsId: "" } : {}),
+        ...(field === "operation" && value === "2" ? { defectsId: "", depotsId: "" } : {}),
+        ...(field === "equipmentTypeId" ? { partsId: "" } : {}),
+      };
+
+      if (field === "equipmentTypeId" || field === "partsId") {
+        const equipmentType =
+          field === "equipmentTypeId"
+            ? equipmentTypes?.find((item) => item.id === value)
+            : equipmentTypes?.find((item) => item.id === nextForm.equipmentTypeId);
+        const part =
+          field === "partsId"
+            ? parts?.find((item) => item.id === value)
+            : parts?.find((item) => item.id === nextForm.partsId);
+        const typeNames = [equipmentType?.name, equipmentType?.partTypeName, part?.partType?.name];
+
+        if (!typeNames.some(isBolsterPartType)) {
+          nextForm.truckType = "0";
+        }
+        if (!typeNames.some(isWheelPairPartType)) {
+          nextForm.thicknessLeft = "0";
+          nextForm.thicknessRight = "0";
+        }
+      }
+
+      return nextForm;
+    });
   };
 
   const handleManualDocumentChange = (documentId: string) => {
@@ -390,9 +456,17 @@ export default function ImportPage() {
         manualPartsImportForm.operation === "2"
           ? manualPartsImportForm.railwayCisternsId
           : undefined,
-      thicknessLeft: Number(manualPartsImportForm.thicknessLeft || 0),
-      thicknessRight: Number(manualPartsImportForm.thicknessRight || 0),
-      truckType: Number(manualPartsImportForm.truckType || 0),
+      defectsId:
+        manualPartsImportForm.operation === "2"
+          ? 0
+          : Number(manualPartsImportForm.defectsId || 0),
+      thicknessLeft: isWheelPairSelected
+        ? Number(manualPartsImportForm.thicknessLeft || 0)
+        : 0,
+      thicknessRight: isWheelPairSelected
+        ? Number(manualPartsImportForm.thicknessRight || 0)
+        : 0,
+      truckType: isBolsterSelected ? Number(manualPartsImportForm.truckType || 0) : 0,
     };
 
     try {
@@ -581,21 +655,6 @@ export default function ImportPage() {
             <ScrollArea className="max-h-[58vh] pr-4">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="operation">Операция</Label>
-                  <Select
-                    value={manualPartsImportForm.operation}
-                    onValueChange={(value) => handleManualPartsImportChange("operation", value)}
-                  >
-                    <SelectTrigger id="operation" className="w-full">
-                      <SelectValue placeholder="Выберите операцию" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2">Установка</SelectItem>
-                      <SelectItem value="1">Снятие</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="equipmentTypeId">Тип оборудования</Label>
                   <SearchableSelect
                     value={manualPartsImportForm.equipmentTypeId}
@@ -606,120 +665,159 @@ export default function ImportPage() {
                     isLoading={equipmentTypesLoading}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="partsId">Деталь</Label>
-                  <SearchableSelect
-                    value={manualPartsImportForm.partsId}
-                    onChange={(value) => handleManualPartsImportChange("partsId", value)}
-                    options={partOptions}
-                    placeholder="Выберите деталь"
-                    searchPlaceholder="Введите заводской номер, клеймо или год"
-                    isLoading={partsLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="defectsId">Дефект</Label>
-                  <SearchableSelect
-                    value={manualPartsImportForm.defectsId}
-                    onChange={(value) => handleManualPartsImportChange("defectsId", value)}
-                    options={defectOptions}
-                    placeholder="Выберите дефект"
-                    searchPlaceholder="Введите код или название"
-                    isLoading={defectsLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="adminOwnerId">Владелец</Label>
-                  <SearchableSelect
-                    value={manualPartsImportForm.adminOwnerId}
-                    onChange={(value) => handleManualPartsImportChange("adminOwnerId", value)}
-                    options={adminOwnerOptions}
-                    placeholder="Выберите владельца"
-                    searchPlaceholder="Введите код или название"
-                    isLoading={adminOwnersLoading}
-                  />
-                </div>
-                {manualPartsImportForm.operation === "2" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="railwayCisternsId">Номер вагона</Label>
-                    <SearchableSelect
-                      value={manualPartsImportForm.railwayCisternsId}
-                      onChange={(value) =>
-                        handleManualPartsImportChange("railwayCisternsId", value)
-                      }
-                      options={cisternOptions}
-                      placeholder="Выберите номер вагона"
-                      searchPlaceholder="Введите номер вагона"
-                      isLoading={cisternsLoading}
-                    />
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="depotsId">Депо</Label>
-                  <SearchableSelect
-                    value={manualPartsImportForm.depotsId}
-                    onChange={(value) => handleManualPartsImportChange("depotsId", value)}
-                    options={depotOptions}
-                    placeholder="Выберите депо"
-                    searchPlaceholder="Введите код депо"
-                    isLoading={depotsLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="jobDepotsId">Депо работ</Label>
-                  <SearchableSelect
-                    value={manualPartsImportForm.jobDepotsId}
-                    onChange={(value) => handleManualPartsImportChange("jobDepotsId", value)}
-                    options={depotOptions}
-                    placeholder="Выберите депо работ"
-                    searchPlaceholder="Введите код депо"
-                    isLoading={depotsLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="repairTypesId">Вид ремонта</Label>
-                  <SearchableSelect
-                    value={manualPartsImportForm.repairTypesId}
-                    onChange={(value) => handleManualPartsImportChange("repairTypesId", value)}
-                    options={repairTypeOptions}
-                    placeholder="Выберите вид ремонта"
-                    searchPlaceholder="Введите название или код"
-                    isLoading={repairTypesLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="documentId">Документ</Label>
-                  <SearchableSelect
-                    value={manualPartsImportForm.documentId}
-                    onChange={handleManualDocumentChange}
-                    options={documentOptions}
-                    placeholder="Выберите документ"
-                    searchPlaceholder="Введите номер, автора или дату"
-                    isLoading={documentsLoading}
-                  />
-                </div>
-                {manualPartsImportFields.map((field) => (
-                  <div key={field.name} className="space-y-2">
-                    <Label htmlFor={field.name}>{field.label}</Label>
-                    <Input
-                      id={field.name}
-                      type={field.type || "text"}
-                      step={field.type === "number" ? "0.01" : undefined}
-                      required={field.required}
-                      value={manualPartsImportForm[field.name]}
-                      onChange={(e) => handleManualPartsImportChange(field.name, e.target.value)}
-                    />
-                  </div>
-                ))}
-                <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-                  <Label htmlFor="notes">Примечания</Label>
-                  <Textarea
-                    id="notes"
-                    value={manualPartsImportForm.notes}
-                    onChange={(e) => handleManualPartsImportChange("notes", e.target.value)}
-                    placeholder="Введите примечания"
-                  />
-                </div>
+                {manualPartsImportForm.equipmentTypeId ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="operation">Операция</Label>
+                      <Select
+                        value={manualPartsImportForm.operation}
+                        onValueChange={(value) =>
+                          handleManualPartsImportChange("operation", value)
+                        }
+                      >
+                        <SelectTrigger id="operation" className="w-full">
+                          <SelectValue placeholder="Выберите операцию" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2">Установка</SelectItem>
+                          <SelectItem value="1">Снятие</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="partsId">Деталь</Label>
+                      <SearchableSelect
+                        value={manualPartsImportForm.partsId}
+                        onChange={(value) => handleManualPartsImportChange("partsId", value)}
+                        options={partOptions}
+                        placeholder="Выберите деталь"
+                        searchPlaceholder="Введите заводской номер, клеймо или год"
+                        isLoading={partsLoading}
+                      />
+                    </div>
+                    {manualPartsImportForm.operation !== "2" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="defectsId">Дефект</Label>
+                        <SearchableSelect
+                          value={manualPartsImportForm.defectsId}
+                          onChange={(value) =>
+                            handleManualPartsImportChange("defectsId", value)
+                          }
+                          options={defectOptions}
+                          placeholder="Выберите дефект"
+                          searchPlaceholder="Введите код или название"
+                          isLoading={defectsLoading}
+                        />
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="adminOwnerId">Владелец</Label>
+                      <SearchableSelect
+                        value={manualPartsImportForm.adminOwnerId}
+                        onChange={(value) =>
+                          handleManualPartsImportChange("adminOwnerId", value)
+                        }
+                        options={adminOwnerOptions}
+                        placeholder="Выберите владельца"
+                        searchPlaceholder="Введите код или название"
+                        isLoading={adminOwnersLoading}
+                      />
+                    </div>
+                    {manualPartsImportForm.operation === "2" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="railwayCisternsId">Номер вагона</Label>
+                        <SearchableSelect
+                          value={manualPartsImportForm.railwayCisternsId}
+                          onChange={(value) =>
+                            handleManualPartsImportChange("railwayCisternsId", value)
+                          }
+                          options={cisternOptions}
+                          placeholder="Выберите номер вагона"
+                          searchPlaceholder="Введите номер вагона"
+                          isLoading={cisternsLoading}
+                        />
+                      </div>
+                    )}
+                    {manualPartsImportForm.operation !== "2" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="depotsId">Депо</Label>
+                        <SearchableSelect
+                          value={manualPartsImportForm.depotsId}
+                          onChange={(value) =>
+                            handleManualPartsImportChange("depotsId", value)
+                          }
+                          options={depotOptions}
+                          placeholder="Выберите депо"
+                          searchPlaceholder="Введите код депо"
+                          isLoading={depotsLoading}
+                        />
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="jobDepotsId">Депо работ</Label>
+                      <SearchableSelect
+                        value={manualPartsImportForm.jobDepotsId}
+                        onChange={(value) =>
+                          handleManualPartsImportChange("jobDepotsId", value)
+                        }
+                        options={depotOptions}
+                        placeholder="Выберите депо работ"
+                        searchPlaceholder="Введите код депо"
+                        isLoading={depotsLoading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="repairTypesId">Вид ремонта</Label>
+                      <SearchableSelect
+                        value={manualPartsImportForm.repairTypesId}
+                        onChange={(value) =>
+                          handleManualPartsImportChange("repairTypesId", value)
+                        }
+                        options={repairTypeOptions}
+                        placeholder="Выберите вид ремонта"
+                        searchPlaceholder="Введите название или код"
+                        isLoading={repairTypesLoading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="documentId">Документ</Label>
+                      <SearchableSelect
+                        value={manualPartsImportForm.documentId}
+                        onChange={handleManualDocumentChange}
+                        options={documentOptions}
+                        placeholder="Выберите документ"
+                        searchPlaceholder="Введите номер, автора или дату"
+                        isLoading={documentsLoading}
+                      />
+                    </div>
+                    {visibleManualPartsImportFields.map((field) => (
+                      <div key={field.name} className="space-y-2">
+                        <Label htmlFor={field.name}>{field.label}</Label>
+                        <Input
+                          id={field.name}
+                          type={field.type || "text"}
+                          step={field.type === "number" ? "0.01" : undefined}
+                          required={field.required}
+                          value={manualPartsImportForm[field.name]}
+                          onChange={(e) =>
+                            handleManualPartsImportChange(field.name, e.target.value)
+                          }
+                        />
+                      </div>
+                    ))}
+                    <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+                      <Label htmlFor="notes">Примечания</Label>
+                      <Textarea
+                        id="notes"
+                        value={manualPartsImportForm.notes}
+                        onChange={(e) =>
+                          handleManualPartsImportChange("notes", e.target.value)
+                        }
+                        placeholder="Введите примечания"
+                      />
+                    </div>
+                  </>
+                ) : null}
               </div>
             </ScrollArea>
 

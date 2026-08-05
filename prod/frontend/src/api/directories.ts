@@ -522,7 +522,33 @@ export const partEquipmentApi = {
 
 // Fitment Equipment API (Привязка арматуры)
 export const fitmentEquipmentApi = {
-  getAll: async (pageNumber = 1, pageSize = 10): Promise<PaginatedFitmentEquipmentResponse> => {
+  getAll: async (
+    pageNumber = 1,
+    pageSize = 10,
+    operations?: number[],
+  ): Promise<PaginatedFitmentEquipmentResponse> => {
+    // Удалённый API пока может не поддерживать ?operations= — фильтруем на клиенте
+    if (operations?.length) {
+      const response = await api.get("/api/fitment-equipments/all/");
+      const allItems = (response.data ?? []) as FitmentEquipmentDTO[];
+      const filtered = allItems.filter((item) => operations.includes(item.operation));
+      const totalCount = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(totalCount / pageSize) || 1);
+      const safePageNumber = Math.min(Math.max(pageNumber, 1), totalPages);
+      const start = (safePageNumber - 1) * pageSize;
+      const items = filtered.slice(start, start + pageSize);
+
+      return {
+        items,
+        pageNumber: safePageNumber,
+        totalPages,
+        totalCount,
+        pageSize,
+        hasPreviousPage: safePageNumber > 1,
+        hasNextPage: safePageNumber < totalPages,
+      };
+    }
+
     const params = new URLSearchParams({
       pageNumber: pageNumber.toString(),
       pageSize: pageSize.toString(),

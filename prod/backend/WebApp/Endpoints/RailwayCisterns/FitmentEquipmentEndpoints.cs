@@ -21,7 +21,8 @@ public static class FitmentEquipmentEndpoints
                 [FromServices] ApplicationDbContext context,
                 [FromQuery] int pageNumber = 1,
                 [FromQuery] int pageSize = 10,
-                [FromQuery] Guid? cisternId = null) =>
+                [FromQuery] Guid? cisternId = null,
+                [FromQuery] string? operations = null) =>
             {
                 var parameters = new PaginationParameters
                 {
@@ -49,6 +50,19 @@ public static class FitmentEquipmentEndpoints
                 if (cisternId.HasValue)
                 {
                     query = query.Where(fe => fe.RailwayCisternsId == cisternId);
+                }
+
+                // operations: "3" или "1,2"
+                var operationFilter = string.IsNullOrWhiteSpace(operations)
+                    ? Array.Empty<int>()
+                    : operations
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Select(int.Parse)
+                        .ToArray();
+
+                if (operationFilter.Length > 0)
+                {
+                    query = query.Where(fe => operationFilter.Contains(fe.Operation));
                 }
 
                 var totalCount = await query.CountAsync();

@@ -5,8 +5,8 @@ import type { CreateFitmentEquipmentDTO } from '@/types/directories';
 export const fitmentEquipmentKeys = {
   all: ['directories', 'fitment-equipments'] as const,
   byId: (id: string) => [...fitmentEquipmentKeys.all, id] as const,
-  filtered: (pageNumber: number, pageSize: number) =>
-    [...fitmentEquipmentKeys.all, { pageNumber, pageSize }] as const,
+  filtered: (pageNumber: number, pageSize: number, operations?: number[]) =>
+    [...fitmentEquipmentKeys.all, { pageNumber, pageSize, operations }] as const,
   lastByFitment: (fitmentId: string) =>
     [...fitmentEquipmentKeys.all, 'last-by-fitment', fitmentId] as const,
   byCistern: (cisternId: string) =>
@@ -15,10 +15,14 @@ export const fitmentEquipmentKeys = {
     [...fitmentEquipmentKeys.all, 'last-by-cistern', cisternId] as const,
 };
 
-export const useFitmentEquipments = (pageNumber = 1, pageSize = 10) => {
+export const useFitmentEquipments = (
+  pageNumber = 1,
+  pageSize = 10,
+  operations?: number[],
+) => {
   return useQuery({
-    queryKey: fitmentEquipmentKeys.filtered(pageNumber, pageSize),
-    queryFn: () => fitmentEquipmentApi.getAll(pageNumber, pageSize),
+    queryKey: fitmentEquipmentKeys.filtered(pageNumber, pageSize, operations),
+    queryFn: () => fitmentEquipmentApi.getAll(pageNumber, pageSize, operations),
   });
 };
 

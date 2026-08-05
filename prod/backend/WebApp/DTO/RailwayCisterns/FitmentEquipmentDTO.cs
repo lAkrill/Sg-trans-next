@@ -3,7 +3,7 @@ namespace WebApp.DTO.RailwayCisterns;
 public class FitmentEquipmentDTO
 {
     public Guid Id { get; set; }
-    public Guid RailwayCisternsId { get; set; }
+    public Guid? RailwayCisternsId { get; set; }
     public int Operation { get; set; }
     public Guid FitmentId { get; set; }
     public Guid JobUserId { get; set; }
@@ -38,7 +38,7 @@ public class UserInfoDTO
 
 public class CreateFitmentEquipmentDTO
 {
-    public Guid RailwayCisternsId { get; set; }
+    public Guid? RailwayCisternsId { get; set; }
     public int Operation { get; set; }
     public Guid FitmentId { get; set; }
     public Guid JobUserId { get; set; }

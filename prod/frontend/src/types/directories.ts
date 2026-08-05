@@ -914,7 +914,7 @@ export interface FitmentEquipmentDocumentDTO {
 
 export interface FitmentEquipmentDTO {
   id: string;
-  railwayCisternsId: string;
+  railwayCisternsId?: string | null;
   operation: number;
   fitmentId: string;
   jobUserId: string;
@@ -931,7 +931,7 @@ export interface FitmentEquipmentDTO {
 }
 
 export interface CreateFitmentEquipmentDTO {
-  railwayCisternsId?: string;
+  railwayCisternsId?: string | null;
   operation: number;
   fitmentId: string;
   jobUserId?: string;
