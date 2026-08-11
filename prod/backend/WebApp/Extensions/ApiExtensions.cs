@@ -84,6 +84,7 @@ public static class ApiExtensions
         // Messaging / Audit
         app.MapMessageEndpoints();
         app.MapActionLogEndpoints();
+        app.MapEmployeeEndpoints();
 
         app.MapFileEndpoints();
     }

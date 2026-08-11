@@ -12,6 +12,9 @@ public class ApplicationDbContext(
     public DbSet<RoleEntity> Roles { get; set; }
     public DbSet<RolePermission> RolePermissions { get; set; }
 
+    // Employees
+    public DbSet<Employee> Employees { get; set; }
+
     //RailwayCisternsModels
     public DbSet<Affiliation> Affiliations { get; set; }
     public DbSet<Manufacturer> Manufacturers { get; set; }
