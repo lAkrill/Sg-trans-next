@@ -13,6 +13,9 @@ import type {
   OwnerDTO,
   CreateOwnerDTO,
   UpdateOwnerDTO,
+  EmployeeDTO,
+  CreateEmployeeDTO,
+  UpdateEmployeeDTO,
   WagonTypeDTO,
   CreateWagonTypeDTO,
   UpdateWagonTypeDTO,
@@ -213,6 +216,13 @@ export const ownersApi = createDirectoryApi<
   UpdateOwnerDTO
 >('owners');
 
+// Employees API
+export const employeesApi = createDirectoryApi<
+  EmployeeDTO,
+  CreateEmployeeDTO,
+  UpdateEmployeeDTO
+>('employees');
+
 // WagonTypes API
 export const wagonTypesApi = createDirectoryApi<
   WagonTypeDTO,
@@ -330,6 +340,12 @@ export const convertToSelectOptions = {
 
   owners: (owners: OwnerDTO[]) =>
     owners.map(o => ({ value: o.id, label: o.name })),
+
+  employees: (employees: EmployeeDTO[]) =>
+    employees.map(e => ({
+      value: e.id,
+      label: [e.lastName, e.firstName, e.patronymic].filter(Boolean).join(' ') || e.initials,
+    })),
 
   depots: (depots: DepotDTO[]) =>
     depots.map(d => ({ value: d.id, label: d.shortName || d.name })),

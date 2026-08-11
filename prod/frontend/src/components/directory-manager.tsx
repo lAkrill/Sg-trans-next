@@ -266,7 +266,6 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
   const deleteMutation = config.hooks.useDelete();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<T | null>(null);
@@ -457,22 +456,11 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
       ? `Поиск: ${searchableFields.map(getFieldLabel).join(", ")}`
       : "Поиск...";
 
-  const hasActiveFilters =
-    Boolean(searchTerm.trim()) ||
-    Object.values(columnFilters).some((value) => Boolean(value.trim()));
+  const hasActiveFilters = Boolean(searchTerm.trim());
 
   const filteredItems = items.filter((item) => {
-    const matchesGlobal =
-      !searchTerm.trim() ||
-      searchableFields.some((field) => matchesQuery(item[field], field, searchTerm));
-
-    if (!matchesGlobal) return false;
-
-    return config.tableColumns.every((column) => {
-      const query = columnFilters[String(column.key)] ?? "";
-      if (!query.trim()) return true;
-      return matchesQuery(item[column.key], column.key, query);
-    });
+    if (!searchTerm.trim()) return true;
+    return searchableFields.some((field) => matchesQuery(item[field], field, searchTerm));
   });
 
   // Pagination calculations
@@ -485,15 +473,10 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
   // Reset pagination when search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, columnFilters]);
-
-  const updateColumnFilter = (fieldKey: string, value: string) => {
-    setColumnFilters((prev) => ({ ...prev, [fieldKey]: value }));
-  };
+  }, [searchTerm]);
 
   const clearAllFilters = () => {
     setSearchTerm("");
-    setColumnFilters({});
   };
 
   useEffect(() => {
@@ -797,21 +780,12 @@ export function DirectoryManager<T extends BaseDirectoryItem, CreateT, UpdateT>(
                 <TableHeader>
                   <TableRow>
                     {config.tableColumns.map((column) => (
-                      <TableHead key={String(column.key)} className="whitespace-normal break-words align-top">
-                        <div className="flex flex-col gap-1.5 min-w-[120px]">
-                          <span>{column.label}</span>
-                          <Input
-                            value={columnFilters[String(column.key)] ?? ""}
-                            onChange={(e) => updateColumnFilter(String(column.key), e.target.value)}
-                            placeholder="Фильтр..."
-                            className="h-8 font-normal"
-                            aria-label={`Фильтр по полю ${column.label}`}
-                          />
-                        </div>
+                      <TableHead key={String(column.key)} className="whitespace-normal break-words">
+                        {column.label}
                       </TableHead>
                     ))}
-                    <TableHead className="whitespace-normal break-words align-top">Дата обновления</TableHead>
-                    <TableHead className="text-right whitespace-normal break-words align-top">Действия</TableHead>
+                    <TableHead className="whitespace-normal break-words">Дата обновления</TableHead>
+                    <TableHead className="text-right whitespace-normal break-words">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

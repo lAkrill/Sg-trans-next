@@ -229,6 +229,34 @@ export interface UpdateOwnerDTO {
   treatRepairs: boolean;
 }
 
+// Employee (Сотрудник)
+export interface EmployeeDTO {
+  id: string;
+  lastName: string;
+  firstName: string;
+  patronymic: string;
+  initials: string;
+  position: string;
+  updatedAt?: string;
+  creatorId?: string;
+}
+
+export interface CreateEmployeeDTO {
+  lastName: string;
+  firstName: string;
+  patronymic: string;
+  initials: string;
+  position: string;
+}
+
+export interface UpdateEmployeeDTO {
+  lastName: string;
+  firstName: string;
+  patronymic: string;
+  initials: string;
+  position: string;
+}
+
 // WagonType (Тип вагона)
 export interface WagonTypeDTO extends BaseEntity {
   name: string;

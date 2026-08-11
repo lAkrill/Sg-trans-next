@@ -255,7 +255,7 @@ const getServiceEndDateRowClass = (cistern: DisplayCistern): string | undefined 
 
   const today = startOfLocalDay(new Date());
   if (endDate < today) {
-    return "bg-red-100 hover:bg-red-100";
+    return "bg-[lab(69_60.78_30.83)] hover:bg-[lab(69_60.78_30.83)]";
   }
 
   const inOneYear = new Date(today);

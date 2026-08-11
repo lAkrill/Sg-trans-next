@@ -7,6 +7,7 @@ export { affiliationsConfig } from './affiliations.config';
 export { depotsConfig } from './depots.config';
 export { manufacturersConfig } from './manufacturers.config';
 export { ownersConfig } from './owners.config';
+export { employeesConfig } from './employees.config';
 export { wagonTypesConfig } from './wagon-types.config';
 export { wagonModelsConfig } from './wagon-models.config';
 export { fitmentTypesConfig } from './fitment-types.config';
@@ -28,6 +29,7 @@ import { affiliationsBaseConfig } from './affiliations.config';
 import { depotsBaseConfig } from './depots.config';
 import { manufacturersBaseConfig } from './manufacturers.config';
 import { ownersBaseConfig } from './owners.config';
+import { employeesBaseConfig } from './employees.config';
 import { wagonTypesBaseConfig } from './wagon-types.config';
 import { wagonModelsBaseConfig } from './wagon-models.config';
 import { fitmentTypesBaseConfig } from './fitment-types.config';
@@ -50,6 +52,7 @@ export const directoriesConfig: Record<string, DirectoryConfig> = {
   depots: depotsBaseConfig,
   manufacturers: manufacturersBaseConfig,
   owners: ownersBaseConfig,
+  employees: employeesBaseConfig,
   wagonTypes: wagonTypesBaseConfig,
   wagonModels: wagonModelsBaseConfig,
   fitmentTypes: fitmentTypesBaseConfig,

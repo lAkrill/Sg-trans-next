@@ -28,7 +28,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui";
-import type { RailwayCisternRepairsFilterRequestDTO } from "@/types/cisterns";
+import type {
+  RailwayCisternRepairsFilterListDTO,
+  RailwayCisternRepairsFilterRequestDTO,
+} from "@/types/cisterns";
 import {
   DEFAULT_PLANNING_VISIBLE_COLUMNS,
   PLANNING_COLUMN_OPTIONS,
@@ -252,12 +255,61 @@ export function countPlanningRepairsFilters(f: RailwayCisternRepairsFilterReques
   return Object.keys(normalizeRequest(f)).filter((key) => key !== "isAnd").length;
 }
 
+function toYmdDate(value?: string): string | null {
+  if (!value) return null;
+  const head = value.includes("T") ? value.split("T")[0] : value.slice(0, 10);
+  return head || null;
+}
+
+function getEffectiveServiceEndDate(row: RailwayCisternRepairsFilterListDTO): string | null {
+  const extension = toYmdDate(row.extensionServiceLifeDate);
+  if (extension) return extension;
+
+  const commissioningEnd = toYmdDate(row.commissioningEndDate);
+  if (commissioningEnd) return commissioningEnd;
+
+  if (
+    row.buildDate == null ||
+    row.buildDate === "" ||
+    row.serviceLifeYears == null ||
+    Number.isNaN(row.serviceLifeYears)
+  ) {
+    return null;
+  }
+
+  const start = new Date(row.buildDate);
+  if (Number.isNaN(start.getTime())) return null;
+  const end = new Date(start);
+  end.setFullYear(end.getFullYear() + row.serviceLifeYears);
+  return formatYmd(end);
+}
+
+/** Вагон, у которого хотя бы один план ремонта совпадает с концом эксплуатации. */
+export function hasServiceEndAlignedWithRepairs(
+  row: RailwayCisternRepairsFilterListDTO
+): boolean {
+  const serviceEnd = getEffectiveServiceEndDate(row);
+  if (!serviceEnd) return false;
+
+  const planDates = [
+    row.planPeriodMajorRepair,
+    row.planPeriodPeriodicTest,
+    row.planPeriodIntermediateTest,
+    row.planPeriodDepotRepair,
+    row.planPeriodPPRRepair,
+  ];
+
+  return planDates.some((date) => toYmdDate(date) === serviceEnd);
+}
+
 interface PlanningRepairsFiltersProps {
   appliedFilters: RailwayCisternRepairsFilterRequestDTO;
   onApply: (filters: RailwayCisternRepairsFilterRequestDTO) => void;
   activeFiltersCount: number;
   visibleColumns: string[];
   onVisibleColumnsChange: (columns: string[]) => void;
+  excludeServiceEndAlignedRepairs: boolean;
+  onExcludeServiceEndAlignedRepairsChange: (value: boolean) => void;
 }
 
 export function PlanningRepairsFilters({
@@ -266,6 +318,8 @@ export function PlanningRepairsFilters({
   activeFiltersCount,
   visibleColumns,
   onVisibleColumnsChange,
+  excludeServiceEndAlignedRepairs,
+  onExcludeServiceEndAlignedRepairsChange,
 }: PlanningRepairsFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState<RailwayCisternRepairsFilterRequestDTO>({});
@@ -307,9 +361,10 @@ export function PlanningRepairsFilters({
     setWagonModelsText("");
     setQuickRepairType(DEFAULT_QUICK_REPAIR_TYPE);
     setQuickMonths(DEFAULT_QUICK_MONTHS);
+    onExcludeServiceEndAlignedRepairsChange(false);
     onApply({});
     onVisibleColumnsChange(DEFAULT_PLANNING_VISIBLE_COLUMNS);
-  }, [onApply, onVisibleColumnsChange]);
+  }, [onApply, onVisibleColumnsChange, onExcludeServiceEndAlignedRepairsChange]);
 
   const handleApply = useCallback(() => {
     const listNums = parseWagonNumbersList(numbersText);
@@ -389,6 +444,24 @@ export function PlanningRepairsFilters({
             </Button>
           </SheetTitle>
         </SheetHeader>
+
+        <div className="flex items-start gap-3 pt-4">
+          <Checkbox
+            id="exclude-service-end-aligned-repairs"
+            checked={excludeServiceEndAlignedRepairs}
+            onCheckedChange={(checked) =>
+              onExcludeServiceEndAlignedRepairsChange(checked === true)
+            }
+            className="mt-0.5"
+          />
+          <Label
+            htmlFor="exclude-service-end-aligned-repairs"
+            className="text-sm font-normal leading-snug cursor-pointer"
+          >
+            Убрать из планирования вагоны со сроком конца эксплуатации совмещённым с
+            ремонтами
+          </Label>
+        </div>
 
         <Tabs defaultValue="quick" className="flex flex-col flex-1 min-h-0 pt-4">
           <TabsList className="grid w-full grid-cols-3 flex-shrink-0 h-auto p-1">

@@ -2,6 +2,7 @@ export * from './affiliations.hook';
 export * from './depots.hook';
 export * from './manufacturers.hook';
 export * from './owners.hook';
+export * from './employees.hook';
 export * from './wagonTypes.hook';
 export * from './railwayCisternStatus.hook';
 export * from './locations.hook';

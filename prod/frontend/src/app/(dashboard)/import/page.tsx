@@ -265,10 +265,12 @@ export default function ImportPage() {
       label: `${owner.id} (${owner.name})`,
     })) || [];
   const documents = documentsResponse || [];
-  const documentOptions = documents.map((document) => ({
-    value: document.id,
-    label: `${document.number} (${document.author}, ${formatRussianDate(document.date)})`,
-  }));
+  const documentOptions = documents
+    .filter((document) => document.type === 1)
+    .map((document) => ({
+      value: document.id,
+      label: `${document.number} (${document.author}, ${formatRussianDate(document.date)})`,
+    }));
   const partOptions =
     parts?.map((part) => ({
       value: part.id,
@@ -449,24 +451,51 @@ export default function ImportPage() {
       message: "Отправляем запрос на сохранение комплектации...",
     });
 
+    const toNullableString = (value: string) => {
+      const trimmed = value.trim();
+      return trimmed === "" ? null : trimmed;
+    };
+
+    const toNullableNumber = (value: string) => {
+      const trimmed = value.trim();
+      if (trimmed === "") return null;
+      const parsed = Number(trimmed);
+      return Number.isNaN(parsed) ? null : parsed;
+    };
+
     const payload = {
-      ...manualPartsImportForm,
-      operation: Number(manualPartsImportForm.operation || 0),
       railwayCisternsId:
         manualPartsImportForm.operation === "2"
-          ? manualPartsImportForm.railwayCisternsId
-          : undefined,
+          ? toNullableString(manualPartsImportForm.railwayCisternsId)
+          : null,
+      operation: toNullableNumber(manualPartsImportForm.operation),
+      equipmentTypeId: toNullableString(manualPartsImportForm.equipmentTypeId),
       defectsId:
         manualPartsImportForm.operation === "2"
           ? 0
-          : Number(manualPartsImportForm.defectsId || 0),
+          : toNullableNumber(manualPartsImportForm.defectsId),
+      adminOwnerId: toNullableNumber(manualPartsImportForm.adminOwnerId),
+      partsId: toNullableString(manualPartsImportForm.partsId),
+      jobDepotsId: toNullableString(manualPartsImportForm.jobDepotsId),
+      jobDate: toNullableString(manualPartsImportForm.jobDate),
+      jobTypeId: toNullableNumber(manualPartsImportForm.jobTypeId),
       thicknessLeft: isWheelPairSelected
-        ? Number(manualPartsImportForm.thicknessLeft || 0)
+        ? toNullableNumber(manualPartsImportForm.thicknessLeft)
         : 0,
       thicknessRight: isWheelPairSelected
-        ? Number(manualPartsImportForm.thicknessRight || 0)
+        ? toNullableNumber(manualPartsImportForm.thicknessRight)
         : 0,
-      truckType: isBolsterSelected ? Number(manualPartsImportForm.truckType || 0) : 0,
+      truckType: isBolsterSelected
+        ? toNullableNumber(manualPartsImportForm.truckType)
+        : 0,
+      notes: toNullableString(manualPartsImportForm.notes),
+      documentId: toNullableString(manualPartsImportForm.documentId),
+      documentDate: toNullableString(manualPartsImportForm.documentDate),
+      depotsId:
+        manualPartsImportForm.operation === "2"
+          ? null
+          : toNullableString(manualPartsImportForm.depotsId),
+      repairTypesId: toNullableString(manualPartsImportForm.repairTypesId),
     };
 
     try {
@@ -643,17 +672,34 @@ export default function ImportPage() {
         </Card>
 
       <Dialog open={manualPartsImport} onOpenChange={handleManualPartsImportDialogChange}>
-        <DialogContent className="max-h-[85vh] sm:max-w-5xl">
-          <DialogHeader>
+        <DialogContent className="!flex min-h-[500px] max-h-[85vh] flex-col sm:max-w-5xl">
+          <DialogHeader className="shrink-0 text-left">
             <DialogTitle>Ручная загрузка комплектации</DialogTitle>
             <DialogDescription>
               Заполните данные по комплектации вагона-цистерны.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleManualPartsImportSubmit} className="min-h-0 space-y-4">
+          <form
+            onSubmit={handleManualPartsImportSubmit}
+            className="flex min-h-0 flex-1 flex-col space-y-4"
+          >
+            {!manualPartsImportForm.equipmentTypeId ? (
+              <div className="flex min-h-0 flex-1 flex-col space-y-2">
+                <Label htmlFor="equipmentTypeId">Тип оборудования</Label>
+                <SearchableSelect
+                  value={manualPartsImportForm.equipmentTypeId}
+                  onChange={(value) => handleManualPartsImportChange("equipmentTypeId", value)}
+                  options={equipmentTypeOptions}
+                  placeholder="Выберите тип оборудования"
+                  searchPlaceholder="Введите код или название"
+                  isLoading={equipmentTypesLoading}
+                  fillAvailable
+                />
+              </div>
+            ) : (
             <ScrollArea className="max-h-[58vh] pr-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="equipmentTypeId">Тип оборудования</Label>
                   <SearchableSelect
@@ -665,8 +711,7 @@ export default function ImportPage() {
                     isLoading={equipmentTypesLoading}
                   />
                 </div>
-                {manualPartsImportForm.equipmentTypeId ? (
-                  <>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div className="space-y-2">
                       <Label htmlFor="operation">Операция</Label>
                       <Select
@@ -816,10 +861,10 @@ export default function ImportPage() {
                         placeholder="Введите примечания"
                       />
                     </div>
-                  </>
-                ) : null}
+                  </div>
               </div>
             </ScrollArea>
+            )}
 
             {manualPartsImportStatus ? (
               <Alert
@@ -837,7 +882,7 @@ export default function ImportPage() {
               </Alert>
             ) : null}
 
-            <DialogFooter className="gap-2 sm:justify-between">
+            <DialogFooter className="shrink-0 gap-2 sm:justify-between">
               <Button
                 type="button"
                 variant="outline"

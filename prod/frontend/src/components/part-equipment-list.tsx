@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -959,6 +960,12 @@ export function PartEquipmentList({ cisternId }: PartEquipmentListProps) {
           </p>
         </div>
         <div className="flex gap-2">
+
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/cisterns/${cisternId}/equipment-control`}>
+              Управление комплектацией
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExportPdf}>
             <Download className="h-4 w-4 mr-2" />
             Экспорт в PDF

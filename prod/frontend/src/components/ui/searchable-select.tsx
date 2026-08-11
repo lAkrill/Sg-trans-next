@@ -17,6 +17,9 @@ interface SearchableSelectProps {
   disabled?: boolean;
   searchPlaceholder?: string;
   isLoading?: boolean;
+  listClassName?: string;
+  /** Раскрывает список в потоке на всю доступную высоту родителя */
+  fillAvailable?: boolean;
 }
 
 export const SearchableSelect = React.forwardRef<
@@ -32,6 +35,8 @@ export const SearchableSelect = React.forwardRef<
       disabled = false,
       searchPlaceholder = 'Поиск...',
       isLoading = false,
+      listClassName,
+      fillAvailable = false,
     },
     ref
   ) => {
@@ -100,7 +105,10 @@ export const SearchableSelect = React.forwardRef<
           if (typeof ref === 'function') ref(node);
           else if (ref) ref.current = node;
         }}
-        className="relative w-full"
+        className={cn(
+          'relative w-full',
+          fillAvailable && 'flex min-h-0 flex-1 flex-col'
+        )}
       >
         {/* Trigger Button */}
         <button
@@ -108,7 +116,7 @@ export const SearchableSelect = React.forwardRef<
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className={cn(
-            'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm',
+            'flex h-9 w-full shrink-0 items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm',
             'shadow-xs transition-colors',
             'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
             'placeholder:text-muted-foreground',
@@ -146,12 +154,15 @@ export const SearchableSelect = React.forwardRef<
         {isOpen && (
           <div
             className={cn(
-              'absolute top-full left-0 right-0 z-[200] mt-1 rounded-md border border-input bg-background shadow-lg',
-              'animate-in fade-in-0 zoom-in-95 slide-in-from-top-2'
+              'z-[200] mt-1 rounded-md border border-input bg-background shadow-lg',
+              'animate-in fade-in-0 zoom-in-95 slide-in-from-top-2',
+              fillAvailable
+                ? 'relative flex min-h-0 flex-1 flex-col'
+                : 'absolute top-full right-0 left-0'
             )}
           >
             {/* Search Input */}
-            <div className="border-b border-input p-2">
+            <div className="shrink-0 border-b border-input p-2">
               <input
                 ref={inputRef}
                 type="text"
@@ -167,7 +178,13 @@ export const SearchableSelect = React.forwardRef<
             </div>
 
             {/* Options List */}
-            <div className="max-h-60 overflow-y-auto">
+            <div
+              className={cn(
+                'overflow-y-auto',
+                fillAvailable ? 'min-h-0 flex-1' : 'max-h-60',
+                listClassName
+              )}
+            >
               {isLoading ? (
                 <div className="px-3 py-2 text-center text-sm text-muted-foreground">
                   Загрузка...
@@ -184,7 +201,7 @@ export const SearchableSelect = React.forwardRef<
                         type="button"
                         onClick={() => handleSelect(option.value)}
                         className={cn(
-                          'w-full px-3 py-2 text-left text-sm whitespace-normal break-words',
+                          'w-full px-3 py-2 text-left text-sm break-words whitespace-normal',
                           'hover:bg-accent hover:text-accent-foreground',
                           value === option.value &&
                             'bg-primary text-primary-foreground'

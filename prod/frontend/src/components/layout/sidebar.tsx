@@ -60,6 +60,11 @@ const directoryItems: SidebarItem[] = [
     icon: User,
   },
   {
+    title: "Сотрудники",
+    href: "/directories/Employees",
+    icon: Users,
+  },
+  {
     title: "Типы вагонов",
     href: "/directories/wagon-types",
     icon: Train,

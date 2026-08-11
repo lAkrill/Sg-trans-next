@@ -54,7 +54,11 @@ import type {
 import { cisternsApi } from "@/api/cisterns";
 import { partEquipmentApi, partsApi } from "@/api/directories";
 import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
-import { PlanningRepairsFilters, countPlanningRepairsFilters } from "@/components/repairs/planning-repairs-filters";
+import {
+  PlanningRepairsFilters,
+  countPlanningRepairsFilters,
+  hasServiceEndAlignedWithRepairs,
+} from "@/components/repairs/planning-repairs-filters";
 import { PlanningRepairsTable } from "@/components/repairs/planning-repairs-table";
 import {
   DEFAULT_PLANNING_VISIBLE_COLUMNS,
@@ -349,6 +353,8 @@ export default function RepairsPage() {
   );
   const [planningFiltersApplied, setPlanningFiltersApplied] =
     useState<RailwayCisternRepairsFilterRequestDTO>({});
+  const [excludeServiceEndAlignedRepairs, setExcludeServiceEndAlignedRepairs] =
+    useState(false);
   const [isPlanningFilterLoading, setIsPlanningFilterLoading] = useState(false);
   const [planningVisibleColumns, setPlanningVisibleColumns] = useState<string[]>([
     ...DEFAULT_PLANNING_VISIBLE_COLUMNS,
@@ -450,8 +456,10 @@ export default function RepairsPage() {
   );
 
   const activePlanningFiltersCount = useMemo(
-    () => countPlanningRepairsFilters(planningFiltersApplied),
-    [planningFiltersApplied]
+    () =>
+      countPlanningRepairsFilters(planningFiltersApplied) +
+      (excludeServiceEndAlignedRepairs ? 1 : 0),
+    [planningFiltersApplied, excludeServiceEndAlignedRepairs]
   );
 
   const repairsInSource = useMemo(() => {
@@ -492,7 +500,11 @@ export default function RepairsPage() {
     [repairsMatchingSorted]
   );
 
-  const planningRowsFiltered = useMemo(() => planningRows ?? [], [planningRows]);
+  const planningRowsFiltered = useMemo(() => {
+    const list = planningRows ?? [];
+    if (!excludeServiceEndAlignedRepairs) return list;
+    return list.filter((row) => !hasServiceEndAlignedWithRepairs(row));
+  }, [planningRows, excludeServiceEndAlignedRepairs]);
 
   useEffect(() => {
     setPageIn(1);
@@ -1118,7 +1130,7 @@ export default function RepairsPage() {
 
   useEffect(() => {
     setPagePlanning(1);
-  }, [planningFiltersApplied]);
+  }, [planningFiltersApplied, excludeServiceEndAlignedRepairs]);
 
   const getVisiblePages = (currentPage: number, totalPages: number) => {
     const delta = 1;
@@ -1711,6 +1723,8 @@ export default function RepairsPage() {
               onVisibleColumnsChange={(columns) =>
                 setPlanningVisibleColumns(columns)
               }
+              excludeServiceEndAlignedRepairs={excludeServiceEndAlignedRepairs}
+              onExcludeServiceEndAlignedRepairsChange={setExcludeServiceEndAlignedRepairs}
             />
             </div>
           </div>

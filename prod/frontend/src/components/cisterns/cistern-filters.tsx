@@ -59,6 +59,12 @@ import type { FilterTypeDTO } from "@/types/directories";
 import { CISTERN_COLUMN_OPTIONS } from "@/lib/cisterns/columns";
 import { cn } from "@/lib/utils";
 
+/** Подсветка активного (заполненного) фильтра */
+const ACTIVE_FILTER_CONTROL =
+  "border-green-500 bg-green-50 text-green-900 hover:bg-green-50 focus-visible:ring-green-500/40";
+const ACTIVE_FILTER_BADGE =
+  "border-green-500 bg-green-100 text-green-800 hover:bg-green-100";
+
 interface CisternFiltersProps {
   filters: FilterCriteria;
   sortFields: SortCriteria[];
@@ -122,6 +128,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ placeholder, options, value, 
     }
   };
 
+  const hasValue = value.length > 0;
+
   return (
     <div className="max-w-full overflow-x-hidden">
       <div className="flex gap-2">
@@ -131,11 +139,13 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ placeholder, options, value, 
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className={cn("h-8 w-full justify-between text-left font-normal", {
-                "text-muted-foreground": !value.length,
-              })}
+              className={cn(
+                "h-8 w-full justify-between text-left font-normal",
+                !hasValue && "text-muted-foreground",
+                hasValue && ACTIVE_FILTER_CONTROL
+              )}
             >
-              {value.length > 0 ? `Выбрано: ${value.length}` : placeholder}
+              {hasValue ? `Выбрано: ${value.length}` : placeholder}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -163,25 +173,30 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ placeholder, options, value, 
             </Command>
           </PopoverContent>
         </Popover>
-        {value.length > 0 && (
-          <Button variant="outline" size="sm" onClick={onClear} className="h-8 w-8 p-0 flex-shrink-0">
+        {hasValue && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClear}
+            className={cn("h-8 w-8 p-0 flex-shrink-0", ACTIVE_FILTER_CONTROL)}
+          >
             <X className="h-4 w-4" />
           </Button>
         )}
       </div>
       {/* Показать выбранные элементы */}
-      {value.length > 0 && (
+      {hasValue && (
         <div className="flex flex-wrap gap-1 mt-2">
           {value.map((id) => {
             const option = options.find((o) => o.id === id);
             return option ? (
-              <Badge key={id} variant="secondary" className="text-xs">
+              <Badge key={id} variant="outline" className={cn("text-xs", ACTIVE_FILTER_BADGE)}>
                 {option.name}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleSelect(id)}
-                  className="h-auto w-auto p-0 ml-1 hover:bg-transparent"
+                  className="h-auto w-auto p-0 ml-1 hover:bg-transparent text-green-800"
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -196,13 +211,20 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ placeholder, options, value, 
 
 const NumberRangeInput: React.FC<NumberRangeInputProps> = ({ label, value, onChange, onClear }) => {
   const hasValue = value.from !== undefined || value.to !== undefined;
+  const hasFrom = value.from !== undefined;
+  const hasTo = value.to !== undefined;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">{label}</Label>
+        <Label className={cn("text-sm font-medium", hasValue && "text-green-800")}>{label}</Label>
         {hasValue && onClear && (
-          <Button variant="outline" size="sm" onClick={onClear} className="h-6 w-6 p-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClear}
+            className={cn("h-6 w-6 p-0", ACTIVE_FILTER_CONTROL)}
+          >
             <X className="h-3 w-3" />
           </Button>
         )}
@@ -214,7 +236,7 @@ const NumberRangeInput: React.FC<NumberRangeInputProps> = ({ label, value, onCha
           step="0.01"
           value={value.from ?? ""}
           onChange={(e) => onChange({ ...value, from: e.target.value ? Number(e.target.value) : undefined })}
-          className="h-8 text-sm"
+          className={cn("h-8 text-sm", hasFrom && ACTIVE_FILTER_CONTROL)}
         />
         <Input
           type="number"
@@ -222,7 +244,7 @@ const NumberRangeInput: React.FC<NumberRangeInputProps> = ({ label, value, onCha
           step="0.01"
           value={value.to ?? ""}
           onChange={(e) => onChange({ ...value, to: e.target.value ? Number(e.target.value) : undefined })}
-          className="h-8 text-sm"
+          className={cn("h-8 text-sm", hasTo && ACTIVE_FILTER_CONTROL)}
         />
       </div>
     </div>
@@ -278,9 +300,14 @@ const DateRangeInput: React.FC<DateRangeInputProps> = ({ label, value, onChange,
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Label className="text-sm font-medium">{label}</Label>
+        <Label className={cn("text-sm font-medium", hasValue && "text-green-800")}>{label}</Label>
         {hasValue && onClear && (
-          <Button variant="outline" size="sm" onClick={onClear} className="h-6 w-6 p-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClear}
+            className={cn("h-6 w-6 p-0", ACTIVE_FILTER_CONTROL)}
+          >
             <X className="h-3 w-3" />
           </Button>
         )}
@@ -290,7 +317,7 @@ const DateRangeInput: React.FC<DateRangeInputProps> = ({ label, value, onChange,
         <div className="flex gap-2 items-center">
           <span className="text-xs">От:</span>
           <Select value={from.year} onValueChange={(val) => handleChange("from", "year", val)}>
-            <SelectTrigger className="h-8 w-20 text-xs">
+            <SelectTrigger className={cn("h-8 w-20 text-xs", from.year && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="Год" />
             </SelectTrigger>
             <SelectContent>
@@ -302,7 +329,7 @@ const DateRangeInput: React.FC<DateRangeInputProps> = ({ label, value, onChange,
             </SelectContent>
           </Select>
           <Select value={from.month} onValueChange={(val) => handleChange("from", "month", val)}>
-            <SelectTrigger className="h-8 w-24 text-xs">
+            <SelectTrigger className={cn("h-8 w-24 text-xs", from.month && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="Месяц" />
             </SelectTrigger>
             <SelectContent>
@@ -318,7 +345,7 @@ const DateRangeInput: React.FC<DateRangeInputProps> = ({ label, value, onChange,
         <div className="flex gap-2 items-center">
           <span className="text-xs">До:</span>
           <Select value={to.year} onValueChange={(val) => handleChange("to", "year", val)}>
-            <SelectTrigger className="h-8 w-20 text-xs">
+            <SelectTrigger className={cn("h-8 w-20 text-xs", to.year && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="Год" />
             </SelectTrigger>
             <SelectContent>
@@ -330,7 +357,7 @@ const DateRangeInput: React.FC<DateRangeInputProps> = ({ label, value, onChange,
             </SelectContent>
           </Select>
           <Select value={to.month} onValueChange={(val) => handleChange("to", "month", val)}>
-            <SelectTrigger className="h-8 w-24 text-xs">
+            <SelectTrigger className={cn("h-8 w-24 text-xs", to.month && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="Месяц" />
             </SelectTrigger>
             <SelectContent>
@@ -486,11 +513,21 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
-        <Button variant="outline" className="relative">
+        <Button
+          variant="outline"
+          className={cn("relative", activeFiltersCount > 0 && ACTIVE_FILTER_CONTROL)}
+        >
           <Filter className="h-4 w-4 mr-2" />
           Фильтры
           {activeFiltersCount > 0 && (
-            <Badge className="ml-2 h-5 w-5 rounded-full p-0 text-xs">{activeFiltersCount}</Badge>
+            <Badge
+              className={cn(
+                "ml-2 h-5 w-5 rounded-full p-0 text-xs",
+                "bg-green-600 text-white hover:bg-green-600"
+              )}
+            >
+              {activeFiltersCount}
+            </Badge>
           )}
         </Button>
       </SheetTrigger>
@@ -560,7 +597,13 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col gap-2">
-                    <Label>Номера вагонов (с новой строки или через запятую)</Label>
+                    <Label
+                      className={cn(
+                        filters.numbers && filters.numbers.length > 0 && "text-green-800"
+                      )}
+                    >
+                      Номера вагонов (с новой строки или через запятую)
+                    </Label>
                     <Textarea
                       placeholder={
                         "По одному номеру в строке, например:\n12345678\n87654321\n\nили в одну строку: 12345678, 87654321"
@@ -568,7 +611,10 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                       value={numbersText}
                       onChange={(e) => handleNumbersChange(e.target.value)}
                       rows={5}
-                      className="min-h-[5.5rem] resize-y text-sm font-mono"
+                      className={cn(
+                        "min-h-[5.5rem] resize-y text-sm font-mono",
+                        filters.numbers && filters.numbers.length > 0 && ACTIVE_FILTER_CONTROL
+                      )}
                     />
                     <p className="text-xs text-muted-foreground">
                       Можно вводить номера столбиком (Enter) или списком через запятую — можно
@@ -577,7 +623,14 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="cistern-status">Статус</Label>
+                    <Label
+                      htmlFor="cistern-status"
+                      className={cn(
+                        filters.cisternStatusIds && filters.cisternStatusIds.length > 0 && "text-green-800"
+                      )}
+                    >
+                      Статус
+                    </Label>
                     <MultiSelect
                       placeholder="Выберите статусы"
                       options={cisternStatuses.map((s) => ({ id: s.id, name: s.name }))}
@@ -590,7 +643,14 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="manufacturer">Производитель</Label>
+                    <Label
+                      htmlFor="manufacturer"
+                      className={cn(
+                        filters.manufacturerIds && filters.manufacturerIds.length > 0 && "text-green-800"
+                      )}
+                    >
+                      Производитель
+                    </Label>
                     <MultiSelect
                       placeholder="Выберите производителей"
                       options={manufacturers.map((m) => ({ id: m.id, name: m.name }))}
@@ -601,7 +661,14 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="type">Тип</Label>
+                    <Label
+                      htmlFor="type"
+                      className={cn(
+                        filters.typeIds && filters.typeIds.length > 0 && "text-green-800"
+                      )}
+                    >
+                      Тип
+                    </Label>
                     <MultiSelect
                       placeholder="Выберите типы"
                       options={types.map((t) => ({ id: t.id, name: t.name }))}
@@ -612,7 +679,14 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="model">Модель</Label>
+                    <Label
+                      htmlFor="model"
+                      className={cn(
+                        filters.modelIds && filters.modelIds.length > 0 && "text-green-800"
+                      )}
+                    >
+                      Модель
+                    </Label>
                     <MultiSelect
                       placeholder="Выберите модели"
                       options={models.map((m) => ({ id: m.id, name: m.name }))}
@@ -623,7 +697,14 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="owner">Собственник</Label>
+                    <Label
+                      htmlFor="owner"
+                      className={cn(
+                        filters.ownerIds && filters.ownerIds.length > 0 && "text-green-800"
+                      )}
+                    >
+                      Собственник
+                    </Label>
                     <MultiSelect
                       placeholder="Выберите собственников"
                       options={owners.map((o) => ({ id: o.id, name: o.name }))}
@@ -691,7 +772,14 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                   />
 
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="owner">Количество осей</Label>
+                    <Label
+                      htmlFor="owner"
+                      className={cn(
+                        filters.axleCounts && filters.axleCounts.length > 0 && "text-green-800"
+                      )}
+                    >
+                      Количество осей
+                    </Label>
                     <MultiSelect
                       placeholder="Выберите количество осей"
                       options={[4, 6, 8, 10].map((count) => ({
@@ -729,7 +817,14 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="registrar">Регистратор</Label>
+                    <Label
+                      htmlFor="registrar"
+                      className={cn(
+                        filters.registrarIds && filters.registrarIds.length > 0 && "text-green-800"
+                      )}
+                    >
+                      Регистратор
+                    </Label>
                     <MultiSelect
                       placeholder="Выберите регистраторов"
                       options={registrars.map((r) => ({ id: r.id, name: r.name }))}
@@ -747,7 +842,14 @@ export const CisternFilters: React.FC<CisternFiltersProps> = ({
                   />
 
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="affiliation">Принадлежность</Label>
+                    <Label
+                      htmlFor="affiliation"
+                      className={cn(
+                        filters.affiliationIds && filters.affiliationIds.length > 0 && "text-green-800"
+                      )}
+                    >
+                      Принадлежность
+                    </Label>
                     <MultiSelect
                       placeholder="Выберите принадлежность"
                       options={affiliations.map((a) => ({ id: a.id, name: a.value }))}
