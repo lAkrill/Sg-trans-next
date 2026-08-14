@@ -35,6 +35,9 @@ public static class FitmentEquipmentEndpoints
                     .ThenInclude(f => f.FitmentType)
                     .Include(fe => fe.JobUser)
                     .Include(fe => fe.TestUser)
+                    .Include(fe => fe.AcceptUser)
+                    .Include(fe => fe.InstallUser)
+                    .Include(fe => fe.ApprovUser)
                     .Include(fe => fe.Depot)
                     .Include(fe => fe.RailwayCistern)
                     .ThenInclude(rc => rc.Manufacturer)
@@ -79,6 +82,9 @@ public static class FitmentEquipmentEndpoints
                         FitmentId = fe.FitmentId,
                         JobUserId = fe.JobUserId,
                         TestUserId = fe.TestUserId,
+                        AcceptUserId = fe.AcceptUserId,
+                        InstallUserId = fe.InstallUserId,
+                        ApprovUserId = fe.ApprovUserId,
                         DepoId = fe.DepoId,
                         Date = fe.Date,
                         DocumentId = fe.DocumentId,
@@ -101,21 +107,58 @@ public static class FitmentEquipmentEndpoints
                             }
                             : null,
                         JobUser = fe.JobUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.JobUser.Id,
-                                Email = fe.JobUser.Email,
+                                LastName = fe.JobUser.LastName,
                                 FirstName = fe.JobUser.FirstName,
-                                LastName = fe.JobUser.LastName
+                                Patronymic = fe.JobUser.Patronymic,
+                                Initials = fe.JobUser.Initials,
+                                Position = fe.JobUser.Position
                             }
                             : null,
                         TestUser = fe.TestUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.TestUser.Id,
-                                Email = fe.TestUser.Email,
+                                LastName = fe.TestUser.LastName,
                                 FirstName = fe.TestUser.FirstName,
-                                LastName = fe.TestUser.LastName
+                                Patronymic = fe.TestUser.Patronymic,
+                                Initials = fe.TestUser.Initials,
+                                Position = fe.TestUser.Position
+                            }
+                            : null,
+                        AcceptUser = fe.AcceptUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.AcceptUser.Id,
+                                LastName = fe.AcceptUser.LastName,
+                                FirstName = fe.AcceptUser.FirstName,
+                                Patronymic = fe.AcceptUser.Patronymic,
+                                Initials = fe.AcceptUser.Initials,
+                                Position = fe.AcceptUser.Position
+                            }
+                            : null,
+                        InstallUser = fe.InstallUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.InstallUser.Id,
+                                LastName = fe.InstallUser.LastName,
+                                FirstName = fe.InstallUser.FirstName,
+                                Patronymic = fe.InstallUser.Patronymic,
+                                Initials = fe.InstallUser.Initials,
+                                Position = fe.InstallUser.Position
+                            }
+                            : null,
+                        ApprovUser = fe.ApprovUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.ApprovUser.Id,
+                                LastName = fe.ApprovUser.LastName,
+                                FirstName = fe.ApprovUser.FirstName,
+                                Patronymic = fe.ApprovUser.Patronymic,
+                                Initials = fe.ApprovUser.Initials,
+                                Position = fe.ApprovUser.Position
                             }
                             : null,
                         Depot = fe.Depot != null
@@ -163,6 +206,9 @@ public static class FitmentEquipmentEndpoints
                     .ThenInclude(f => f.FitmentType)
                     .Include(fe => fe.JobUser)
                     .Include(fe => fe.TestUser)
+                    .Include(fe => fe.AcceptUser)
+                    .Include(fe => fe.InstallUser)
+                    .Include(fe => fe.ApprovUser)
                     .Include(fe => fe.Depot)
                     .Include(fe => fe.RailwayCistern)
                     .ThenInclude(rc => rc.Manufacturer)
@@ -189,6 +235,9 @@ public static class FitmentEquipmentEndpoints
                         FitmentId = fe.FitmentId,
                         JobUserId = fe.JobUserId,
                         TestUserId = fe.TestUserId,
+                        AcceptUserId = fe.AcceptUserId,
+                        InstallUserId = fe.InstallUserId,
+                        ApprovUserId = fe.ApprovUserId,
                         DepoId = fe.DepoId,
                         Date = fe.Date,
                         DocumentId = fe.DocumentId,
@@ -211,21 +260,58 @@ public static class FitmentEquipmentEndpoints
                             }
                             : null,
                         JobUser = fe.JobUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.JobUser.Id,
-                                Email = fe.JobUser.Email,
+                                LastName = fe.JobUser.LastName,
                                 FirstName = fe.JobUser.FirstName,
-                                LastName = fe.JobUser.LastName
+                                Patronymic = fe.JobUser.Patronymic,
+                                Initials = fe.JobUser.Initials,
+                                Position = fe.JobUser.Position
                             }
                             : null,
                         TestUser = fe.TestUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.TestUser.Id,
-                                Email = fe.TestUser.Email,
+                                LastName = fe.TestUser.LastName,
                                 FirstName = fe.TestUser.FirstName,
-                                LastName = fe.TestUser.LastName
+                                Patronymic = fe.TestUser.Patronymic,
+                                Initials = fe.TestUser.Initials,
+                                Position = fe.TestUser.Position
+                            }
+                            : null,
+                        AcceptUser = fe.AcceptUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.AcceptUser.Id,
+                                LastName = fe.AcceptUser.LastName,
+                                FirstName = fe.AcceptUser.FirstName,
+                                Patronymic = fe.AcceptUser.Patronymic,
+                                Initials = fe.AcceptUser.Initials,
+                                Position = fe.AcceptUser.Position
+                            }
+                            : null,
+                        InstallUser = fe.InstallUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.InstallUser.Id,
+                                LastName = fe.InstallUser.LastName,
+                                FirstName = fe.InstallUser.FirstName,
+                                Patronymic = fe.InstallUser.Patronymic,
+                                Initials = fe.InstallUser.Initials,
+                                Position = fe.InstallUser.Position
+                            }
+                            : null,
+                        ApprovUser = fe.ApprovUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.ApprovUser.Id,
+                                LastName = fe.ApprovUser.LastName,
+                                FirstName = fe.ApprovUser.FirstName,
+                                Patronymic = fe.ApprovUser.Patronymic,
+                                Initials = fe.ApprovUser.Initials,
+                                Position = fe.ApprovUser.Position
                             }
                             : null,
                         Depot = fe.Depot != null
@@ -266,6 +352,9 @@ public static class FitmentEquipmentEndpoints
                     .ThenInclude(f => f.FitmentType)
                     .Include(fe => fe.JobUser)
                     .Include(fe => fe.TestUser)
+                    .Include(fe => fe.AcceptUser)
+                    .Include(fe => fe.InstallUser)
+                    .Include(fe => fe.ApprovUser)
                     .Include(fe => fe.Depot)
                     .Include(fe => fe.RailwayCistern)
                     .ThenInclude(rc => rc.Manufacturer)
@@ -291,6 +380,9 @@ public static class FitmentEquipmentEndpoints
                     FitmentId = entity.FitmentId,
                     JobUserId = entity.JobUserId,
                     TestUserId = entity.TestUserId,
+                    AcceptUserId = entity.AcceptUserId,
+                    InstallUserId = entity.InstallUserId,
+                    ApprovUserId = entity.ApprovUserId,
                     DepoId = entity.DepoId,
                     Date = entity.Date,
                     DocumentId = entity.DocumentId,
@@ -313,21 +405,58 @@ public static class FitmentEquipmentEndpoints
                         }
                         : null,
                     JobUser = entity.JobUser != null
-                        ? new UserInfoDTO
+                        ? new EmployeeInfoDTO
                         {
                             Id = entity.JobUser.Id,
-                            Email = entity.JobUser.Email,
+                            LastName = entity.JobUser.LastName,
                             FirstName = entity.JobUser.FirstName,
-                            LastName = entity.JobUser.LastName
+                            Patronymic = entity.JobUser.Patronymic,
+                            Initials = entity.JobUser.Initials,
+                            Position = entity.JobUser.Position
                         }
                         : null,
                     TestUser = entity.TestUser != null
-                        ? new UserInfoDTO
+                        ? new EmployeeInfoDTO
                         {
                             Id = entity.TestUser.Id,
-                            Email = entity.TestUser.Email,
+                            LastName = entity.TestUser.LastName,
                             FirstName = entity.TestUser.FirstName,
-                            LastName = entity.TestUser.LastName
+                            Patronymic = entity.TestUser.Patronymic,
+                            Initials = entity.TestUser.Initials,
+                            Position = entity.TestUser.Position
+                        }
+                        : null,
+                    AcceptUser = entity.AcceptUser != null
+                        ? new EmployeeInfoDTO
+                        {
+                            Id = entity.AcceptUser.Id,
+                            LastName = entity.AcceptUser.LastName,
+                            FirstName = entity.AcceptUser.FirstName,
+                            Patronymic = entity.AcceptUser.Patronymic,
+                            Initials = entity.AcceptUser.Initials,
+                            Position = entity.AcceptUser.Position
+                        }
+                        : null,
+                    InstallUser = entity.InstallUser != null
+                        ? new EmployeeInfoDTO
+                        {
+                            Id = entity.InstallUser.Id,
+                            LastName = entity.InstallUser.LastName,
+                            FirstName = entity.InstallUser.FirstName,
+                            Patronymic = entity.InstallUser.Patronymic,
+                            Initials = entity.InstallUser.Initials,
+                            Position = entity.InstallUser.Position
+                        }
+                        : null,
+                    ApprovUser = entity.ApprovUser != null
+                        ? new EmployeeInfoDTO
+                        {
+                            Id = entity.ApprovUser.Id,
+                            LastName = entity.ApprovUser.LastName,
+                            FirstName = entity.ApprovUser.FirstName,
+                            Patronymic = entity.ApprovUser.Patronymic,
+                            Initials = entity.ApprovUser.Initials,
+                            Position = entity.ApprovUser.Position
                         }
                         : null,
                     Depot = entity.Depot != null
@@ -389,6 +518,9 @@ public static class FitmentEquipmentEndpoints
                         FitmentId = fe.FitmentId,
                         JobUserId = fe.JobUserId,
                         TestUserId = fe.TestUserId,
+                        AcceptUserId = fe.AcceptUserId,
+                        InstallUserId = fe.InstallUserId,
+                        ApprovUserId = fe.ApprovUserId,
                         DepoId = fe.DepoId,
                         Date = fe.Date,
                         DocumentId = fe.DocumentId,
@@ -411,21 +543,58 @@ public static class FitmentEquipmentEndpoints
                             }
                             : null,
                         JobUser = fe.JobUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.JobUser.Id,
-                                Email = fe.JobUser.Email,
+                                LastName = fe.JobUser.LastName,
                                 FirstName = fe.JobUser.FirstName,
-                                LastName = fe.JobUser.LastName
+                                Patronymic = fe.JobUser.Patronymic,
+                                Initials = fe.JobUser.Initials,
+                                Position = fe.JobUser.Position
                             }
                             : null,
                         TestUser = fe.TestUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.TestUser.Id,
-                                Email = fe.TestUser.Email,
+                                LastName = fe.TestUser.LastName,
                                 FirstName = fe.TestUser.FirstName,
-                                LastName = fe.TestUser.LastName
+                                Patronymic = fe.TestUser.Patronymic,
+                                Initials = fe.TestUser.Initials,
+                                Position = fe.TestUser.Position
+                            }
+                            : null,
+                        AcceptUser = fe.AcceptUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.AcceptUser.Id,
+                                LastName = fe.AcceptUser.LastName,
+                                FirstName = fe.AcceptUser.FirstName,
+                                Patronymic = fe.AcceptUser.Patronymic,
+                                Initials = fe.AcceptUser.Initials,
+                                Position = fe.AcceptUser.Position
+                            }
+                            : null,
+                        InstallUser = fe.InstallUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.InstallUser.Id,
+                                LastName = fe.InstallUser.LastName,
+                                FirstName = fe.InstallUser.FirstName,
+                                Patronymic = fe.InstallUser.Patronymic,
+                                Initials = fe.InstallUser.Initials,
+                                Position = fe.InstallUser.Position
+                            }
+                            : null,
+                        ApprovUser = fe.ApprovUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.ApprovUser.Id,
+                                LastName = fe.ApprovUser.LastName,
+                                FirstName = fe.ApprovUser.FirstName,
+                                Patronymic = fe.ApprovUser.Patronymic,
+                                Initials = fe.ApprovUser.Initials,
+                                Position = fe.ApprovUser.Position
                             }
                             : null,
                         Depot = fe.Depot != null
@@ -492,6 +661,9 @@ public static class FitmentEquipmentEndpoints
                         FitmentId = fe.FitmentId,
                         JobUserId = fe.JobUserId,
                         TestUserId = fe.TestUserId,
+                        AcceptUserId = fe.AcceptUserId,
+                        InstallUserId = fe.InstallUserId,
+                        ApprovUserId = fe.ApprovUserId,
                         DepoId = fe.DepoId,
                         Date = fe.Date,
                         DocumentId = fe.DocumentId,
@@ -514,21 +686,58 @@ public static class FitmentEquipmentEndpoints
                             }
                             : null,
                         JobUser = fe.JobUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.JobUser.Id,
-                                Email = fe.JobUser.Email,
+                                LastName = fe.JobUser.LastName,
                                 FirstName = fe.JobUser.FirstName,
-                                LastName = fe.JobUser.LastName
+                                Patronymic = fe.JobUser.Patronymic,
+                                Initials = fe.JobUser.Initials,
+                                Position = fe.JobUser.Position
                             }
                             : null,
                         TestUser = fe.TestUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.TestUser.Id,
-                                Email = fe.TestUser.Email,
+                                LastName = fe.TestUser.LastName,
                                 FirstName = fe.TestUser.FirstName,
-                                LastName = fe.TestUser.LastName
+                                Patronymic = fe.TestUser.Patronymic,
+                                Initials = fe.TestUser.Initials,
+                                Position = fe.TestUser.Position
+                            }
+                            : null,
+                        AcceptUser = fe.AcceptUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.AcceptUser.Id,
+                                LastName = fe.AcceptUser.LastName,
+                                FirstName = fe.AcceptUser.FirstName,
+                                Patronymic = fe.AcceptUser.Patronymic,
+                                Initials = fe.AcceptUser.Initials,
+                                Position = fe.AcceptUser.Position
+                            }
+                            : null,
+                        InstallUser = fe.InstallUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.InstallUser.Id,
+                                LastName = fe.InstallUser.LastName,
+                                FirstName = fe.InstallUser.FirstName,
+                                Patronymic = fe.InstallUser.Patronymic,
+                                Initials = fe.InstallUser.Initials,
+                                Position = fe.InstallUser.Position
+                            }
+                            : null,
+                        ApprovUser = fe.ApprovUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.ApprovUser.Id,
+                                LastName = fe.ApprovUser.LastName,
+                                FirstName = fe.ApprovUser.FirstName,
+                                Patronymic = fe.ApprovUser.Patronymic,
+                                Initials = fe.ApprovUser.Initials,
+                                Position = fe.ApprovUser.Position
                             }
                             : null,
                         Depot = fe.Depot != null
@@ -590,6 +799,9 @@ public static class FitmentEquipmentEndpoints
                         FitmentId = fe.FitmentId,
                         JobUserId = fe.JobUserId,
                         TestUserId = fe.TestUserId,
+                        AcceptUserId = fe.AcceptUserId,
+                        InstallUserId = fe.InstallUserId,
+                        ApprovUserId = fe.ApprovUserId,
                         DepoId = fe.DepoId,
                         Date = fe.Date,
                         DocumentId = fe.DocumentId,
@@ -612,23 +824,60 @@ public static class FitmentEquipmentEndpoints
                             }
                             : null,
                         JobUser = fe.JobUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.JobUser.Id,
-                                Email = fe.JobUser.Email,
+                                LastName = fe.JobUser.LastName,
                                 FirstName = fe.JobUser.FirstName,
-                                LastName = fe.JobUser.LastName
+                                Patronymic = fe.JobUser.Patronymic,
+                                Initials = fe.JobUser.Initials,
+                                Position = fe.JobUser.Position
                             }
                             : null,
                         TestUser = fe.TestUser != null
-                            ? new UserInfoDTO
+                            ? new EmployeeInfoDTO
                             {
                                 Id = fe.TestUser.Id,
-                                Email = fe.TestUser.Email,
+                                LastName = fe.TestUser.LastName,
                                 FirstName = fe.TestUser.FirstName,
-                                LastName = fe.TestUser.LastName
+                                Patronymic = fe.TestUser.Patronymic,
+                                Initials = fe.TestUser.Initials,
+                                Position = fe.TestUser.Position
                             }
                             : null,
+                        AcceptUser = fe.AcceptUser != null
+                        ? new EmployeeInfoDTO
+                        {
+                            Id = fe.AcceptUser.Id,
+                            LastName = fe.AcceptUser.LastName,
+                            FirstName = fe.AcceptUser.FirstName,
+                            Patronymic = fe.AcceptUser.Patronymic,
+                            Initials = fe.AcceptUser.Initials,
+                            Position = fe.AcceptUser.Position
+                        }
+                        : null,
+                        InstallUser = fe.InstallUser != null
+                        ? new EmployeeInfoDTO
+                        {
+                            Id = fe.InstallUser.Id,
+                            LastName = fe.InstallUser.LastName,
+                            FirstName = fe.InstallUser.FirstName,
+                            Patronymic = fe.InstallUser.Patronymic,
+                            Initials = fe.InstallUser.Initials,
+                            Position = fe.InstallUser.Position
+                        }
+                        : null,
+                        ApprovUser = fe.ApprovUser != null
+                        ? new EmployeeInfoDTO
+                        {
+                            Id = fe.ApprovUser.Id,
+                            LastName = fe.ApprovUser.LastName,
+                            FirstName = fe.ApprovUser.FirstName,
+                            Patronymic = fe.ApprovUser.Patronymic,
+                            Initials = fe.ApprovUser.Initials,
+                            Position = fe.ApprovUser.Position
+                        }
+                        : null,
                         Depot = fe.Depot != null
                             ? new DepotDTO
                             {
@@ -696,6 +945,9 @@ public static class FitmentEquipmentEndpoints
                     FitmentId = lastEquipment.FitmentId,
                     JobUserId = lastEquipment.JobUserId,
                     TestUserId = lastEquipment.TestUserId,
+                    AcceptUserId = lastEquipment.AcceptUserId,
+                    InstallUserId = lastEquipment.InstallUserId,
+                    ApprovUserId = lastEquipment.ApprovUserId,
                     DepoId = lastEquipment.DepoId,
                     Date = lastEquipment.Date,
                     DocumentId = lastEquipment.DocumentId,
@@ -718,21 +970,58 @@ public static class FitmentEquipmentEndpoints
                         }
                         : null,
                     JobUser = lastEquipment.JobUser != null
-                        ? new UserInfoDTO
+                        ? new EmployeeInfoDTO
                         {
                             Id = lastEquipment.JobUser.Id,
-                            Email = lastEquipment.JobUser.Email,
+                            LastName = lastEquipment.JobUser.LastName,
                             FirstName = lastEquipment.JobUser.FirstName,
-                            LastName = lastEquipment.JobUser.LastName
+                            Patronymic = lastEquipment.JobUser.Patronymic,
+                            Initials = lastEquipment.JobUser.Initials,
+                            Position = lastEquipment.JobUser.Position
                         }
                         : null,
                     TestUser = lastEquipment.TestUser != null
-                        ? new UserInfoDTO
+                        ? new EmployeeInfoDTO
                         {
                             Id = lastEquipment.TestUser.Id,
-                            Email = lastEquipment.TestUser.Email,
+                            LastName = lastEquipment.TestUser.LastName,
                             FirstName = lastEquipment.TestUser.FirstName,
-                            LastName = lastEquipment.TestUser.LastName
+                            Patronymic = lastEquipment.TestUser.Patronymic,
+                            Initials = lastEquipment.TestUser.Initials,
+                            Position = lastEquipment.TestUser.Position
+                        }
+                        : null,
+                    AcceptUser = lastEquipment.AcceptUser != null
+                        ? new EmployeeInfoDTO
+                        {
+                            Id = lastEquipment.AcceptUser.Id,
+                            LastName = lastEquipment.AcceptUser.LastName,
+                            FirstName = lastEquipment.AcceptUser.FirstName,
+                            Patronymic = lastEquipment.AcceptUser.Patronymic,
+                            Initials = lastEquipment.AcceptUser.Initials,
+                            Position = lastEquipment.AcceptUser.Position
+                        }
+                        : null,
+                    InstallUser = lastEquipment.InstallUser != null
+                        ? new EmployeeInfoDTO
+                        {
+                            Id = lastEquipment.InstallUser.Id,
+                            LastName = lastEquipment.InstallUser.LastName,
+                            FirstName = lastEquipment.InstallUser.FirstName,
+                            Patronymic = lastEquipment.InstallUser.Patronymic,
+                            Initials = lastEquipment.InstallUser.Initials,
+                            Position = lastEquipment.InstallUser.Position
+                        }
+                        : null,
+                    ApprovUser = lastEquipment.ApprovUser != null
+                        ? new EmployeeInfoDTO
+                        {
+                            Id = lastEquipment.ApprovUser.Id,
+                            LastName = lastEquipment.ApprovUser.LastName,
+                            FirstName = lastEquipment.ApprovUser.FirstName,
+                            Patronymic = lastEquipment.ApprovUser.Patronymic,
+                            Initials = lastEquipment.ApprovUser.Initials,
+                            Position = lastEquipment.ApprovUser.Position
                         }
                         : null,
                     Depot = lastEquipment.Depot != null
@@ -778,6 +1067,9 @@ public static class FitmentEquipmentEndpoints
                     FitmentId = dto.FitmentId,
                     JobUserId = dto.JobUserId,
                     TestUserId = dto.TestUserId,
+                    AcceptUserId = dto.AcceptUserId,
+                    InstallUserId = dto.InstallUserId,
+                    ApprovUserId = dto.ApprovUserId,
                     DepoId = dto.DepoId,
                     Date = dto.Date,
                     DocumentId = dto.DocumentId

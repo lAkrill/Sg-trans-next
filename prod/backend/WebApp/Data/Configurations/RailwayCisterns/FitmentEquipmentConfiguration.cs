@@ -14,6 +14,9 @@ public class FitmentEquipmentConfiguration : IEntityTypeConfiguration<FitmentEqu
         entity.Property(e => e.Operation).IsRequired();
         entity.Property(e => e.Date).HasColumnName("date").IsRequired().HasColumnType("date");
         entity.Property(e => e.DocumentId).IsRequired();
+        entity.Property(e => e.AcceptUserId).IsRequired(false);
+        entity.Property(e => e.InstallUserId).IsRequired(false);
+        entity.Property(e => e.ApprovUserId).IsRequired(false);
 
         entity.HasOne(fe => fe.RailwayCistern)
             .WithMany()
@@ -34,6 +37,21 @@ public class FitmentEquipmentConfiguration : IEntityTypeConfiguration<FitmentEqu
         entity.HasOne(fe => fe.TestUser)
             .WithMany()
             .HasForeignKey(fe => fe.TestUserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        entity.HasOne(fe => fe.AcceptUser)
+            .WithMany()
+            .HasForeignKey(fe => fe.AcceptUserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        entity.HasOne(fe => fe.InstallUser)
+            .WithMany()
+            .HasForeignKey(fe => fe.InstallUserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        entity.HasOne(fe => fe.ApprovUser)
+            .WithMany()
+            .HasForeignKey(fe => fe.ApprovUserId)
             .OnDelete(DeleteBehavior.NoAction);
 
         entity.HasOne(fe => fe.Depot)
