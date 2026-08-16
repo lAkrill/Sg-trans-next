@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Alert,
   AlertDescription,
@@ -24,17 +24,25 @@ import {
 import { Loader2 } from "lucide-react";
 import {
   useAllDocuments,
-  useAllUsers,
   useCisternIdAndNumbers,
   useCreateDocument,
   useCreateFitmentEquipment,
+  useCurrentUser,
   useDepots,
+  useEmployees,
   useFitments,
   useUpdateFitment,
 } from "@/hooks";
 import { fitmentEquipmentApi } from "@/api/directories";
+import { getDocumentTypeLabel } from "@/components/documents-filter";
 import { formatDate } from "@/lib/formatDate";
-import type { FitmentDTO, FitmentEquipmentDTO, UpdateFitmentDTO } from "@/types/directories";
+import type {
+  CreateDocumentDTO,
+  EmployeeDTO,
+  FitmentDTO,
+  FitmentEquipmentDTO,
+  UpdateFitmentDTO,
+} from "@/types/directories";
 
 type BindFitmentFormData = {
   railwayCisternsId: string;
@@ -42,7 +50,11 @@ type BindFitmentFormData = {
   fitmentId: string;
   jobUserId: string;
   testUserId: string;
+  acceptUserId: string;
+  installUserId: string;
+  approvUserId: string;
   depoId: string;
+  locationDepoId: string;
   date: string;
   documentId: string;
 };
@@ -52,8 +64,9 @@ type RequestStatus = {
   message: string;
 };
 
-/** Шаблонный документ: при выборе создаётся новый документ на основе данных формы */
-const TEMPLATE_DOCUMENT_ID = "a63d2f42-355c-44b6-90b5-7bc522ab7f04";
+const MAINTENANCE_OPERATION = 3;
+const FITMENT_DOCUMENT_TYPE = 2;
+const CREATE_NEW_DOCUMENT_VALUE = "__create_new_document__";
 
 const initialValues: BindFitmentFormData = {
   railwayCisternsId: "",
@@ -61,9 +74,67 @@ const initialValues: BindFitmentFormData = {
   fitmentId: "",
   jobUserId: "",
   testUserId: "",
+  acceptUserId: "",
+  installUserId: "",
+  approvUserId: "",
   depoId: "",
+  locationDepoId: "",
   date: "",
   documentId: "",
+};
+
+const getTodayDate = () => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+};
+
+const formatEmployeeLabel = (employee: EmployeeDTO) => {
+  const fullName = [employee.lastName, employee.firstName, employee.patronymic]
+    .filter(Boolean)
+    .join(" ");
+  const name = fullName || employee.initials || "—";
+  return employee.position ? `${name} (${employee.position})` : name;
+};
+
+const formatDocumentLabel = (document: {
+  number?: string | null;
+  date?: string | null;
+  author?: string | null;
+  type?: number | null;
+}) => {
+  const number = document.number?.trim() || "—";
+  const date = formatDate(document.date, "ru-RU", "—");
+  const author = document.author?.trim() || "—";
+  const typeLabel = getDocumentTypeLabel(document.type);
+  return `${number} (${date}, ${author}) - ${typeLabel}`;
+};
+
+const formatUserAuthor = (user?: { firstName?: string | null; lastName?: string | null } | null) => {
+  if (!user) return "";
+  return [user.lastName, user.firstName].filter(Boolean).join(" ").trim();
+};
+
+const EMPTY_DOCUMENT_FORM: CreateDocumentDTO = {
+  number: "",
+  type: FITMENT_DOCUMENT_TYPE,
+  date: "",
+  author: "",
+  price: null,
+  note: "",
+  file: "",
+};
+
+const findLatestMaintenanceRecord = (records: FitmentEquipmentDTO[]) => {
+  return records
+    .filter((record) => Number(record.operation) === MAINTENANCE_OPERATION)
+    .reduce<FitmentEquipmentDTO | null>((latest, record) => {
+      if (!record.date) return latest;
+      if (!latest?.date) return record;
+
+      return new Date(record.date).getTime() >= new Date(latest.date).getTime() ? record : latest;
+    }, null);
 };
 
 const getErrorMessage = (err: unknown) => {
@@ -105,7 +176,8 @@ const buildFitmentLocationUpdate = (
   fitment: FitmentDTO,
   operation: number,
   depoId: string,
-  railwayCisternsId: string
+  railwayCisternsId: string,
+  locationDepoId: string
 ): UpdateFitmentDTO => {
   const isInstall = operation === 2;
   const isRemoval = operation === 1;
@@ -122,7 +194,7 @@ const buildFitmentLocationUpdate = (
     depotId: fitment.depotId ?? null,
     // 1 — снятие, 2 — установка
     code: isRemoval ? 1 : isInstall ? 2 : fitment.code ?? 0,
-    locationDepoId: isRemoval ? depoId || null : null,
+    locationDepoId: isRemoval ? locationDepoId || depoId || null : null,
     locationCisternId: isInstall ? railwayCisternsId || null : null,
   };
 };
@@ -135,20 +207,30 @@ interface BindFitmentDialogProps {
 export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps) {
   const [form, setForm] = useState<BindFitmentFormData>(initialValues);
   const [status, setStatus] = useState<RequestStatus | null>(null);
+  const [latestMaintenance, setLatestMaintenance] = useState<FitmentEquipmentDTO | null>(null);
+  const [isPrefilling, setIsPrefilling] = useState(false);
+  const [isCreateDocumentOpen, setIsCreateDocumentOpen] = useState(false);
+  const [documentFormData, setDocumentFormData] = useState<CreateDocumentDTO>(EMPTY_DOCUMENT_FORM);
+  const [documentFormError, setDocumentFormError] = useState<string | null>(null);
+  const [isCreatingDocument, setIsCreatingDocument] = useState(false);
+  const prefillRequestIdRef = useRef(0);
   const createMutation = useCreateFitmentEquipment();
   const createDocumentMutation = useCreateDocument();
   const updateFitmentMutation = useUpdateFitment();
 
   const { data: cisternIdAndNumbers, isLoading: cisternsLoading } = useCisternIdAndNumbers();
   const { data: fitments, isLoading: fitmentsLoading } = useFitments();
-  const { data: users, isLoading: usersLoading } = useAllUsers();
+  const { data: employees, isLoading: employeesLoading } = useEmployees();
   const { data: depots, isLoading: depotsLoading } = useDepots();
-  const { data: documents, isLoading: documentsLoading } = useAllDocuments();
+  const { data: documents = [], isLoading: documentsLoading } = useAllDocuments();
+  const { data: currentUser } = useCurrentUser();
 
   const isSubmitting =
     createMutation.isPending ||
     createDocumentMutation.isPending ||
-    updateFitmentMutation.isPending;
+    updateFitmentMutation.isPending ||
+    isPrefilling ||
+    isCreatingDocument;
 
   const cisternOptions =
     cisternIdAndNumbers?.map((cistern) => ({
@@ -156,100 +238,247 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
       label: cistern.number,
     })) || [];
 
+  const expectedFitmentCode = form.operation === "1" ? 2 : 3;
+
   const fitmentOptions =
-    fitments?.map((fitment) => ({
-      value: fitment.id,
-      label: `(${fitment.serialNumber || "—"}; ${fitment.passportNumber || "—"}) — ${
-        fitment.fitmentType?.name || "—"
-      }`,
+    fitments
+      ?.filter((fitment) => Number(fitment.code) === expectedFitmentCode)
+      .map((fitment) => ({
+        value: fitment.id,
+        label: `(${fitment.serialNumber || "—"}; ${fitment.passportNumber || "—"}) — ${
+          fitment.fitmentType?.name || "—"
+        }`,
+      })) || [];
+
+  const employeeOptions =
+    employees?.map((employee) => ({
+      value: employee.id,
+      label: formatEmployeeLabel(employee),
     })) || [];
 
-  const userOptions =
-    users?.map((user) => ({
-      value: user.id,
-      label: `${[user.lastName, user.firstName].filter(Boolean).join(" ")} (${user.email})`,
-    })) || [];
-
-  const depotOptions =
+  const locationDepotOptions =
     depots?.map((depot) => ({
       value: depot.id,
-      label: `${depot.shortName || depot.name} (${depot.code})`,
+      label: `${depot.shortName || depot.name || "—"} (${depot.code})`,
     })) || [];
 
-  const documentOptions =
-    documents?.map((document) => ({
-      value: document.id,
-      label: `${document.number} (${document.author || "—"}, ${formatDate(document.date, "ru-RU", "—")})`,
-    })) || [];
+  const isRemoval = form.operation === "1";
+
+  const documentOptions = useMemo(() => {
+    const fitmentDocuments = documents
+      .filter((document) => Number(document.type) === FITMENT_DOCUMENT_TYPE)
+      .map((document) => ({
+        value: document.id,
+        label: formatDocumentLabel(document),
+      }));
+
+    const options = [
+      { value: CREATE_NEW_DOCUMENT_VALUE, label: "Создать новый документ" },
+      ...fitmentDocuments,
+    ];
+
+    if (
+      form.documentId &&
+      form.documentId !== CREATE_NEW_DOCUMENT_VALUE &&
+      !options.some((option) => option.value === form.documentId)
+    ) {
+      const selected =
+        documents.find((document) => document.id === form.documentId) ?? latestMaintenance?.document;
+      options.push({
+        value: form.documentId,
+        label: selected ? formatDocumentLabel(selected) : form.documentId,
+      });
+    }
+
+    return options;
+  }, [documents, form.documentId, latestMaintenance]);
+
+  const handleDocumentChange = (documentId: string) => {
+    setStatus(null);
+
+    if (documentId === CREATE_NEW_DOCUMENT_VALUE) {
+      setDocumentFormData({
+        ...EMPTY_DOCUMENT_FORM,
+        type: FITMENT_DOCUMENT_TYPE,
+        date: form.date || getTodayDate(),
+        author: formatUserAuthor(currentUser),
+      });
+      setDocumentFormError(null);
+      setIsCreateDocumentOpen(true);
+      return;
+    }
+
+    const document =
+      documents.find((item) => item.id === documentId) ??
+      (latestMaintenance?.document?.id === documentId ? latestMaintenance.document : undefined);
+    const documentDate = document?.date?.slice(0, 10) ?? "";
+
+    setForm((current) => ({
+      ...current,
+      documentId,
+      ...(documentDate ? { date: documentDate } : {}),
+    }));
+  };
+
+  const updateDocumentFormField = <K extends keyof CreateDocumentDTO>(
+    key: K,
+    value: CreateDocumentDTO[K]
+  ) => {
+    setDocumentFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleCreateDocumentDialogChange = (nextOpen: boolean) => {
+    if (!nextOpen && isCreatingDocument) return;
+    setIsCreateDocumentOpen(nextOpen);
+    if (!nextOpen) {
+      setDocumentFormData(EMPTY_DOCUMENT_FORM);
+      setDocumentFormError(null);
+    }
+  };
+
+  const handleCreateDocument = async () => {
+    if (!documentFormData.number.trim() || !documentFormData.date || isCreatingDocument) return;
+
+    setDocumentFormError(null);
+    setIsCreatingDocument(true);
+
+    try {
+      const newDocumentId = await createDocumentMutation.mutateAsync({
+        number: documentFormData.number.trim(),
+        type: FITMENT_DOCUMENT_TYPE,
+        date: documentFormData.date,
+        author: documentFormData.author?.trim() || null,
+        price: null,
+        note: documentFormData.note?.trim() || null,
+        file: null,
+      });
+
+      setForm((current) => ({
+        ...current,
+        documentId: newDocumentId,
+        date: documentFormData.date || current.date,
+      }));
+      setIsCreateDocumentOpen(false);
+      setDocumentFormData(EMPTY_DOCUMENT_FORM);
+      setDocumentFormError(null);
+    } catch (createDocumentError) {
+      setDocumentFormError(
+        getErrorMessage(createDocumentError) ||
+          "Не удалось создать документ. Попробуйте ещё раз."
+      );
+    } finally {
+      setIsCreatingDocument(false);
+    }
+  };
 
   const handleChange = (field: keyof BindFitmentFormData, value: string) => {
     setStatus(null);
     setForm((current) => ({
       ...current,
       [field]: value,
-      ...(field === "operation" && value !== "2" ? { railwayCisternsId: "" } : {}),
     }));
   };
 
+  const handleOperationChange = (operation: string) => {
+    if (operation === form.operation) return;
+
+    prefillRequestIdRef.current += 1;
+    setLatestMaintenance(null);
+    setIsPrefilling(false);
+    setStatus(null);
+    setForm({ ...initialValues, operation });
+  };
+
+  const handleFitmentChange = async (fitmentId: string) => {
+    setStatus(null);
+    const requestId = ++prefillRequestIdRef.current;
+
+    if (!fitmentId) {
+      setLatestMaintenance(null);
+      setForm((current) => ({
+        ...current,
+        fitmentId: "",
+        jobUserId: "",
+        testUserId: "",
+        acceptUserId: "",
+        depoId: "",
+        documentId: "",
+        date: "",
+      }));
+      return;
+    }
+
+    setLatestMaintenance(null);
+    setForm((current) => ({
+      ...current,
+      fitmentId,
+      jobUserId: "",
+      testUserId: "",
+      acceptUserId: "",
+      depoId: "",
+      documentId: "",
+      date: getTodayDate(),
+    }));
+    setIsPrefilling(true);
+
+    try {
+      const records = await fitmentEquipmentApi.getByFitment(fitmentId);
+      if (requestId !== prefillRequestIdRef.current) return;
+
+      const latest = findLatestMaintenanceRecord(records);
+      setLatestMaintenance(latest);
+
+      if (!latest) {
+        setStatus({
+          type: "error",
+          message: "Для выбранной арматуры не найдена запись технического обслуживания",
+        });
+        return;
+      }
+
+      setForm((current) => ({
+        ...current,
+        fitmentId,
+        jobUserId: latest.jobUserId || "",
+        testUserId: latest.testUserId || "",
+        acceptUserId: latest.acceptUserId || "",
+        depoId: latest.depoId || "",
+        documentId: latest.documentId || "",
+        date: getTodayDate(),
+      }));
+    } catch (err: unknown) {
+      if (requestId !== prefillRequestIdRef.current) return;
+      setLatestMaintenance(null);
+      setStatus({
+        type: "error",
+        message: getErrorMessage(err) || "Не удалось загрузить данные технического обслуживания",
+      });
+    } finally {
+      if (requestId === prefillRequestIdRef.current) {
+        setIsPrefilling(false);
+      }
+    }
+  };
+
   const handleDialogChange = (nextOpen: boolean) => {
-    if (isSubmitting) return;
+    if (isSubmitting || isCreatingDocument) return;
     onOpenChange(nextOpen);
     if (!nextOpen) {
       setStatus(null);
+      setLatestMaintenance(null);
+      setIsCreateDocumentOpen(false);
+      setDocumentFormData(EMPTY_DOCUMENT_FORM);
+      setDocumentFormError(null);
+      prefillRequestIdRef.current += 1;
     }
   };
 
   const handleReset = () => {
+    prefillRequestIdRef.current += 1;
+    setLatestMaintenance(null);
+    setIsPrefilling(false);
     setForm(initialValues);
     setStatus(null);
-  };
-
-  const resolveDocumentId = async (): Promise<string | undefined> => {
-    if (!form.documentId) return undefined;
-
-    if (form.documentId !== TEMPLATE_DOCUMENT_ID) {
-      return form.documentId;
-    }
-
-    const selectedFitment = fitments?.find((fitment) => fitment.id === form.fitmentId);
-    const selectedJobUser = users?.find((user) => user.id === form.jobUserId);
-
-    if (!selectedFitment?.passportNumber) {
-      throw new Error("У выбранной арматуры отсутствует номер паспорта");
-    }
-
-    if (!form.date) {
-      throw new Error("Укажите дату привязки для создания документа");
-    }
-
-    if (!selectedJobUser) {
-      throw new Error("Выберите сотрудника, который произвёл работу");
-    }
-
-    const author = [selectedJobUser.lastName, selectedJobUser.firstName]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-
-    if (!author) {
-      throw new Error("У выбранного сотрудника отсутствует ФИО");
-    }
-
-    setStatus({
-      type: "loading",
-      message: "Создаём документ...",
-    });
-
-    const newDocumentId = await createDocumentMutation.mutateAsync({
-      number: `${selectedFitment.passportNumber}-${form.date}`,
-      type: 2,
-      date: form.date,
-      author,
-      price: null,
-      note: null,
-    });
-
-    return newDocumentId;
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -266,10 +495,10 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
       return;
     }
 
-    if (operation === 1 && !form.depoId) {
+    if (operation === 1 && !form.locationDepoId) {
       setStatus({
         type: "error",
-        message: "Выберите место работы для снятия арматуры",
+        message: "Выберите депо для снятия арматуры",
       });
       return;
     }
@@ -282,6 +511,14 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
       return;
     }
 
+    if (!form.documentId || form.documentId === CREATE_NEW_DOCUMENT_VALUE) {
+      setStatus({
+        type: "error",
+        message: "Выберите документ",
+      });
+      return;
+    }
+
     try {
       setStatus({
         type: "loading",
@@ -289,8 +526,6 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
       });
 
       const lastBinding = await fitmentEquipmentApi.getLastByFitment(form.fitmentId);
-
-      const documentId = await resolveDocumentId();
 
       setStatus({
         type: "loading",
@@ -302,11 +537,14 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
         fitmentId: form.fitmentId,
         railwayCisternsId:
           operation === 2 ? form.railwayCisternsId : form.railwayCisternsId || undefined,
-        jobUserId: form.jobUserId || undefined,
-        testUserId: form.testUserId || undefined,
-        depoId: form.depoId || undefined,
+        jobUserId: operation === 1 ? null : form.jobUserId || undefined,
+        testUserId: operation === 1 ? null : form.testUserId || undefined,
+        acceptUserId: operation === 1 ? null : form.acceptUserId || undefined,
+        installUserId: operation === 1 ? null : form.installUserId || undefined,
+        approvUserId: operation === 1 ? null : form.approvUserId || undefined,
+        depoId: operation === 1 ? form.locationDepoId || undefined : form.depoId || undefined,
         date: form.date || undefined,
-        documentId,
+        documentId: form.documentId,
       });
 
       if (
@@ -330,7 +568,8 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
             selectedFitment,
             operation,
             form.depoId,
-            form.railwayCisternsId
+            form.railwayCisternsId,
+            form.locationDepoId
           ),
         });
       }
@@ -340,6 +579,7 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
         message: "Арматура успешно привязана",
       });
       setForm(initialValues);
+      setLatestMaintenance(null);
     } catch (err: unknown) {
       setStatus({
         type: "error",
@@ -352,6 +592,7 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent className="max-h-[95vh] sm:max-w-5xl">
         <DialogHeader>
@@ -368,7 +609,7 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
                 <Label htmlFor="bind-operation">Операция *</Label>
                 <Select
                   value={form.operation}
-                  onValueChange={(value) => handleChange("operation", value)}
+                  onValueChange={handleOperationChange}
                 >
                   <SelectTrigger id="bind-operation" className="w-full">
                     <SelectValue placeholder="Выберите операцию" />
@@ -376,7 +617,6 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
                   <SelectContent>
                     <SelectItem value="2">Установка</SelectItem>
                     <SelectItem value="1">Снятие</SelectItem>
-                    <SelectItem value="0">Не указана</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -385,11 +625,11 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
                 <Label htmlFor="bind-fitmentId">Арматура *</Label>
                 <SearchableSelect
                   value={form.fitmentId}
-                  onChange={(value) => handleChange("fitmentId", value)}
+                  onChange={handleFitmentChange}
                   options={fitmentOptions}
                   placeholder="Выберите арматуру"
                   searchPlaceholder="Введите номер или паспорт"
-                  isLoading={fitmentsLoading}
+                  isLoading={fitmentsLoading || isPrefilling}
                 />
               </div>
 
@@ -408,41 +648,6 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="bind-depoId">Место работы *</Label>
-                <SearchableSelect
-                  value={form.depoId}
-                  onChange={(value) => handleChange("depoId", value)}
-                  options={depotOptions}
-                  placeholder="Выберите депо"
-                  searchPlaceholder="Введите код или название"
-                  isLoading={depotsLoading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bind-testUserId">Испытание провёл *</Label>
-                <SearchableSelect
-                  value={form.testUserId}
-                  onChange={(value) => handleChange("testUserId", value)}
-                  options={userOptions}
-                  placeholder="Выберите сотрудника"
-                  searchPlaceholder="Введите ФИО или email"
-                  isLoading={usersLoading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bind-jobUserId">Работу произвёл *</Label>
-                <SearchableSelect
-                  value={form.jobUserId}
-                  onChange={(value) => handleChange("jobUserId", value)}
-                  options={userOptions}
-                  placeholder="Выберите сотрудника"
-                  searchPlaceholder="Введите ФИО или email"
-                  isLoading={usersLoading}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="bind-date">Дата привязки *</Label>
                 <Input
                   id="bind-date"
@@ -450,19 +655,102 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
                   value={form.date}
                   onChange={(e) => handleChange("date", e.target.value)}
                 />
-              </div>
+              </div> 
+
+              {!isRemoval && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="bind-installUserId">Установил</Label>
+                    <SearchableSelect
+                      value={form.installUserId}
+                      onChange={(value) => handleChange("installUserId", value)}
+                      options={employeeOptions}
+                      placeholder="Выберите сотрудника"
+                      searchPlaceholder="Введите ФИО или должность"
+                      isLoading={employeesLoading}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bind-approvUserId">Утвердил</Label>
+                    <SearchableSelect
+                      value={form.approvUserId}
+                      onChange={(value) => handleChange("approvUserId", value)}
+                      options={employeeOptions}
+                      placeholder="Выберите сотрудника"
+                      searchPlaceholder="Введите ФИО или должность"
+                      isLoading={employeesLoading}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bind-testUserId">Испытание провёл *</Label>
+                    <SearchableSelect
+                      value={form.testUserId}
+                      onChange={(value) => handleChange("testUserId", value)}
+                      options={employeeOptions}
+                      placeholder="Выберите сотрудника"
+                      searchPlaceholder="Введите ФИО или должность"
+                      isLoading={employeesLoading || isPrefilling}
+                      disabled
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bind-jobUserId">Работу произвёл *</Label>
+                    <SearchableSelect
+                      value={form.jobUserId}
+                      onChange={(value) => handleChange("jobUserId", value)}
+                      options={employeeOptions}
+                      placeholder="Выберите сотрудника"
+                      searchPlaceholder="Введите ФИО или должность"
+                      isLoading={employeesLoading || isPrefilling}
+                      disabled
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bind-acceptUserId">Работу принял</Label>
+                    <SearchableSelect
+                      value={form.acceptUserId}
+                      onChange={(value) => handleChange("acceptUserId", value)}
+                      options={employeeOptions}
+                      placeholder="Выберите сотрудника"
+                      searchPlaceholder="Введите ФИО или должность"
+                      isLoading={employeesLoading || isPrefilling}
+                      disabled
+                    />
+                  </div>
+                </>
+              )}
+
+              {isRemoval && (
+                <div className="space-y-2">
+                  <Label htmlFor="bind-locationDepoId">Депо *</Label>
+                  <SearchableSelect
+                    value={form.locationDepoId}
+                    onChange={(value) => handleChange("locationDepoId", value)}
+                    options={locationDepotOptions}
+                    placeholder="Выберите депо"
+                    searchPlaceholder="Введите краткое название или код"
+                    isLoading={depotsLoading}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="bind-documentId">Документ *</Label>
                 <SearchableSelect
                   value={form.documentId}
-                  onChange={(value) => handleChange("documentId", value)}
+                  onChange={handleDocumentChange}
                   options={documentOptions}
                   placeholder="Выберите документ"
                   searchPlaceholder="Введите номер, автора или дату"
-                  isLoading={documentsLoading}
+                  isLoading={documentsLoading || isPrefilling}
+                  disabled={!isRemoval}
                 />
               </div>
+
             </div>
           </ScrollArea>
 
@@ -515,5 +803,99 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
         </form>
       </DialogContent>
     </Dialog>
+
+      <Dialog open={isCreateDocumentOpen} onOpenChange={handleCreateDocumentDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Создать документ</DialogTitle>
+            <DialogDescription>
+              Новый документ типа «Привязка арматуры».
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="bind-document-number">
+                Номер <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="bind-document-number"
+                value={documentFormData.number}
+                onChange={(e) => updateDocumentFormField("number", e.target.value)}
+                placeholder="Введите номер документа"
+              />
+            </div>
+            <div>
+              <Label htmlFor="bind-document-type">Тип</Label>
+              <Select value={String(FITMENT_DOCUMENT_TYPE)} disabled>
+                <SelectTrigger id="bind-document-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={String(FITMENT_DOCUMENT_TYPE)}>
+                    {getDocumentTypeLabel(FITMENT_DOCUMENT_TYPE)}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="bind-document-date">
+                Дата <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="bind-document-date"
+                type="date"
+                value={documentFormData.date}
+                onChange={(e) => updateDocumentFormField("date", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="bind-document-author">Автор</Label>
+              <Input
+                id="bind-document-author"
+                value={documentFormData.author ?? ""}
+                onChange={(e) => updateDocumentFormField("author", e.target.value)}
+                placeholder="Введите автора"
+              />
+            </div>
+            <div>
+              <Label htmlFor="bind-document-note">Примечание</Label>
+              <Input
+                id="bind-document-note"
+                value={documentFormData.note ?? ""}
+                onChange={(e) => updateDocumentFormField("note", e.target.value)}
+                placeholder="Введите примечание"
+              />
+            </div>
+            {documentFormError && <p className="text-sm text-red-600">{documentFormError}</p>}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleCreateDocumentDialogChange(false)}
+              disabled={isCreatingDocument}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handleCreateDocument}
+              disabled={
+                isCreatingDocument ||
+                !documentFormData.number.trim() ||
+                !documentFormData.date
+              }
+            >
+              {isCreatingDocument ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Создание...
+                </>
+              ) : (
+                "Создать"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

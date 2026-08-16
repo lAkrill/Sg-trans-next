@@ -38,6 +38,10 @@ import {
 } from "@/lib/repairs/planning-columns";
 import { cn } from "@/lib/utils";
 
+/** Подсветка активного (заполненного) фильтра */
+const ACTIVE_FILTER_CONTROL =
+  "border-green-500 bg-green-50 text-green-900 hover:bg-green-50 focus-visible:ring-green-500/40";
+
 type QuickRepairTypeId =
   | "all"
   | "majorRepair"
@@ -137,10 +141,14 @@ function DateBoundControl({
   value?: string;
   onChange: (next: string | undefined) => void;
 }) {
+  const hasValue = !!value;
   return (
     <Input
       type="date"
-      className="h-8 w-[9.75rem] shrink-0 font-mono text-xs px-2"
+      className={cn(
+        "h-8 w-[9.75rem] shrink-0 font-mono text-xs px-2",
+        hasValue && ACTIVE_FILTER_CONTROL
+      )}
       value={ymdForInput(value)}
       onChange={(e) => {
         const v = e.target.value;
@@ -179,13 +187,20 @@ function PlanningDateRangeRow({
   return (
     <div className="flex flex-col gap-1.5 min-w-0">
       <div className="flex items-center justify-between gap-2 min-w-0">
-        <Label className="text-sm font-medium leading-snug min-w-0">{label}</Label>
+        <Label
+          className={cn(
+            "text-sm font-medium leading-snug min-w-0",
+            hasValue && "text-green-800"
+          )}
+        >
+          {label}
+        </Label>
         {hasValue && onClear ? (
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-7 w-7 shrink-0"
+            className={cn("h-7 w-7 shrink-0", ACTIVE_FILTER_CONTROL)}
             onClick={onClear}
             aria-label="Очистить период"
           >
@@ -422,14 +437,27 @@ export function PlanningRepairsFilters({
   const clampQuickMonths = (value: number) =>
     Math.min(MAX_QUICK_MONTHS, Math.max(MIN_QUICK_MONTHS, value));
 
+  const hasNumbers = parseWagonNumbersList(numbersText).length > 0;
+  const hasWagonModels = parseCommaList(wagonModelsText).length > 0;
+  const hasQuickPlanRange = !!(quickPlanPreviewRange?.from || quickPlanPreviewRange?.to);
+  const hasQuickRepairType = quickRepairType !== DEFAULT_QUICK_REPAIR_TYPE;
+
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" className="relative">
+        <Button
+          variant="outline"
+          className={cn("relative", activeFiltersCount > 0 && ACTIVE_FILTER_CONTROL)}
+        >
           <Filter className="h-4 w-4 mr-2" />
           Фильтры
           {activeFiltersCount > 0 && (
-            <Badge className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+            <Badge
+              className={cn(
+                "ml-2 h-5 w-5 rounded-full p-0 text-xs",
+                "bg-green-600 text-white hover:bg-green-600"
+              )}
+            >
               {activeFiltersCount}
             </Badge>
           )}
@@ -445,7 +473,14 @@ export function PlanningRepairsFilters({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex items-start gap-3 pt-4">
+        <div
+          className={cn(
+            "flex items-start gap-3 rounded-md border px-3 py-3 mt-4",
+            excludeServiceEndAlignedRepairs
+              ? "border-green-500 bg-green-50"
+              : "border-border/60 bg-muted/30"
+          )}
+        >
           <Checkbox
             id="exclude-service-end-aligned-repairs"
             checked={excludeServiceEndAlignedRepairs}
@@ -456,7 +491,10 @@ export function PlanningRepairsFilters({
           />
           <Label
             htmlFor="exclude-service-end-aligned-repairs"
-            className="text-sm font-normal leading-snug cursor-pointer"
+            className={cn(
+              "text-sm font-normal leading-snug cursor-pointer",
+              excludeServiceEndAlignedRepairs && "text-green-800"
+            )}
           >
             Убрать из планирования вагоны со сроком конца эксплуатации совмещённым с
             ремонтами
@@ -481,13 +519,18 @@ export function PlanningRepairsFilters({
             className="flex flex-col flex-1 min-h-0 overflow-y-auto mt-4 gap-4 pr-1 data-[state=inactive]:hidden"
           >
             <div className="flex flex-col gap-2">
-              <Label>Номера вагонов (с новой строки или через запятую)</Label>
+              <Label className={cn(hasNumbers && "text-green-800")}>
+                Номера вагонов (с новой строки или через запятую)
+              </Label>
               <Textarea
                 placeholder={"По одному номеру в строке, например:\n12345678\n87654321\n\nили в одну строку: 12345678, 87654321"}
                 value={numbersText}
                 onChange={(e) => setNumbersText(e.target.value)}
                 rows={5}
-                className="min-h-[5.5rem] resize-y text-sm font-mono"
+                className={cn(
+                  "min-h-[5.5rem] resize-y text-sm font-mono",
+                  hasNumbers && ACTIVE_FILTER_CONTROL
+                )}
               />
               <p className="text-xs text-muted-foreground">
                 Можно вводить номера столбиком (Enter) или списком через запятую — можно смешивать.
@@ -495,12 +538,16 @@ export function PlanningRepairsFilters({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Тип ремонта</Label>
+              <Label className={cn(hasQuickRepairType && "text-green-800")}>
+                Тип ремонта
+              </Label>
               <Select
                 value={quickRepairType}
                 onValueChange={(value) => setQuickRepairType(value as QuickRepairTypeId)}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger
+                  className={cn("h-9", hasQuickRepairType && ACTIVE_FILTER_CONTROL)}
+                >
                   <SelectValue placeholder="Выберите тип ремонта" />
                 </SelectTrigger>
                 <SelectContent>
@@ -514,7 +561,9 @@ export function PlanningRepairsFilters({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Следующий ремонт — период от сегодня</Label>
+              <Label className={cn(hasQuickPlanRange && "text-green-800")}>
+                Следующий ремонт — период от сегодня
+              </Label>
               <p className="text-xs text-muted-foreground">
                 {quickRepairType === "all"
                   ? "Заполняет фильтры «план (следующий)» для всех видов ремонтов от текущей даты до выбранного срока."
@@ -526,7 +575,7 @@ export function PlanningRepairsFilters({
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="h-9 w-9 shrink-0"
+                    className={cn("h-9 w-9 shrink-0", hasQuickPlanRange && ACTIVE_FILTER_CONTROL)}
                     onClick={() => setQuickMonths((m) => clampQuickMonths(m - 1))}
                     disabled={quickMonths <= MIN_QUICK_MONTHS}
                     aria-label="Уменьшить количество месяцев"
@@ -542,14 +591,17 @@ export function PlanningRepairsFilters({
                       const parsed = Number.parseInt(e.target.value, 10);
                       if (!Number.isNaN(parsed)) setQuickMonths(clampQuickMonths(parsed));
                     }}
-                    className="h-9 w-14 text-center px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className={cn(
+                      "h-9 w-14 text-center px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+                      hasQuickPlanRange && ACTIVE_FILTER_CONTROL
+                    )}
                     aria-label="Количество месяцев"
                   />
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="h-9 w-9 shrink-0"
+                    className={cn("h-9 w-9 shrink-0", hasQuickPlanRange && ACTIVE_FILTER_CONTROL)}
                     onClick={() => setQuickMonths((m) => clampQuickMonths(m + 1))}
                     disabled={quickMonths >= MAX_QUICK_MONTHS}
                     aria-label="Увеличить количество месяцев"
@@ -562,7 +614,7 @@ export function PlanningRepairsFilters({
                 </Button>
               </div>
               {quickPlanPreviewRange?.from || quickPlanPreviewRange?.to ? (
-                <p className="text-xs text-muted-foreground font-mono">
+                <p className="text-xs text-green-800 font-mono">
                   {quickRepairType === "all" ? "Все виды: " : null}
                   От {ymdForInput(quickPlanPreviewRange.from) || "—"} до{" "}
                   {ymdForInput(quickPlanPreviewRange.to) || "—"}
@@ -580,12 +632,14 @@ export function PlanningRepairsFilters({
             className="flex flex-col flex-1 min-h-0 overflow-y-auto mt-4 gap-4 pr-1 data-[state=inactive]:hidden"
           >
           <div className="flex flex-col gap-2">
-            <Label>Модели вагонов (названия через запятую)</Label>
+            <Label className={cn(hasWagonModels && "text-green-800")}>
+              Модели вагонов (названия через запятую)
+            </Label>
             <Input
               placeholder="Например: 15-1547, 15-1566"
               value={wagonModelsText}
               onChange={(e) => setWagonModelsText(e.target.value)}
-              className="h-8"
+              className={cn("h-8", hasWagonModels && ACTIVE_FILTER_CONTROL)}
             />
           </div>
 

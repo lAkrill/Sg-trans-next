@@ -44,6 +44,12 @@ import type {
 } from "@/types/repairs";
 import { cn } from "@/lib/utils";
 
+/** Подсветка активного (заполненного) фильтра */
+const ACTIVE_FILTER_CONTROL =
+  "border-green-500 bg-green-50 text-green-900 hover:bg-green-50 focus-visible:ring-green-500/40";
+const ACTIVE_FILTER_BADGE =
+  "border-green-500 bg-green-100 text-green-800 hover:bg-green-100";
+
 const years = Array.from({ length: 50 }, (_, i) => new Date().getFullYear() - i);
 const months = [
   { value: "01", label: "Январь" },
@@ -83,6 +89,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   onClear,
 }) => {
   const [open, setOpen] = useState(false);
+  const hasValue = value.length > 0;
 
   const handleSelect = (optionId: string) => {
     const newValue = value.includes(optionId)
@@ -108,11 +115,13 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className={cn("h-8 w-full justify-between text-left font-normal", {
-                "text-muted-foreground": !value.length,
-              })}
+              className={cn(
+                "h-8 w-full justify-between text-left font-normal",
+                !hasValue && "text-muted-foreground",
+                hasValue && ACTIVE_FILTER_CONTROL
+              )}
             >
-              {value.length > 0 ? `Выбрано: ${value.length}` : placeholder}
+              {hasValue ? `Выбрано: ${value.length}` : placeholder}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -149,29 +158,29 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             </Command>
           </PopoverContent>
         </Popover>
-        {value.length > 0 && (
+        {hasValue && (
           <Button
             variant="outline"
             size="sm"
             onClick={onClear}
-            className="h-8 w-8 p-0 flex-shrink-0"
+            className={cn("h-8 w-8 p-0 flex-shrink-0", ACTIVE_FILTER_CONTROL)}
           >
             <X className="h-4 w-4" />
           </Button>
         )}
       </div>
-      {value.length > 0 && (
+      {hasValue && (
         <div className="flex flex-wrap gap-1 mt-2">
           {value.map((id) => {
             const option = options.find((o) => o.id === id);
             return option ? (
-              <Badge key={id} variant="secondary" className="text-xs">
+              <Badge key={id} variant="outline" className={cn("text-xs", ACTIVE_FILTER_BADGE)}>
                 {option.name}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleSelect(id)}
-                  className="h-auto w-auto p-0 ml-1 hover:bg-transparent"
+                  className="h-auto w-auto p-0 ml-1 hover:bg-transparent text-green-800"
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -252,13 +261,15 @@ export const DateRangeInput: React.FC<DateRangeInputProps> = ({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Label className="text-sm font-medium">{label}</Label>
+        <Label className={cn("text-sm font-medium", hasValue && "text-green-800")}>
+          {label}
+        </Label>
         {hasValue && onClear && (
           <Button
             variant="outline"
             size="sm"
             onClick={onClear}
-            className="h-6 w-6 p-0"
+            className={cn("h-6 w-6 p-0", ACTIVE_FILTER_CONTROL)}
           >
             <X className="h-3 w-3" />
           </Button>
@@ -271,7 +282,7 @@ export const DateRangeInput: React.FC<DateRangeInputProps> = ({
             value={from.year}
             onValueChange={(val) => handleChange("from", "year", val)}
           >
-            <SelectTrigger className="h-8 w-20 text-xs">
+            <SelectTrigger className={cn("h-8 w-20 text-xs", from.year && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="Год" />
             </SelectTrigger>
             <SelectContent>
@@ -286,7 +297,7 @@ export const DateRangeInput: React.FC<DateRangeInputProps> = ({
             value={from.month}
             onValueChange={(val) => handleChange("from", "month", val)}
           >
-            <SelectTrigger className="h-8 w-20 text-xs">
+            <SelectTrigger className={cn("h-8 w-20 text-xs", from.month && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="Мес." />
             </SelectTrigger>
             <SelectContent>
@@ -301,7 +312,7 @@ export const DateRangeInput: React.FC<DateRangeInputProps> = ({
             value={from.day}
             onValueChange={(val) => handleChange("from", "day", val)}
           >
-            <SelectTrigger className="h-8 w-16 text-xs">
+            <SelectTrigger className={cn("h-8 w-16 text-xs", from.day && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="День" />
             </SelectTrigger>
             <SelectContent>
@@ -319,7 +330,7 @@ export const DateRangeInput: React.FC<DateRangeInputProps> = ({
             value={to.year}
             onValueChange={(val) => handleChange("to", "year", val)}
           >
-            <SelectTrigger className="h-8 w-20 text-xs">
+            <SelectTrigger className={cn("h-8 w-20 text-xs", to.year && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="Год" />
             </SelectTrigger>
             <SelectContent>
@@ -334,7 +345,7 @@ export const DateRangeInput: React.FC<DateRangeInputProps> = ({
             value={to.month}
             onValueChange={(val) => handleChange("to", "month", val)}
           >
-            <SelectTrigger className="h-8 w-20 text-xs">
+            <SelectTrigger className={cn("h-8 w-20 text-xs", to.month && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="Мес." />
             </SelectTrigger>
             <SelectContent>
@@ -349,7 +360,7 @@ export const DateRangeInput: React.FC<DateRangeInputProps> = ({
             value={to.day}
             onValueChange={(val) => handleChange("to", "day", val)}
           >
-            <SelectTrigger className="h-8 w-16 text-xs">
+            <SelectTrigger className={cn("h-8 w-16 text-xs", to.day && ACTIVE_FILTER_CONTROL)}>
               <SelectValue placeholder="День" />
             </SelectTrigger>
             <SelectContent>
@@ -566,14 +577,42 @@ export function RepairsFilters({
     [sortFields, onSortFieldsChange]
   );
 
+  const hasNumbers =
+    filterTableType === "in"
+      ? !!(filtersIn.cisternNumbers && filtersIn.cisternNumbers.length)
+      : !!(filtersOut.cisternNumbers && filtersOut.cisternNumbers.length);
+  const hasTypeRepairIds =
+    filterTableType === "in"
+      ? !!(filtersIn.typeRepairIds && filtersIn.typeRepairIds.length)
+      : !!(filtersOut.typeRepairIds && filtersOut.typeRepairIds.length);
+  const hasDepotIds =
+    filterTableType === "in"
+      ? !!(filtersIn.depotIds && filtersIn.depotIds.length)
+      : !!(filtersOut.depotIds && filtersOut.depotIds.length);
+  const hasRoadNames =
+    filterTableType === "in"
+      ? !!(filtersIn.roadNames && filtersIn.roadNames.length)
+      : !!(filtersOut.roadNames && filtersOut.roadNames.length);
+  const hasVu23 = !!(filtersIn.vu23 && filtersIn.vu23.length);
+  const hasStationNames = !!(filtersIn.stationNames && filtersIn.stationNames.length);
+  const hasVu36 = !!(filtersOut.vu36 && filtersOut.vu36.length);
+
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
-        <Button variant="outline" className="relative">
+        <Button
+          variant="outline"
+          className={cn("relative", activeFiltersCount > 0 && ACTIVE_FILTER_CONTROL)}
+        >
           <Filter className="h-4 w-4 mr-2" />
           Фильтры
           {activeFiltersCount > 0 && (
-            <Badge className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+            <Badge
+              className={cn(
+                "ml-2 h-5 w-5 rounded-full p-0 text-xs",
+                "bg-green-600 text-white hover:bg-green-600"
+              )}
+            >
               {activeFiltersCount}
             </Badge>
           )}
@@ -618,7 +657,14 @@ export function RepairsFilters({
                   <CardTitle className="text-base">Сопоставление</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="flex items-start gap-3 rounded-md border border-border/60 bg-muted/30 px-3 py-3">
+                  <div
+                    className={cn(
+                      "flex items-start gap-3 rounded-md border px-3 py-3",
+                      onlyUnmatchedRepairs
+                        ? "border-green-500 bg-green-50"
+                        : "border-border/60 bg-muted/30"
+                    )}
+                  >
                     <Checkbox
                       id="repairs-only-unmatched"
                       checked={onlyUnmatchedRepairs}
@@ -631,7 +677,11 @@ export function RepairsFilters({
                     <div className="grid gap-1 leading-snug">
                       <Label
                         htmlFor="repairs-only-unmatched"
-                        className={`font-medium cursor-pointer ${onlyUnmatchedRepairsDisabled ? "cursor-not-allowed opacity-60" : ""}`}
+                        className={cn(
+                          "font-medium cursor-pointer",
+                          onlyUnmatchedRepairs && "text-green-800",
+                          onlyUnmatchedRepairsDisabled && "cursor-not-allowed opacity-60"
+                        )}
                       >
                         Только без пары в сопоставлении
                       </Label>
@@ -662,7 +712,9 @@ export function RepairsFilters({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col gap-2">
-                    <Label>Номера вагонов (с новой строки или через запятую)</Label>
+                    <Label className={cn(hasNumbers && "text-green-800")}>
+                      Номера вагонов (с новой строки или через запятую)
+                    </Label>
                     <Textarea
                       placeholder={
                         "По одному номеру в строке, например:\n12345678\n87654321\n\nили в одну строку: 12345678, 87654321"
@@ -670,7 +722,10 @@ export function RepairsFilters({
                       value={numbersText}
                       onChange={(e) => handleNumbersChange(e.target.value)}
                       rows={5}
-                      className="min-h-[5.5rem] resize-y text-sm font-mono"
+                      className={cn(
+                        "min-h-[5.5rem] resize-y text-sm font-mono",
+                        hasNumbers && ACTIVE_FILTER_CONTROL
+                      )}
                     />
                     <p className="text-xs text-muted-foreground">
                       Можно вводить номера столбиком (Enter) или списком через запятую — можно
@@ -679,7 +734,9 @@ export function RepairsFilters({
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <Label>Тип ремонта</Label>
+                    <Label className={cn(hasTypeRepairIds && "text-green-800")}>
+                      Тип ремонта
+                    </Label>
                     <MultiSelect
                       placeholder="Выберите типы ремонта"
                       options={repairTypes.map((r) => ({ id: r.id, name: r.name }))}
@@ -713,7 +770,7 @@ export function RepairsFilters({
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <Label>Депо</Label>
+                    <Label className={cn(hasDepotIds && "text-green-800")}>Депо</Label>
                     <MultiSelect
                       placeholder="Выберите депо"
                       options={depots.map((d) => ({ id: d.id, name: d.shortName ?? d.name }))}
@@ -747,19 +804,23 @@ export function RepairsFilters({
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <Label>Дороги (названия через запятую)</Label>
+                    <Label className={cn(hasRoadNames && "text-green-800")}>
+                      Дороги (названия через запятую)
+                    </Label>
                     <Input
                       placeholder="Например: ОЖД, СЖД"
                       value={roadNamesText}
                       onChange={(e) => handleRoadNamesChange(e.target.value)}
-                      className="h-8"
+                      className={cn("h-8", hasRoadNames && ACTIVE_FILTER_CONTROL)}
                     />
                   </div>
 
                   {filterTableType === "in" && (
                     <>
                       <div className="flex flex-col gap-2">
-                        <Label>ВУ23 (через запятую)</Label>
+                        <Label className={cn(hasVu23 && "text-green-800")}>
+                          ВУ23 (через запятую)
+                        </Label>
                         <Input
                           placeholder="Коды ВУ23"
                           value={vu23Text}
@@ -772,11 +833,13 @@ export function RepairsFilters({
                               list.length ? list : undefined
                             );
                           }}
-                          className="h-8"
+                          className={cn("h-8", hasVu23 && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                       <div className="flex flex-col gap-2">
-                        <Label>Станции (названия через запятую)</Label>
+                        <Label className={cn(hasStationNames && "text-green-800")}>
+                          Станции (названия через запятую)
+                        </Label>
                         <Input
                           placeholder="Названия станций"
                           value={stationNamesText}
@@ -789,7 +852,7 @@ export function RepairsFilters({
                               list.length ? list : undefined
                             );
                           }}
-                          className="h-8"
+                          className={cn("h-8", hasStationNames && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                       <DateRangeInput
@@ -804,7 +867,9 @@ export function RepairsFilters({
                   {filterTableType === "out" && (
                     <>
                       <div className="flex flex-col gap-2">
-                        <Label>ВУ36 (через запятую)</Label>
+                        <Label className={cn(hasVu36 && "text-green-800")}>
+                          ВУ36 (через запятую)
+                        </Label>
                         <Input
                           placeholder="Коды ВУ36"
                           value={vu36Text}
@@ -817,7 +882,7 @@ export function RepairsFilters({
                               list.length ? list : undefined
                             );
                           }}
-                          className="h-8"
+                          className={cn("h-8", hasVu36 && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                       <DateRangeInput

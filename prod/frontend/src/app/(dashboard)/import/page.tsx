@@ -445,6 +445,33 @@ export default function ImportPage() {
       return;
     }
 
+    if (isWheelPairSelected) {
+      const validateThickness = (value: string, label: string) => {
+        const trimmed = value.trim();
+        if (trimmed === "" || trimmed === "0") return null;
+        const parsed = Number(trimmed);
+        if (Number.isNaN(parsed)) {
+          return `${label}: введите число`;
+        }
+        if (parsed <= 100) {
+          return `${label}: значение должно быть больше 100`;
+        }
+        return null;
+      };
+
+      const thicknessError =
+        validateThickness(manualPartsImportForm.thicknessLeft, "Толщина слева") ||
+        validateThickness(manualPartsImportForm.thicknessRight, "Толщина справа");
+
+      if (thicknessError) {
+        setManualPartsImportStatus({
+          type: "error",
+          message: thicknessError,
+        });
+        return;
+      }
+    }
+
     setUploadingType("manual-parts");
     setManualPartsImportStatus({
       type: "loading",
@@ -463,6 +490,12 @@ export default function ImportPage() {
       return Number.isNaN(parsed) ? null : parsed;
     };
 
+    const toNullableDefectsId = (value: string) => {
+      const trimmed = value.trim();
+      if (trimmed === "" || trimmed === "0") return null;
+      return trimmed;
+    };
+
     const payload = {
       railwayCisternsId:
         manualPartsImportForm.operation === "2"
@@ -472,13 +505,13 @@ export default function ImportPage() {
       equipmentTypeId: toNullableString(manualPartsImportForm.equipmentTypeId),
       defectsId:
         manualPartsImportForm.operation === "2"
-          ? 0
-          : toNullableNumber(manualPartsImportForm.defectsId),
-      adminOwnerId: toNullableNumber(manualPartsImportForm.adminOwnerId),
+          ? null
+          : toNullableDefectsId(manualPartsImportForm.defectsId),
+      adminOwnerId: toNullableString(manualPartsImportForm.adminOwnerId),
       partsId: toNullableString(manualPartsImportForm.partsId),
       jobDepotsId: toNullableString(manualPartsImportForm.jobDepotsId),
       jobDate: toNullableString(manualPartsImportForm.jobDate),
-      jobTypeId: toNullableNumber(manualPartsImportForm.jobTypeId),
+      jobTypeId: toNullableString(manualPartsImportForm.jobTypeId),
       thicknessLeft: isWheelPairSelected
         ? toNullableNumber(manualPartsImportForm.thicknessLeft)
         : 0,
@@ -504,7 +537,15 @@ export default function ImportPage() {
         type: "success",
         message: "Комплектация успешно сохранена",
       });
-      setManualPartsImportForm(manualPartsImportInitialValues);
+      setManualPartsImportForm((current) => ({
+        ...manualPartsImportInitialValues,
+        equipmentTypeId: current.equipmentTypeId,
+        railwayCisternsId: current.railwayCisternsId,
+        jobDepotsId: current.jobDepotsId,
+        repairTypesId: current.repairTypesId,
+        documentId: current.documentId,
+        documentDate: current.documentDate,
+      }));
     } catch (err: unknown) {
       setManualPartsImportStatus({
         type: "error",

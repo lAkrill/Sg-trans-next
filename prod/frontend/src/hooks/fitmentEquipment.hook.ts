@@ -9,6 +9,8 @@ export const fitmentEquipmentKeys = {
     [...fitmentEquipmentKeys.all, { pageNumber, pageSize, operations }] as const,
   lastByFitment: (fitmentId: string) =>
     [...fitmentEquipmentKeys.all, 'last-by-fitment', fitmentId] as const,
+  byFitment: (fitmentId: string) =>
+    [...fitmentEquipmentKeys.all, 'by-fitment', fitmentId] as const,
   byCistern: (cisternId: string) =>
     [...fitmentEquipmentKeys.all, 'by-cistern', cisternId] as const,
   lastByCistern: (cisternId: string) =>
@@ -38,6 +40,14 @@ export const useLastFitmentEquipmentByFitment = (fitmentId: string) => {
   return useQuery({
     queryKey: fitmentEquipmentKeys.lastByFitment(fitmentId),
     queryFn: () => fitmentEquipmentApi.getLastByFitment(fitmentId),
+    enabled: !!fitmentId,
+  });
+};
+
+export const useFitmentEquipmentsByFitment = (fitmentId: string) => {
+  return useQuery({
+    queryKey: fitmentEquipmentKeys.byFitment(fitmentId),
+    queryFn: () => fitmentEquipmentApi.getByFitment(fitmentId),
     enabled: !!fitmentId,
   });
 };

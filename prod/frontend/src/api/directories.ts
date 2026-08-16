@@ -596,6 +596,11 @@ export const fitmentEquipmentApi = {
     }
   },
 
+  getByFitment: async (fitmentId: string): Promise<FitmentEquipmentDTO[]> => {
+    const response = await api.get(`/api/fitment-equipments/by-fitment/${fitmentId}`);
+    return response.data ?? [];
+  },
+
   getByCistern: async (cisternId: string): Promise<FitmentEquipmentDTO[]> => {
     const response = await api.get(`/api/fitment-equipments/by-cistern/${cisternId}`);
     return response.data;

@@ -53,6 +53,7 @@ import type {
 } from "@/types/cisterns";
 import { cisternsApi } from "@/api/cisterns";
 import { partEquipmentApi, partsApi } from "@/api/directories";
+import { CisternRepairs, type RepairsIn, type RepairsOut, type RepairsMatching } from "@/api/repairs";
 import { RepairsFilters, type RepairsFilterTableType } from "@/components/repairs/repairs-filters";
 import {
   PlanningRepairsFilters,
@@ -858,237 +859,270 @@ export default function RepairsPage() {
       type: "string" | "date" | "number";
     };
 
-    let columns: ExportColumn[] = [];
-    let data: Record<string, string>[] = [];
-
-    if (mainSection === "planning") {
-      const visibleExportKeys = getPlanningExportColumnKeys(planningVisibleColumns);
-      const allPlanningColumns = [
-        { key: "number", label: "Вагон", type: "string" },
-        { key: "registrationNumber", label: "Рег. №", type: "string" },
-        { key: "serviceLifeYears", label: "Срок эксплуатации, лет", type: "string" },
-        { key: "buildDate", label: "Дата постройки", type: "date" },
-        { key: "model", label: "Модель", type: "string" },
-        { key: "periodMajorRepair", label: "Капитальный ремонт — последний", type: "date" },
-        { key: "planPeriodMajorRepair", label: "Капитальный ремонт — следующий", type: "date" },
-        { key: "periodDepotRepair", label: "Деповской ремонт — последний", type: "date" },
-        { key: "planPeriodDepotRepair", label: "Деповской ремонт — следующий", type: "date" },
-        { key: "periodPeriodicTest", label: "ГИ (периодическое испытание) — последний", type: "date" },
-        { key: "planPeriodPeriodicTest", label: "ГИ (периодическое испытание) — следующий", type: "date" },
-        { key: "periodIntermediateTest", label: "ИГ (промежуточное испытание) — последний", type: "date" },
-        { key: "planPeriodIntermediateTest", label: "ИГ (промежуточное испытание) — следующий", type: "date" },
-        { key: "periodPPRRepair", label: "Профремонт (ППР) — последний", type: "date" },
-        { key: "planPeriodPPRRepair", label: "Профремонт (ППР) — следующий", type: "date" },
-        { key: "mileage", label: "Пробег", type: "number" },
-        { key: "paintingLast", label: "Покраска — последняя", type: "date" },
-        {
-          key: "serviceEndDate",
-          label: "Дата окончания эксплуатации",
-          type: "date",
-        },
-        {
-          key: "extensionServiceLifeDate",
-          label: "Дата продления срока эксплуатации",
-          type: "date",
-        },
-        {
-          key: "reRegistrationDate",
-          label: "Перерегистрация — последняя",
-          type: "date",
-        },
-        {
-          key: "reRegistrationNextDate",
-          label: "Перерегистрация — следующая",
-          type: "date",
-        },
-        {
-          key: "periodDetachRepair",
-          label: "Текущий отцепочный ремонт — последний",
-          type: "date",
-        },
-      ] satisfies ExportColumn[];
-      columns = allPlanningColumns.filter((col) => visibleExportKeys.has(col.key));
-      const allRows: Record<string, string>[] = (planningRowsFiltered ?? []).map((row) => ({
-        number: row.number ?? "—",
-        registrationNumber: row.registrationNumber ?? "—",
-        serviceLifeYears: String(row.serviceLifeYears ?? "—"),
-        buildDate: row.buildDate
-          ? new Date(row.buildDate).toLocaleDateString("ru-RU")
-          : "—",
-        model: row.wagonModelName ?? "—",
-        periodMajorRepair: formatRuDate(row.periodMajorRepair),
-        planPeriodMajorRepair: formatRuDate(row.planPeriodMajorRepair),
-        periodDepotRepair: formatRuDate(row.periodDepotRepair),
-        planPeriodDepotRepair: formatRuDate(row.planPeriodDepotRepair),
-        periodPeriodicTest: formatRuDate(row.periodPeriodicTest),
-        planPeriodPeriodicTest: formatRuDate(row.planPeriodPeriodicTest),
-        periodIntermediateTest: formatRuDate(row.periodIntermediateTest),
-        planPeriodIntermediateTest: formatRuDate(row.planPeriodIntermediateTest),
-        periodPPRRepair: formatRuDate(row.periodPPRRepair),
-        planPeriodPPRRepair: formatRuDate(row.planPeriodPPRRepair),
-        mileage: row.milage != null ? String(row.milage) : "—",
-        paintingLast: formatRuDate(row.periodPaintRepair),
-        serviceEndDate: formatPlanningServiceEndDate(row.buildDate, row.serviceLifeYears),
-        extensionServiceLifeDate: formatRuDate(row.extensionServiceLifeDate),
-        periodDetachRepair: formatRuDate(row.periodDetachRepair),
-        reRegistrationDate: formatRuDate(row.reRegistrationDate),
-        reRegistrationNextDate: formatRuDate(row.reRegistrationNextDate),
-      }));
-      data = allRows.map((row) => {
-        const filtered: Record<string, string> = {};
-        for (const col of columns) {
-          filtered[col.key] = row[col.key] ?? "—";
-        }
-        return filtered;
-      });
-    } else if (activeTab === "in") {
-      columns = [
-        { key: "dateIn", label: "Дата приёма", type: "date" },
-        { key: "number", label: "Номер вагона", type: "string" },
-        { key: "repairType", label: "Тип ремонта", type: "string" },
-        { key: "vu23", label: "ВУ23", type: "string" },
-        { key: "depot", label: "Депо", type: "string" },
-        { key: "station", label: "Станция", type: "string" },
-        { key: "road", label: "Дорога", type: "string" },
-        { key: "defectCode", label: "Код дефектов", type: "string" },
-        { key: "defects", label: "Дефекты", type: "string" },
-      ];
-      data = (repairsInFiltered ?? []).map((r) => ({
-        dateIn: r.dateIn
-          ? new Date(r.dateIn).toLocaleString("ru-RU", {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
-          : "—",
-        number: r.cisternNumber ?? "—",
-        repairType: r.repairType?.name ?? "—",
-        vu23: r.vU23 ?? "—",
-        depot: r.depotName ? `${r.depotName} (${r.depotCode})` : "—",
-        station: r.stationName ? `${r.stationName} (${r.stationCode})` : "—",
-        road: r.roadName ?? "—",
-        defectCode: r.defectCode?.length ? r.defectCode.join(", ") : "—",
-        defects: r.defectName?.length ? r.defectName.join(", ") : "—",
-      }));
-    } else if (activeTab === "out") {
-      columns = [
-        { key: "dateIn", label: "Дата начала ремонта", type: "date" },
-        { key: "dateOut", label: "Дата выпуска", type: "date" },
-        { key: "number", label: "Номер вагона", type: "string" },
-        { key: "repairType", label: "Тип ремонта", type: "string" },
-        { key: "vu36", label: "ВУ36", type: "string" },
-        { key: "depot", label: "Депо", type: "string" },
-        { key: "road", label: "Дорога", type: "string" },
-        { key: "modernCode", label: "Код модификации", type: "string" },
-        { key: "modern", label: "Модернизации", type: "string" },
-      ];
-      data = (repairsOutFiltered ?? []).map((r) => ({
-        dateIn: r.dateIn
-          ? new Date(r.dateIn).toLocaleString("ru-RU", {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
-          : "—",
-        dateOut: r.dateOut
-          ? new Date(r.dateOut).toLocaleString("ru-RU", {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
-          : "—",
-        number: r.cisternNumber ?? "—",
-        repairType: r.repairType?.name ?? "—",
-        vu36: r.vU36 ?? "—",
-        depot: r.depotName ? `${r.depotName} (${r.depotCode})` : "—",
-        road: r.roadName ?? "—",
-        modernCode: r.modernCode?.length ? r.modernCode.join(", ") : "—",
-        modern: r.modernName?.length ? r.modernName.join(", ") : "—",
-      }));
-    } else {
-      columns = [
-        { key: "dateTime", label: "Дата сопоставления", type: "date" },
-        { key: "number", label: "Номер вагона", type: "string" },
-        { key: "dateIn", label: "Дата приёма", type: "date" },
-        { key: "dateOutIn", label: "Дата нач. ремонта", type: "date" },
-        { key: "dateOut", label: "Дата выпуска", type: "date" },
-        { key: "repairType", label: "Тип ремонта", type: "string" },
-        { key: "vu23", label: "ВУ23", type: "string" },
-        { key: "vu36", label: "ВУ36", type: "string" },
-        { key: "depotIn", label: "Депо (приём)", type: "string" },
-        { key: "station", label: "Станция", type: "string" },
-        { key: "roadIn", label: "Дорога (приём)", type: "string" },
-        { key: "defects", label: "Дефекты", type: "string" },
-        { key: "depotOut", label: "Депо (выпуск)", type: "string" },
-        { key: "roadOut", label: "Дорога (выпуск)", type: "string" },
-        { key: "modern", label: "Модернизации", type: "string" },
-      ];
-      data = (repairsMatchingFiltered ?? []).map((m) => ({
-        dateTime: m.dateTime
-          ? new Date(m.dateTime).toLocaleString("ru-RU", {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
-          : "—",
-        number:
-          m.repairIn?.cisternNumber ?? m.repairOut?.cisternNumber ?? m.cistern?.number ?? "—",
-        dateIn: m.repairIn?.dateIn
-          ? new Date(m.repairIn.dateIn).toLocaleString("ru-RU", {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
-          : "—",
-        dateOutIn: m.repairOut?.dateIn
-          ? new Date(m.repairOut.dateIn).toLocaleString("ru-RU", {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
-          : "—",
-        dateOut: m.repairOut?.dateOut
-          ? new Date(m.repairOut.dateOut).toLocaleString("ru-RU", {
-              dateStyle: "short",
-              timeStyle: "short",
-            })
-          : "—",
-        repairType: m.repairIn?.repairType?.name ?? m.repairOut?.repairType?.name ?? "—",
-        vu23: m.repairIn?.vU23 ?? "—",
-        vu36: m.repairOut?.vU36 ?? "—",
-        depotIn: m.repairIn?.depotName ? `${m.repairIn?.depotName} (${m.repairIn?.depotCode})` : "—",
-        station: m.repairIn?.stationName ? `${m.repairIn?.stationName} (${m.repairIn?.stationCode})` : "—",
-        roadIn: m.repairIn?.roadName ?? "—",
-        defects: m.repairIn?.defectName?.length ? m.repairIn.defectName.join(", ") : "—",
-        depotOut: m.repairOut?.depotName ? `${m.repairOut?.depotName} (${m.repairOut?.depotCode})` : "—",
-        roadOut: m.repairOut?.roadName ?? "—",
-        modern: m.repairOut?.modernName?.length ? m.repairOut.modernName.join(", ") : "—",
-      }));
-    }
-
-    const extensionByType: Record<"pdf" | "doc" | "xls", string> = {
-      pdf: "pdf",
-      doc: "docx",
-      xls: "xlsx",
-    };
-    const mimeByType: Record<"pdf" | "doc" | "xls", string> = {
-      pdf: "application/pdf",
-      doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      xls: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    };
+    if (exportingType) return;
 
     setExportingType(type);
     try {
+      let columns: ExportColumn[] = [];
+      let data: Record<string, string>[] = [];
+
+      if (mainSection === "planning") {
+        const visibleExportKeys = getPlanningExportColumnKeys(planningVisibleColumns);
+        const allPlanningColumns = [
+          { key: "number", label: "Вагон", type: "string" },
+          { key: "registrationNumber", label: "Рег. №", type: "string" },
+          { key: "serviceLifeYears", label: "Срок эксплуатации, лет", type: "string" },
+          { key: "buildDate", label: "Дата постройки", type: "date" },
+          { key: "model", label: "Модель", type: "string" },
+          { key: "periodMajorRepair", label: "Капитальный ремонт — последний", type: "date" },
+          { key: "planPeriodMajorRepair", label: "Капитальный ремонт — следующий", type: "date" },
+          { key: "periodDepotRepair", label: "Деповской ремонт — последний", type: "date" },
+          { key: "planPeriodDepotRepair", label: "Деповской ремонт — следующий", type: "date" },
+          { key: "periodPeriodicTest", label: "ГИ (периодическое испытание) — последний", type: "date" },
+          { key: "planPeriodPeriodicTest", label: "ГИ (периодическое испытание) — следующий", type: "date" },
+          { key: "periodIntermediateTest", label: "ИГ (промежуточное испытание) — последний", type: "date" },
+          { key: "planPeriodIntermediateTest", label: "ИГ (промежуточное испытание) — следующий", type: "date" },
+          { key: "periodPPRRepair", label: "Профремонт (ППР) — последний", type: "date" },
+          { key: "planPeriodPPRRepair", label: "Профремонт (ППР) — следующий", type: "date" },
+          { key: "mileage", label: "Пробег", type: "number" },
+          { key: "paintingLast", label: "Покраска — последняя", type: "date" },
+          {
+            key: "serviceEndDate",
+            label: "Дата окончания эксплуатации",
+            type: "date",
+          },
+          {
+            key: "extensionServiceLifeDate",
+            label: "Дата продления срока эксплуатации",
+            type: "date",
+          },
+          {
+            key: "reRegistrationDate",
+            label: "Перерегистрация — последняя",
+            type: "date",
+          },
+          {
+            key: "reRegistrationNextDate",
+            label: "Перерегистрация — следующая",
+            type: "date",
+          },
+          {
+            key: "periodDetachRepair",
+            label: "Текущий отцепочный ремонт — последний",
+            type: "date",
+          },
+        ] satisfies ExportColumn[];
+        columns = allPlanningColumns.filter((col) => visibleExportKeys.has(col.key));
+        const allRows: Record<string, string>[] = (planningRowsFiltered ?? []).map((row) => ({
+          number: row.number ?? "—",
+          registrationNumber: row.registrationNumber ?? "—",
+          serviceLifeYears: String(row.serviceLifeYears ?? "—"),
+          buildDate: row.buildDate
+            ? new Date(row.buildDate).toLocaleDateString("ru-RU")
+            : "—",
+          model: row.wagonModelName ?? "—",
+          periodMajorRepair: formatRuDate(row.periodMajorRepair),
+          planPeriodMajorRepair: formatRuDate(row.planPeriodMajorRepair),
+          periodDepotRepair: formatRuDate(row.periodDepotRepair),
+          planPeriodDepotRepair: formatRuDate(row.planPeriodDepotRepair),
+          periodPeriodicTest: formatRuDate(row.periodPeriodicTest),
+          planPeriodPeriodicTest: formatRuDate(row.planPeriodPeriodicTest),
+          periodIntermediateTest: formatRuDate(row.periodIntermediateTest),
+          planPeriodIntermediateTest: formatRuDate(row.planPeriodIntermediateTest),
+          periodPPRRepair: formatRuDate(row.periodPPRRepair),
+          planPeriodPPRRepair: formatRuDate(row.planPeriodPPRRepair),
+          mileage: row.milage != null ? String(row.milage) : "—",
+          paintingLast: formatRuDate(row.periodPaintRepair),
+          serviceEndDate: formatPlanningServiceEndDate(row.buildDate, row.serviceLifeYears),
+          extensionServiceLifeDate: formatRuDate(row.extensionServiceLifeDate),
+          periodDetachRepair: formatRuDate(row.periodDetachRepair),
+          reRegistrationDate: formatRuDate(row.reRegistrationDate),
+          reRegistrationNextDate: formatRuDate(row.reRegistrationNextDate),
+        }));
+        data = allRows.map((row) => {
+          const filtered: Record<string, string> = {};
+          for (const col of columns) {
+            filtered[col.key] = row[col.key] ?? "—";
+          }
+          return filtered;
+        });
+      } else if (activeTab === "in") {
+        columns = [
+          { key: "dateIn", label: "Дата приёма", type: "date" },
+          { key: "number", label: "Номер вагона", type: "string" },
+          { key: "repairType", label: "Тип ремонта", type: "string" },
+          { key: "vu23", label: "ВУ23", type: "string" },
+          { key: "depot", label: "Депо", type: "string" },
+          { key: "station", label: "Станция", type: "string" },
+          { key: "road", label: "Дорога", type: "string" },
+          { key: "defectCode", label: "Код дефектов", type: "string" },
+          { key: "defects", label: "Дефекты", type: "string" },
+        ];
+
+        // Повторный запрос фильтра: все записи на одной странице
+        const exportResult = await CisternRepairs.filterRepairsIn({
+          ...filterRequestIn,
+          page: 1,
+          pageSize: Math.max(totalCountIn, 1),
+        });
+        let rows: RepairsIn[] = exportResult.items ?? [];
+        if (onlyUnmatchedRepairs && !isFilterModeIn) {
+          rows = rows.filter((r) => !r.isMatching);
+        }
+
+        data = rows.map((r) => ({
+          dateIn: r.dateIn
+            ? new Date(r.dateIn).toLocaleString("ru-RU", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })
+            : "—",
+          number: r.cisternNumber ?? "—",
+          repairType: r.repairType?.name ?? "—",
+          vu23: r.vU23 ?? "—",
+          depot: r.depotName ? `${r.depotName} (${r.depotCode})` : "—",
+          station: r.stationName ? `${r.stationName} (${r.stationCode})` : "—",
+          road: r.roadName ?? "—",
+          defectCode: r.defectCode?.length ? r.defectCode.join(", ") : "—",
+          defects: r.defectName?.length ? r.defectName.join(", ") : "—",
+        }));
+      } else if (activeTab === "out") {
+        columns = [
+          { key: "dateIn", label: "Дата начала ремонта", type: "date" },
+          { key: "dateOut", label: "Дата выпуска", type: "date" },
+          { key: "number", label: "Номер вагона", type: "string" },
+          { key: "repairType", label: "Тип ремонта", type: "string" },
+          { key: "vu36", label: "ВУ36", type: "string" },
+          { key: "depot", label: "Депо", type: "string" },
+          { key: "road", label: "Дорога", type: "string" },
+          { key: "modernCode", label: "Код модификации", type: "string" },
+          { key: "modern", label: "Модернизации", type: "string" },
+        ];
+
+        const exportResult = await CisternRepairs.filterRepairsOut({
+          ...filterRequestOut,
+          page: 1,
+          pageSize: Math.max(totalCountOut, 1),
+        });
+        let rows: RepairsOut[] = exportResult.items ?? [];
+        if (onlyUnmatchedRepairs && !isFilterModeOut) {
+          rows = rows.filter((r) => !r.isMatching);
+        }
+
+        data = rows.map((r) => ({
+          dateIn: r.dateIn
+            ? new Date(r.dateIn).toLocaleString("ru-RU", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })
+            : "—",
+          dateOut: r.dateOut
+            ? new Date(r.dateOut).toLocaleString("ru-RU", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })
+            : "—",
+          number: r.cisternNumber ?? "—",
+          repairType: r.repairType?.name ?? "—",
+          vu36: r.vU36 ?? "—",
+          depot: r.depotName ? `${r.depotName} (${r.depotCode})` : "—",
+          road: r.roadName ?? "—",
+          modernCode: r.modernCode?.length ? r.modernCode.join(", ") : "—",
+          modern: r.modernName?.length ? r.modernName.join(", ") : "—",
+        }));
+      } else {
+        columns = [
+          { key: "dateTime", label: "Дата сопоставления", type: "date" },
+          { key: "number", label: "Номер вагона", type: "string" },
+          { key: "dateIn", label: "Дата приёма", type: "date" },
+          { key: "dateOutIn", label: "Дата нач. ремонта", type: "date" },
+          { key: "dateOut", label: "Дата выпуска", type: "date" },
+          { key: "repairType", label: "Тип ремонта", type: "string" },
+          { key: "vu23", label: "ВУ23", type: "string" },
+          { key: "vu36", label: "ВУ36", type: "string" },
+          { key: "depotIn", label: "Депо (приём)", type: "string" },
+          { key: "station", label: "Станция", type: "string" },
+          { key: "roadIn", label: "Дорога (приём)", type: "string" },
+          { key: "defects", label: "Дефекты", type: "string" },
+          { key: "depotOut", label: "Депо (выпуск)", type: "string" },
+          { key: "roadOut", label: "Дорога (выпуск)", type: "string" },
+          { key: "modern", label: "Модернизации", type: "string" },
+        ];
+
+        const exportResult = await CisternRepairs.filterRepairsMatching({
+          ...filterRequestMatched,
+          page: 1,
+          pageSize: Math.max(totalCountMatched, 1),
+        });
+        const rows: RepairsMatching[] = exportResult.items ?? [];
+
+        data = rows.map((m) => ({
+          dateTime: m.dateTime
+            ? new Date(m.dateTime).toLocaleString("ru-RU", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })
+            : "—",
+          number:
+            m.repairIn?.cisternNumber ?? m.repairOut?.cisternNumber ?? m.cistern?.number ?? "—",
+          dateIn: m.repairIn?.dateIn
+            ? new Date(m.repairIn.dateIn).toLocaleString("ru-RU", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })
+            : "—",
+          dateOutIn: m.repairOut?.dateIn
+            ? new Date(m.repairOut.dateIn).toLocaleString("ru-RU", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })
+            : "—",
+          dateOut: m.repairOut?.dateOut
+            ? new Date(m.repairOut.dateOut).toLocaleString("ru-RU", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })
+            : "—",
+          repairType: m.repairIn?.repairType?.name ?? m.repairOut?.repairType?.name ?? "—",
+          vu23: m.repairIn?.vU23 ?? "—",
+          vu36: m.repairOut?.vU36 ?? "—",
+          depotIn: m.repairIn?.depotName ? `${m.repairIn?.depotName} (${m.repairIn?.depotCode})` : "—",
+          station: m.repairIn?.stationName ? `${m.repairIn?.stationName} (${m.repairIn?.stationCode})` : "—",
+          roadIn: m.repairIn?.roadName ?? "—",
+          defects: m.repairIn?.defectName?.length ? m.repairIn.defectName.join(", ") : "—",
+          depotOut: m.repairOut?.depotName ? `${m.repairOut?.depotName} (${m.repairOut?.depotCode})` : "—",
+          roadOut: m.repairOut?.roadName ?? "—",
+          modern: m.repairOut?.modernName?.length ? m.repairOut.modernName.join(", ") : "—",
+        }));
+      }
+
+      const extensionByType: Record<"pdf" | "doc" | "xls", string> = {
+        pdf: "pdf",
+        doc: "docx",
+        xls: "xlsx",
+      };
+      const mimeByType: Record<"pdf" | "doc" | "xls", string> = {
+        pdf: "application/pdf",
+        doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xls: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      };
+
+      const fileBaseName =
+        type === "pdf" ? "ExportPDF" : type === "doc" ? "ExportDOC" : "ExportXLS";
+
       const response = await api.post(
         "/api/export/table",
         {
           type,
           columns,
           data,
-          fileName:
-            type === "pdf" ? "ExportPDF" : type === "doc" ? "ExportDOC" : "ExportXLS",
+          fileName: fileBaseName,
         },
         {
           responseType: "blob",
         }
       );
 
-      const fileBaseName =
-        type === "pdf" ? "ExportPDF" : type === "doc" ? "ExportDOC" : "ExportXLS";
       const url = window.URL.createObjectURL(
         new Blob([response.data], { type: mimeByType[type] })
       );
@@ -1106,12 +1140,19 @@ export default function RepairsPage() {
     }
   }, [
     activeTab,
+    exportingType,
+    filterRequestIn,
+    filterRequestMatched,
+    filterRequestOut,
+    isFilterModeIn,
+    isFilterModeOut,
     mainSection,
-    repairsInFiltered,
-    repairsOutFiltered,
-    repairsMatchingFiltered,
+    onlyUnmatchedRepairs,
     planningRowsFiltered,
     planningVisibleColumns,
+    totalCountIn,
+    totalCountMatched,
+    totalCountOut,
   ]);
 
   const handleCisternSelect = useCallback(async () => {

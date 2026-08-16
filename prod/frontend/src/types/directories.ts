@@ -916,9 +916,12 @@ export interface FitmentEquipmentFitmentInfoDTO {
 
 export interface FitmentEquipmentUserDTO {
   id: string;
-  email: string;
+  email?: string;
   firstName: string;
   lastName: string;
+  patronymic?: string;
+  initials?: string;
+  position?: string;
 }
 
 export interface FitmentEquipmentDepotDTO {
@@ -947,6 +950,9 @@ export interface FitmentEquipmentDTO {
   fitmentId: string;
   jobUserId: string;
   testUserId: string;
+  acceptUserId?: string | null;
+  installUserId?: string | null;
+  approvUserId?: string | null;
   depoId: string;
   date: string;
   documentId: string;
@@ -954,6 +960,9 @@ export interface FitmentEquipmentDTO {
   fitment?: FitmentEquipmentFitmentInfoDTO | null;
   jobUser?: FitmentEquipmentUserDTO | null;
   testUser?: FitmentEquipmentUserDTO | null;
+  acceptUser?: FitmentEquipmentUserDTO | null;
+  installUser?: FitmentEquipmentUserDTO | null;
+  approvUser?: FitmentEquipmentUserDTO | null;
   depot?: FitmentEquipmentDepotDTO | null;
   document?: FitmentEquipmentDocumentDTO | null;
 }
@@ -962,9 +971,12 @@ export interface CreateFitmentEquipmentDTO {
   railwayCisternsId?: string | null;
   operation: number;
   fitmentId: string;
-  jobUserId?: string;
-  testUserId?: string;
-  depoId?: string;
+  jobUserId?: string | null;
+  testUserId?: string | null;
+  acceptUserId?: string | null;
+  installUserId?: string | null;
+  approvUserId?: string | null;
+  depoId?: string | null;
   date?: string;
   documentId?: string;
 }

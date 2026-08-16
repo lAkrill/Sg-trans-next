@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { 
   Card, 
@@ -30,6 +31,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
 } from "lucide-react";
 import {
   useCisterns,
@@ -40,6 +42,7 @@ import {
   useDebounce,
 } from "@/hooks";
 import { cisternsApi } from "@/api/cisterns";
+import { api } from "@/lib/api";
 import { CisternFilters } from "@/components/cisterns/cistern-filters";
 import { getCisternColumnLabel } from "@/lib/cisterns/columns";
 import type {
@@ -91,6 +94,31 @@ const COLUMN_PROPERTY_ALIASES: Record<string, string> = {
 const isDateLikeField = (field: string, propertyName: string): boolean => {
   const key = `${field} ${propertyName}`.toLowerCase();
   return key.includes("date") || key.includes("period");
+};
+
+const NUMBER_EXPORT_COLUMNS = new Set([
+  "tareweight",
+  "tareweight2",
+  "tareweight3",
+  "initialtareweight",
+  "loadcapacity",
+  "length",
+  "axlecount",
+  "volume",
+  "fillingvolume",
+  "pressure",
+  "testpressure",
+  "servicelifeyears",
+  "dangerclass",
+]);
+
+const getExportColumnType = (column: string): "string" | "date" | "number" => {
+  const key = column.toLowerCase();
+  if (key.includes("date") || key.includes("period") || key === SERVICE_END_DATE_COLUMN) {
+    return "date";
+  }
+  if (NUMBER_EXPORT_COLUMNS.has(key)) return "number";
+  return "string";
 };
 
 const resolveRecordProperty = (
@@ -406,6 +434,7 @@ export default function CisternsPage() {
     "registrationnumber",
     "railwaycisternstatus.name",
   ]);
+  const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
 
   // Debounce search term for API calls
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
@@ -624,6 +653,97 @@ export default function CisternsPage() {
     return count;
   }, [advancedFilters, sortFields]);
 
+  const handleExport = useCallback(
+    async (type: "pdf" | "doc" | "xls") => {
+      if (totalCount <= 0 || exportingType) return;
+
+      setExportingType(type);
+      try {
+        let rows: DisplayCistern[] = [];
+
+        if (isSearchMode) {
+          rows = searchResults ?? [];
+        } else if (isFilterMode) {
+          // Повторный запрос фильтра: все записи на одной странице
+          const result = await cisternsApi.filterWithPagination({
+            ...filterRequest,
+            page: 1,
+            pageSize: Math.max(totalCount, 1),
+          });
+          rows = result.railwayCisterns;
+        } else {
+          const result = await cisternsApi.getAll({
+            page: 1,
+            pageSize: Math.max(totalCount, 1),
+          });
+          rows = result.railwayCisterns;
+        }
+
+        const columns = visibleColumns.map((column) => ({
+          key: column,
+          label: getCisternColumnLabel(column),
+          type: getExportColumnType(column),
+        }));
+
+        const data = rows.map((cistern) => {
+          const row: Record<string, string> = {};
+          for (const col of columns) {
+            row[col.key] = getDisplayValue(cistern, col.key);
+          }
+          return row;
+        });
+
+        const extensionByType: Record<"pdf" | "doc" | "xls", string> = {
+          pdf: "pdf",
+          doc: "docx",
+          xls: "xlsx",
+        };
+        const mimeByType: Record<"pdf" | "doc" | "xls", string> = {
+          pdf: "application/pdf",
+          doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          xls: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        };
+        const fileBaseName =
+          type === "pdf" ? "CisternsExportPDF" : type === "doc" ? "CisternsExportDOC" : "CisternsExportXLS";
+
+        const response = await api.post(
+          "/api/export/table",
+          {
+            type,
+            columns,
+            data,
+            fileName: fileBaseName,
+          },
+          { responseType: "blob" }
+        );
+
+        const url = window.URL.createObjectURL(
+          new Blob([response.data], { type: mimeByType[type] })
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${fileBaseName}.${extensionByType[type]}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error(`Export cisterns ${type.toUpperCase()} failed`, error);
+      } finally {
+        setExportingType(null);
+      }
+    },
+    [
+      exportingType,
+      filterRequest,
+      isFilterMode,
+      isSearchMode,
+      searchResults,
+      totalCount,
+      visibleColumns,
+    ]
+  );
+
   const handleDelete = async (id: string) => {
     if (confirm("Вы уверены, что хотите удалить эту цистерну?")) {
       try {
@@ -811,7 +931,51 @@ export default function CisternsPage() {
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт DOC"
+              onClick={() => handleExport("doc")}
+              disabled={!!exportingType || displayLoading || totalCount <= 0}
+            >
+              {exportingType === "doc" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_word.svg" alt="Экспорт DOC" width={16} height={16} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт PDF"
+              onClick={() => handleExport("pdf")}
+              disabled={!!exportingType || displayLoading || totalCount <= 0}
+            >
+              {exportingType === "pdf" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_pdf.png" alt="Экспорт PDF" width={16} height={16} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт XLS"
+              onClick={() => handleExport("xls")}
+              disabled={!!exportingType || displayLoading || totalCount <= 0}
+            >
+              {exportingType === "xls" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_excel.svg" alt="Экспорт XLS" width={16} height={16} />
+              )}
+            </Button>
+          </div>
           <CisternFilters
             filters={advancedFilters}
             sortFields={sortFields}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   AlertDescription,
@@ -13,7 +13,6 @@ import {
   DialogTitle,
   Input,
   Label,
-  ScrollArea,
   SearchableSelect,
   Select,
   SelectContent,
@@ -24,22 +23,23 @@ import {
 import { Loader2 } from "lucide-react";
 import {
   useAllDocuments,
-  useAllUsers,
   useCreateDocument,
   useCreateFitmentEquipment,
   useCurrentUser,
   useDepots,
+  useEmployees,
   useFitments,
   useUpdateFitment,
 } from "@/hooks";
 import { getDocumentTypeLabel } from "@/components/documents-filter";
 import { formatDate } from "@/lib/formatDate";
-import type { CreateDocumentDTO, FitmentDTO, UpdateFitmentDTO } from "@/types/directories";
+import type { CreateDocumentDTO, EmployeeDTO, FitmentDTO, UpdateFitmentDTO } from "@/types/directories";
 
 type MaintenanceFormData = {
   fitmentId: string;
   jobUserId: string;
   testUserId: string;
+  acceptUserId: string;
   depoId: string;
   date: string;
   documentId: string;
@@ -53,11 +53,13 @@ type RequestStatus = {
 const MAINTENANCE_OPERATION = 3;
 const FITMENT_DOCUMENT_TYPE = 2;
 const CREATE_NEW_DOCUMENT_VALUE = "__create_new_document__";
+const DEFAULT_DEPOT_CODE = "10001";
 
 const initialValues: MaintenanceFormData = {
   fitmentId: "",
   jobUserId: "",
   testUserId: "",
+  acceptUserId: "",
   depoId: "",
   date: "",
   documentId: "",
@@ -89,6 +91,14 @@ const formatDocumentLabel = (document: {
 const formatUserAuthor = (user?: { firstName?: string | null; lastName?: string | null } | null) => {
   if (!user) return "";
   return [user.lastName, user.firstName].filter(Boolean).join(" ").trim();
+};
+
+const formatEmployeeLabel = (employee: EmployeeDTO) => {
+  const fullName = [employee.lastName, employee.firstName, employee.patronymic]
+    .filter(Boolean)
+    .join(" ");
+  const name = fullName || employee.initials || "—";
+  return employee.position ? `${name} (${employee.position})` : name;
 };
 
 const getErrorMessage = (err: unknown) => {
@@ -123,6 +133,21 @@ const isNewerRepairDate = (fitment: FitmentDTO, newDate: string): boolean => {
   return lastTime < newTime;
 };
 
+const toApiDateTime = (value?: string | null) => {
+  if (!value) return "";
+
+  const datePart = value.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+  if (datePart) return `${datePart}T00:00:00`;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}T00:00:00`;
+};
+
 const buildFitmentRepairUpdate = (
   fitment: FitmentDTO,
   lastRepairDate: string
@@ -130,13 +155,13 @@ const buildFitmentRepairUpdate = (
   fitmentTypeId: fitment.fitmentTypeId,
   serialNumber: fitment.serialNumber,
   passportNumber: fitment.passportNumber,
-  buildDate: fitment.buildDate,
-  lastRepairDate,
+  buildDate: toApiDateTime(fitment.buildDate),
+  lastRepairDate: toApiDateTime(lastRepairDate),
   periodRep: fitment.periodRep,
   serviceLifeYears: fitment.serviceLifeYears,
   modelId: fitment.modelId,
   depotId: fitment.depotId ?? null,
-  code: fitment.code ?? 0,
+  code: 3,
   locationDepoId: fitment.locationDepoId ?? null,
   locationCisternId: fitment.locationCisternId ?? null,
 });
@@ -162,7 +187,7 @@ export function AddFitmentMaintenanceDialog({
   const updateFitmentMutation = useUpdateFitment();
 
   const { data: fitments, isLoading: fitmentsLoading } = useFitments();
-  const { data: users, isLoading: usersLoading } = useAllUsers();
+  const { data: employees, isLoading: employeesLoading } = useEmployees();
   const { data: depots, isLoading: depotsLoading } = useDepots();
   const { data: documents = [], isLoading: documentsLoading } = useAllDocuments();
   const { data: currentUser } = useCurrentUser();
@@ -173,17 +198,22 @@ export function AddFitmentMaintenanceDialog({
     updateFitmentMutation.isPending;
 
   const fitmentOptions =
-    fitments?.map((fitment) => ({
-      value: fitment.id,
-      label: `(${fitment.serialNumber || "—"}; ${fitment.passportNumber || "—"}) — ${
-        fitment.fitmentType?.name || "—"
-      }`,
-    })) || [];
+    fitments
+      ?.filter((fitment) => {
+        const code = Number(fitment.code);
+        return code === 0 || code === 1 || code === 4;
+      })
+      .map((fitment) => ({
+        value: fitment.id,
+        label: `(${fitment.serialNumber || "—"}; ${fitment.passportNumber || "—"}) — ${
+          fitment.fitmentType?.name || "—"
+        }`,
+      })) || [];
 
-  const userOptions =
-    users?.map((user) => ({
-      value: user.id,
-      label: `${[user.lastName, user.firstName].filter(Boolean).join(" ")} (${user.email})`,
+  const employeeOptions =
+    employees?.map((employee) => ({
+      value: employee.id,
+      label: formatEmployeeLabel(employee),
     })) || [];
 
   const depotOptions =
@@ -191,6 +221,17 @@ export function AddFitmentMaintenanceDialog({
       value: depot.id,
       label: `${depot.shortName || depot.name} (${depot.code})`,
     })) || [];
+
+  const defaultDepotId = useMemo(
+    () => depots?.find((depot) => String(depot.code) === DEFAULT_DEPOT_CODE)?.id ?? "",
+    [depots]
+  );
+
+  useEffect(() => {
+    if (!defaultDepotId) return;
+
+    setForm((current) => (current.depoId ? current : { ...current, depoId: defaultDepotId }));
+  }, [defaultDepotId]);
 
   const documentOptions = useMemo(() => {
     const fitmentDocuments = documents
@@ -225,13 +266,6 @@ export function AddFitmentMaintenanceDialog({
     setForm((current) => {
       const next = { ...current, [field]: value };
 
-      if (field === "fitmentId") {
-        const selectedFitment = fitments?.find((fitment) => fitment.id === value);
-        if (selectedFitment?.locationDepoId && !current.depoId) {
-          next.depoId = selectedFitment.locationDepoId;
-        }
-      }
-
       return next;
     });
   };
@@ -240,12 +274,11 @@ export function AddFitmentMaintenanceDialog({
     setStatus(null);
 
     if (documentId === CREATE_NEW_DOCUMENT_VALUE) {
-      const selectedJobUser = users?.find((user) => user.id === form.jobUserId);
       setDocumentFormData({
         ...EMPTY_DOCUMENT_FORM,
         type: FITMENT_DOCUMENT_TYPE,
         date: form.date || new Date().toISOString().slice(0, 10),
-        author: formatUserAuthor(selectedJobUser) || formatUserAuthor(currentUser),
+        author: formatUserAuthor(currentUser),
       });
       setDocumentFormError(null);
       setIsCreateDocumentOpen(true);
@@ -325,7 +358,7 @@ export function AddFitmentMaintenanceDialog({
   };
 
   const handleReset = () => {
-    setForm(initialValues);
+    setForm({ ...initialValues, depoId: defaultDepotId });
     setStatus(null);
   };
 
@@ -343,8 +376,18 @@ export function AddFitmentMaintenanceDialog({
       return;
     }
 
+    if (!form.testUserId) {
+      setStatus({ type: "error", message: "Выберите сотрудника, который провёл испытание" });
+      return;
+    }
+
     if (!form.jobUserId) {
       setStatus({ type: "error", message: "Выберите сотрудника, который произвёл работу" });
+      return;
+    }
+
+    if (!form.acceptUserId) {
+      setStatus({ type: "error", message: "Выберите сотрудника, который принял работу" });
       return;
     }
 
@@ -369,7 +412,8 @@ export function AddFitmentMaintenanceDialog({
         fitmentId: form.fitmentId,
         railwayCisternsId: null,
         jobUserId: form.jobUserId,
-        testUserId: form.testUserId || undefined,
+        testUserId: form.testUserId,
+        acceptUserId: form.acceptUserId,
         depoId: form.depoId,
         date: form.date,
         documentId: form.documentId,
@@ -393,7 +437,7 @@ export function AddFitmentMaintenanceDialog({
         type: "success",
         message: "Запись технического обслуживания успешно добавлена",
       });
-      setForm(initialValues);
+      setForm({ ...initialValues, depoId: defaultDepotId });
     } catch (err: unknown) {
       setStatus({
         type: "error",
@@ -408,17 +452,16 @@ export function AddFitmentMaintenanceDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-h-[95vh] sm:max-w-5xl">
-          <DialogHeader>
+        <DialogContent className="flex min-h-[500px] max-h-[95vh] flex-col justify-start sm:max-w-5xl">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Техническое обслуживание</DialogTitle>
             <DialogDescription>
               Заполните данные по техническому обслуживанию арматуры.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="min-h-0 space-y-4">
-            <ScrollArea className="max-h-[75vh] pr-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col justify-start space-y-4 overflow-y-auto">
+            <div className="grid shrink-0 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="maintenance-fitmentId">Арматура *</Label>
                   <SearchableSelect
@@ -444,14 +487,14 @@ export function AddFitmentMaintenanceDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="maintenance-testUserId">Испытание провёл</Label>
+                  <Label htmlFor="maintenance-testUserId">Испытание провёл *</Label>
                   <SearchableSelect
                     value={form.testUserId}
                     onChange={(value) => handleChange("testUserId", value)}
-                    options={userOptions}
+                    options={employeeOptions}
                     placeholder="Выберите сотрудника"
-                    searchPlaceholder="Введите ФИО или email"
-                    isLoading={usersLoading}
+                    searchPlaceholder="Введите ФИО или должность"
+                    isLoading={employeesLoading}
                   />
                 </div>
 
@@ -460,10 +503,22 @@ export function AddFitmentMaintenanceDialog({
                   <SearchableSelect
                     value={form.jobUserId}
                     onChange={(value) => handleChange("jobUserId", value)}
-                    options={userOptions}
+                    options={employeeOptions}
                     placeholder="Выберите сотрудника"
-                    searchPlaceholder="Введите ФИО или email"
-                    isLoading={usersLoading}
+                    searchPlaceholder="Введите ФИО или должность"
+                    isLoading={employeesLoading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance-acceptUserId">Работу принял *</Label>
+                  <SearchableSelect
+                    value={form.acceptUserId}
+                    onChange={(value) => handleChange("acceptUserId", value)}
+                    options={employeeOptions}
+                    placeholder="Выберите сотрудника"
+                    searchPlaceholder="Введите ФИО или должность"
+                    isLoading={employeesLoading}
                   />
                 </div>
 
@@ -489,7 +544,6 @@ export function AddFitmentMaintenanceDialog({
                   />
                 </div>
               </div>
-            </ScrollArea>
 
             {status ? (
               <Alert
@@ -507,7 +561,7 @@ export function AddFitmentMaintenanceDialog({
               </Alert>
             ) : null}
 
-            <DialogFooter className="gap-2 sm:justify-between">
+            <DialogFooter className="mt-auto gap-2 sm:justify-between">
               <Button
                 type="button"
                 variant="outline"
