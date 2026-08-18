@@ -1,7 +1,24 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { Eye, Inbox, Loader2, Mail, MailOpen, Paperclip, Send, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  Archive,
+  ArrowLeft,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Eye,
+  Inbox,
+  Loader2,
+  Mail,
+  MailOpen,
+  Paperclip,
+  Search,
+  Send,
+  X,
+} from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import {
   Badge,
@@ -110,6 +127,8 @@ const getMessageStatusLabel = (status: number) => {
       return "Не прочитано";
     case MessageStatus.Read:
       return "Прочитано";
+    case MessageStatus.Archived:
+      return "Архив";
     default:
       return `Статус ${status}`;
   }
@@ -128,6 +147,71 @@ const getMessagePriorityLabel = (priority: number) => {
   }
 };
 
+const ARCHIVE_PAGE_SIZES = [5, 10, 25, 50] as const;
+
+const matchesArchiveSearch = (
+  message: MessageDTO,
+  query: string,
+  userId: string | undefined,
+  getUserName: (id: string) => string
+) => {
+  const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+
+  const directionLabel = message.toUserId === userId ? "входящее входящие от" : "исходящее исходящие кому";
+  const haystack = [
+    message.id,
+    message.text,
+    message.fromUserId,
+    message.toUserId,
+    getUserName(message.fromUserId),
+    getUserName(message.toUserId),
+    message.fileName,
+    message.filePath,
+    String(message.status),
+    getMessageStatusLabel(message.status),
+    String(message.priority),
+    getMessagePriorityLabel(message.priority),
+    message.creationDate,
+    formatDateTime(message.creationDate),
+    message.readingDate,
+    formatDateTime(message.readingDate),
+    directionLabel,
+    "архив",
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .toLowerCase();
+
+  return tokens.every((token) => haystack.includes(token));
+};
+
+const getVisiblePages = (currentPage: number, totalPages: number) => {
+  const delta = 2;
+  const range: number[] = [];
+  const rangeWithDots: (number | string)[] = [];
+
+  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+    range.push(i);
+  }
+
+  if (currentPage - delta > 2) {
+    rangeWithDots.push(1, "...");
+  } else {
+    rangeWithDots.push(1);
+  }
+
+  rangeWithDots.push(...range);
+
+  if (currentPage + delta < totalPages - 1) {
+    rangeWithDots.push("...", totalPages);
+  } else if (totalPages > 1) {
+    rangeWithDots.push(totalPages);
+  }
+
+  return rangeWithDots;
+};
+
 const UserMessageCard = () => {
   const { data: user } = useCurrentUser();
   const userId = user?.userId;
@@ -136,13 +220,18 @@ const UserMessageCard = () => {
   const updateMessageMutation = useUpdateMessage();
   const createMessageMutation = useCreateMessage();
   const [selectedMessage, setSelectedMessage] = useState<MessageDTO | null>(null);
-  const [selectedMessageType, setSelectedMessageType] = useState<"received" | "sent">("received");
+  const [selectedMessageType, setSelectedMessageType] = useState<"received" | "sent" | "archive">(
+    "received"
+  );
   const [isViewingFile, setIsViewingFile] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [recipientId, setRecipientId] = useState("");
   const [messageText, setMessageText] = useState("");
   const [messageFile, setMessageFile] = useState<File | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [archiveSearch, setArchiveSearch] = useState("");
+  const [archivePage, setArchivePage] = useState(1);
+  const [archivePageSize, setArchivePageSize] = useState(10);
 
   const userNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -155,31 +244,74 @@ const UserMessageCard = () => {
 
   const getUserName = (id: string) => userNameById.get(id) || id;
 
-  const { receivedMessages, sentMessages, unreadReceivedCount } = useMemo(() => {
+  const { receivedMessages, sentMessages, archivedMessages, unreadReceivedCount } = useMemo(() => {
     if (!userId) {
       return {
         receivedMessages: [] as MessageDTO[],
         sentMessages: [] as MessageDTO[],
+        archivedMessages: [] as MessageDTO[],
         unreadReceivedCount: 0,
       };
     }
 
+    const byDateDesc = (a: MessageDTO, b: MessageDTO) =>
+      new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime();
+
     const received = messages
-      .filter((message) => message.toUserId === userId)
-      .sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
+      .filter(
+        (message) =>
+          message.toUserId === userId && message.status !== MessageStatus.Archived
+      )
+      .sort(byDateDesc);
 
     const sent = messages
-      .filter((message) => message.fromUserId === userId)
-      .sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
+      .filter(
+        (message) =>
+          message.fromUserId === userId && message.status !== MessageStatus.Archived
+      )
+      .sort(byDateDesc);
+
+    const archived = messages
+      .filter((message) => message.status === MessageStatus.Archived)
+      .sort(byDateDesc);
 
     return {
       receivedMessages: received,
       sentMessages: sent,
+      archivedMessages: archived,
       unreadReceivedCount: received.filter((message) => message.status === MessageStatus.Unread).length,
     };
   }, [messages, userId]);
 
-  const openMessage = async (message: MessageDTO, type: "received" | "sent") => {
+  const filteredArchivedMessages = useMemo(
+    () =>
+      archivedMessages.filter((message) =>
+        matchesArchiveSearch(message, archiveSearch, userId, getUserName)
+      ),
+    [archivedMessages, archiveSearch, userId, userNameById]
+  );
+
+  const archiveTotalItems = filteredArchivedMessages.length;
+  const archiveTotalPages = Math.max(1, Math.ceil(archiveTotalItems / archivePageSize));
+  const archiveStartItem = archiveTotalItems === 0 ? 0 : (archivePage - 1) * archivePageSize + 1;
+  const archiveEndItem = Math.min(archivePage * archivePageSize, archiveTotalItems);
+  const paginatedArchivedMessages = filteredArchivedMessages.slice(
+    (archivePage - 1) * archivePageSize,
+    archivePage * archivePageSize
+  );
+  const hasArchiveSearch = archiveSearch.trim().length > 0;
+
+  useEffect(() => {
+    setArchivePage(1);
+  }, [archiveSearch, archivePageSize]);
+
+  useEffect(() => {
+    if (archivePage > archiveTotalPages) {
+      setArchivePage(archiveTotalPages);
+    }
+  }, [archivePage, archiveTotalPages]);
+
+  const openMessage = async (message: MessageDTO, type: "received" | "sent" | "archive") => {
     setSelectedMessageType(type);
 
     const shouldMarkAsRead =
@@ -203,12 +335,36 @@ const UserMessageCard = () => {
       await updateMessageMutation.mutateAsync({
         id: message.id,
         data: {
+          text: message.text,
           readingDate,
           status: MessageStatus.Read,
+          priority: message.priority,
         },
       });
     } catch {
       setSelectedMessage(message);
+    }
+  };
+
+  const handleArchiveMessage = async (message: MessageDTO) => {
+    if (message.status !== MessageStatus.Read) return;
+
+    try {
+      await updateMessageMutation.mutateAsync({
+        id: message.id,
+        data: {
+          text: message.text,
+          readingDate: message.readingDate || formatReadingDateForApi(),
+          status: MessageStatus.Archived,
+          priority: message.priority,
+        },
+      });
+
+      if (selectedMessage?.id === message.id) {
+        setSelectedMessage(null);
+      }
+    } catch {
+      // список обновится после инвалидации запроса
     }
   };
 
@@ -335,22 +491,36 @@ const UserMessageCard = () => {
     }
   };
 
-  const renderMessageList = (items: MessageDTO[], type: "received" | "sent") => {
+  const renderMessageList = (items: MessageDTO[], type: "received" | "sent" | "archive") => {
     if (items.length === 0) {
+      const emptyLabel =
+        type === "received"
+          ? "Нет входящих сообщений"
+          : type === "sent"
+            ? "Нет отправленных сообщений"
+            : "Нет архивных сообщений";
+
       return (
         <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-          {type === "received" ? "Нет входящих сообщений" : "Нет отправленных сообщений"}
+          {emptyLabel}
         </div>
       );
     }
 
     return (
-      <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+      <div className={`${type === "archive" ? "" : "max-h-96 overflow-y-auto pr-1 "}space-y-2`}>
         {items.map((message) => {
           const isUnread = message.status === MessageStatus.Unread;
           const hasAttachment = Boolean(message.fileName || message.filePath);
-          const counterpartId = type === "received" ? message.fromUserId : message.toUserId;
-          const counterpartLabel = type === "received" ? "От" : "Кому";
+          const direction =
+            type === "archive"
+              ? message.toUserId === userId
+                ? "received"
+                : "sent"
+              : type;
+          const counterpartId = direction === "received" ? message.fromUserId : message.toUserId;
+          const counterpartLabel = direction === "received" ? "От" : "Кому";
+          const DirectionIcon = direction === "received" ? ArrowRight : ArrowLeft;
           const StatusIcon = isUnread ? Mail : MailOpen;
 
           return (
@@ -363,10 +533,17 @@ const UserMessageCard = () => {
               }`}
             >
               <div className="flex shrink-0 items-center gap-1.5">
-                <StatusIcon
-                  className={`h-4 w-4 ${isUnread ? "text-blue-600" : "text-muted-foreground"}`}
-                  aria-label={getMessageStatusLabel(message.status)}
-                />
+                {type === "archive" ? (
+                  <DirectionIcon
+                    className="h-4 w-4 text-muted-foreground"
+                    aria-label={direction === "received" ? "Входящее" : "Исходящее"}
+                  />
+                ) : (
+                  <StatusIcon
+                    className={`h-4 w-4 ${isUnread ? "text-blue-600" : "text-muted-foreground"}`}
+                    aria-label={getMessageStatusLabel(message.status)}
+                  />
+                )}
                 {hasAttachment && (
                   <Paperclip className="h-4 w-4 text-muted-foreground" aria-label="Есть вложение" />
                 )}
@@ -385,15 +562,38 @@ const UserMessageCard = () => {
                 </Badge>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => openMessage(message, type)}
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                Прочитать
-              </Button>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => openMessage(message, type)}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Прочитать
+                </Button>
+                {type !== "archive" && message.status === MessageStatus.Read && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => handleArchiveMessage(message)}
+                    disabled={
+                      updateMessageMutation.isPending &&
+                      updateMessageMutation.variables?.id === message.id
+                    }
+                  >
+                    {updateMessageMutation.isPending &&
+                    updateMessageMutation.variables?.id === message.id &&
+                    updateMessageMutation.variables?.data.status === MessageStatus.Archived ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Archive className="mr-2 h-4 w-4" />
+                    )}
+                    В архив
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })}
@@ -437,7 +637,7 @@ const UserMessageCard = () => {
           </div>
         ) : (
           <Tabs defaultValue="received" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="received" className="flex items-center gap-2">
                 <Inbox className="h-4 w-4" />
                 Принятые
@@ -454,12 +654,137 @@ const UserMessageCard = () => {
                   {sentMessages.length}
                 </Badge>
               </TabsTrigger>
+              <TabsTrigger value="archive" className="flex items-center gap-2">
+                <Archive className="h-4 w-4" />
+                Архив
+                <Badge variant="secondary" className="ml-1">
+                  {archivedMessages.length}
+                </Badge>
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="received" className="mt-4">
               {renderMessageList(receivedMessages, "received")}
             </TabsContent>
             <TabsContent value="sent" className="mt-4">
               {renderMessageList(sentMessages, "sent")}
+            </TabsContent>
+            <TabsContent value="archive" className="mt-4 space-y-3">
+              {archivedMessages.length === 0 ? (
+                renderMessageList([], "archive")
+              ) : (
+                <>
+                  <div className="relative max-w-md">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={archiveSearch}
+                      onChange={(e) => setArchiveSearch(e.target.value)}
+                      placeholder="Быстрый поиск по всем полям..."
+                      className="pl-9 pr-9"
+                    />
+                    {archiveSearch && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 p-0"
+                        onClick={() => setArchiveSearch("")}
+                        aria-label="Очистить поиск"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {hasArchiveSearch && (
+                    <p className="text-sm text-muted-foreground">
+                      Найдено: {archiveTotalItems} из {archivedMessages.length}
+                    </p>
+                  )}
+
+                  {archiveTotalItems === 0 ? (
+                    <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                      Ничего не найдено по запросу «{archiveSearch.trim()}»
+                    </div>
+                  ) : (
+                    <>
+                      {renderMessageList(paginatedArchivedMessages, "archive")}
+                      <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm text-muted-foreground">
+                            Показано {archiveStartItem}-{archiveEndItem} из {archiveTotalItems}
+                          </p>
+                          <select
+                            value={archivePageSize}
+                            onChange={(e) => setArchivePageSize(Number(e.target.value))}
+                            className="rounded border border-input bg-background px-2 py-1 text-sm"
+                          >
+                            {ARCHIVE_PAGE_SIZES.map((size) => (
+                              <option key={size} value={size}>
+                                {size} на странице
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {archiveTotalPages > 1 && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setArchivePage(1)}
+                              disabled={archivePage === 1}
+                              aria-label="Первая страница"
+                            >
+                              <ChevronsLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setArchivePage((page) => Math.max(1, page - 1))}
+                              disabled={archivePage === 1}
+                              aria-label="Предыдущая страница"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            {getVisiblePages(archivePage, archiveTotalPages).map((page, index) => (
+                              <Button
+                                key={`${page}-${index}`}
+                                variant={page === archivePage ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => typeof page === "number" && setArchivePage(page)}
+                                disabled={typeof page !== "number"}
+                                className="min-w-[40px]"
+                              >
+                                {page}
+                              </Button>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setArchivePage((page) => Math.min(archiveTotalPages, page + 1))
+                              }
+                              disabled={archivePage === archiveTotalPages}
+                              aria-label="Следующая страница"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setArchivePage(archiveTotalPages)}
+                              disabled={archivePage === archiveTotalPages}
+                              aria-label="Последняя страница"
+                            >
+                              <ChevronsRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
             </TabsContent>
           </Tabs>
         )}
@@ -475,7 +800,11 @@ const UserMessageCard = () => {
           <DialogHeader>
             <DialogTitle>Сообщение</DialogTitle>
             <DialogDescription>
-              {selectedMessageType === "received" ? "Входящее сообщение" : "Отправленное сообщение"}
+              {selectedMessageType === "received"
+                ? "Входящее сообщение"
+                : selectedMessageType === "sent"
+                  ? "Отправленное сообщение"
+                  : "Архивное сообщение"}
             </DialogDescription>
           </DialogHeader>
 

@@ -47,6 +47,7 @@ export const DOCUMENT_TYPE_OPTIONS = [
   { value: 2, label: "Привязка арматуры" },
   { value: 3, label: "АКТ приемки-передачи металлолома" },
   { value: 4, label: "АКТ приемки металлолома" },
+  { value: 5, label: "АКТ приемки-передачи запосных частей" },
 ] as const;
 
 export type DocumentTypeValue = (typeof DOCUMENT_TYPE_OPTIONS)[number]["value"];

@@ -21,13 +21,16 @@ export interface CreateMessageDTO {
 }
 
 export interface UpdateMessageDTO {
+  text: string;
   readingDate: string;
   status: number;
+  priority: number;
 }
 
 export enum MessageStatus {
   Unread = 0,
   Read = 1,
+  Archived = 3,
 }
 
 export enum MessagePriority {
@@ -42,6 +45,8 @@ export const getMessageStatusLabel = (status: number) => {
       return "Не прочитано";
     case MessageStatus.Read:
       return "Прочитано";
+    case MessageStatus.Archived:
+      return "Архив";
     default:
       return `Статус ${status}`;
   }
