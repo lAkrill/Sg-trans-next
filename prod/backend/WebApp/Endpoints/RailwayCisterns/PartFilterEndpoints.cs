@@ -229,7 +229,7 @@ public static class PartFilterEndpoints
             query = query.Where(p => filters.StampNumbers.Contains(p.StampNumber.Value));
 
         if (filters.SerialNumbers != null && filters.SerialNumbers.Any())
-            query = query.Where(p => p.SerialNumber != null && filters.SerialNumbers.Contains(p.SerialNumber));
+            query = query.Where(p => p.SerialNumber != null && filters.SerialNumbers.Any(sn => p.SerialNumber.Contains(sn)));
 
         if (filters.ManufactureYear != null)
         {
@@ -265,7 +265,7 @@ public static class PartFilterEndpoints
         }
 
         if (filters.Models != null && filters.Models.Any())
-            query = query.Where(p => p.Model != null && filters.Models.Contains(p.Model));
+            query = query.Where(p => p.Model != null && filters.Models.Any(m => p.Model.Contains(m)));
 
         if (filters.CreatedAt != null)
         {

@@ -5,6 +5,7 @@ using WebApp.Data.Entities.RailwayCisterns;
 using WebApp.Data.Enums;
 using WebApp.DTO.Common;
 using WebApp.DTO.RailwayCisterns;
+using WebApp.Exceptions;
 using WebApp.Extensions;
 
 namespace WebApp.Endpoints.RailwayCisterns;
@@ -908,6 +909,178 @@ public static class FitmentEquipmentEndpoints
             .WithName("GetFitmentEquipmentsByFitment")
             .Produces<List<FitmentEquipmentDTO>>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
+
+        // Получение записей по документу
+        group.MapGet("/by-document/{documentId}", async ([FromServices] ApplicationDbContext context, Guid documentId) =>
+            {
+                var items = await context.Set<FitmentEquipment>()
+                    .AsNoTracking()
+                    .Include(fe => fe.Fitment)
+                    .ThenInclude(f => f.FitmentType)
+                    .Include(fe => fe.JobUser)
+                    .Include(fe => fe.TestUser)
+                    .Include(fe => fe.Depot)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Manufacturer)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Type)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Model)
+                    .Include(fe => fe.RailwayCistern)
+                    .ThenInclude(rc => rc.Owner)
+                    .Include(fe => fe.Document)
+                    .Where(fe => fe.DocumentId == documentId)
+                    .OrderByDescending(fe => fe.Date)
+                    .Select(fe => new FitmentEquipmentDTO
+                    {
+                        Id = fe.Id,
+                        RailwayCisternsId = fe.RailwayCisternsId,
+                        Operation = fe.Operation,
+                        FitmentId = fe.FitmentId,
+                        JobUserId = fe.JobUserId,
+                        TestUserId = fe.TestUserId,
+                        AcceptUserId = fe.AcceptUserId,
+                        InstallUserId = fe.InstallUserId,
+                        ApprovUserId = fe.ApprovUserId,
+                        DepoId = fe.DepoId,
+                        Date = fe.Date,
+                        DocumentId = fe.DocumentId,
+                        RailwayCistern = fe.RailwayCistern != null
+                            ? new RailwayCisternDTO
+                            {
+                                Id = fe.RailwayCistern.Id,
+                                Number = fe.RailwayCistern.Number,
+                                Model = fe.RailwayCistern.Model.Name,
+                                Owner = fe.RailwayCistern.Owner.UNP,
+                            }
+                            : null,
+                        Fitment = fe.Fitment != null
+                            ? new FitmentInfoDTO
+                            {
+                                Id = fe.Fitment.Id,
+                                SerialNumber = fe.Fitment.SerialNumber,
+                                PassportNumber = fe.Fitment.PassportNumber,
+                                FitmentTypeName = fe.Fitment.FitmentType.Name
+                            }
+                            : null,
+                        JobUser = fe.JobUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.JobUser.Id,
+                                LastName = fe.JobUser.LastName,
+                                FirstName = fe.JobUser.FirstName,
+                                Patronymic = fe.JobUser.Patronymic,
+                                Initials = fe.JobUser.Initials,
+                                Position = fe.JobUser.Position
+                            }
+                            : null,
+                        TestUser = fe.TestUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.TestUser.Id,
+                                LastName = fe.TestUser.LastName,
+                                FirstName = fe.TestUser.FirstName,
+                                Patronymic = fe.TestUser.Patronymic,
+                                Initials = fe.TestUser.Initials,
+                                Position = fe.TestUser.Position
+                            }
+                            : null,
+                        AcceptUser = fe.AcceptUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.AcceptUser.Id,
+                                LastName = fe.AcceptUser.LastName,
+                                FirstName = fe.AcceptUser.FirstName,
+                                Patronymic = fe.AcceptUser.Patronymic,
+                                Initials = fe.AcceptUser.Initials,
+                                Position = fe.AcceptUser.Position
+                            }
+                            : null,
+                        InstallUser = fe.InstallUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.InstallUser.Id,
+                                LastName = fe.InstallUser.LastName,
+                                FirstName = fe.InstallUser.FirstName,
+                                Patronymic = fe.InstallUser.Patronymic,
+                                Initials = fe.InstallUser.Initials,
+                                Position = fe.InstallUser.Position
+                            }
+                            : null,
+                        ApprovUser = fe.ApprovUser != null
+                            ? new EmployeeInfoDTO
+                            {
+                                Id = fe.ApprovUser.Id,
+                                LastName = fe.ApprovUser.LastName,
+                                FirstName = fe.ApprovUser.FirstName,
+                                Patronymic = fe.ApprovUser.Patronymic,
+                                Initials = fe.ApprovUser.Initials,
+                                Position = fe.ApprovUser.Position
+                            }
+                            : null,
+                        Depot = fe.Depot != null
+                            ? new DepotDTO
+                            {
+                                Id = fe.Depot.Id,
+                                Name = fe.Depot.Name,
+                                Code = fe.Depot.Code,
+                                Location = fe.Depot.Location,
+                                ShortName = fe.Depot.ShortName
+                            }
+                            : null,
+                        Document = fe.Document != null
+                            ? new DocumentDTO
+                            {
+                                Id = fe.Document.Id,
+                                Number = fe.Document.Number,
+                                Type = fe.Document.Type,
+                                Date = fe.Document.Date,
+                                Author = fe.Document.Author,
+                                Price = fe.Document.Price,
+                                Note = fe.Document.Note
+                            }
+                            : null
+                    })
+                    .ToListAsync();
+
+                return Results.Ok(items);
+            })
+            .WithName("GetFitmentEquipmentsByDocument")
+            .Produces<List<FitmentEquipmentDTO>>(StatusCodes.Status200OK)
+            .RequirePermissions(Permission.Read);
+
+        // Обновление записи комплектации
+        group.MapPut("/{id}", async (
+                [FromServices] ApplicationDbContext context,
+                Guid id,
+                [FromBody] CreateFitmentEquipmentDTO dto) =>
+            {
+                var entity = await context.Set<FitmentEquipment>().FirstOrDefaultAsync(fe => fe.Id == id);
+                if (entity is null)
+                {
+                    return Results.NotFound();
+                }
+
+                entity.RailwayCisternsId = dto.RailwayCisternsId;
+                entity.Operation = dto.Operation;
+                entity.FitmentId = dto.FitmentId;
+                entity.JobUserId = dto.JobUserId;
+                entity.TestUserId = dto.TestUserId;
+                entity.AcceptUserId = dto.AcceptUserId;
+                entity.InstallUserId = dto.InstallUserId;
+                entity.ApprovUserId = dto.ApprovUserId;
+                entity.DepoId = dto.DepoId;
+                entity.Date = dto.Date;
+                entity.DocumentId = dto.DocumentId;
+
+                await context.SaveChangesAsync();
+
+                return Results.NoContent();
+            })
+            .WithName("UpdateFitmentEquipment")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .RequirePermissions(Permission.Update);
 
         group.MapGet("/last-by-fitment/{fitmentId}", async ([FromServices] ApplicationDbContext context, Guid fitmentId) =>
             {

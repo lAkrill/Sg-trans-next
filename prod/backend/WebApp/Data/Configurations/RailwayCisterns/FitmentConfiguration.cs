@@ -21,10 +21,12 @@ public class FitmentConfiguration : IEntityTypeConfiguration<Fitment>
             .HasColumnType("text");
 
         builder.Property(f => f.BuildDate)
-            .IsRequired();
+            .IsRequired()
+            .HasColumnType("date");
 
         builder.Property(f => f.LastRepairDate)
-            .IsRequired(false);
+            .IsRequired(false)
+            .HasColumnType("date");
 
         builder.Property(f => f.PeriodRep)
             .IsRequired()
