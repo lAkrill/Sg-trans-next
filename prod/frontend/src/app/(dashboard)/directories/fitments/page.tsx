@@ -668,16 +668,16 @@ export default function FitmentsPage() {
             Техническое обслуживание арматуры
           </div>
 
-          <div className="flex justify-end items-center gap-4">
-            <Button onClick={() => setMaintenanceOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Добавить запись
-            </Button>
-          </div>
-
           <FitmentEquipmentsTable
             operations={[3]}
             title="Список технического обслуживания"
+            exportFileName="FitmentMaintenance"
+            toolbarActions={
+              <Button onClick={() => setMaintenanceOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Добавить запись
+              </Button>
+            }
           />
 
           <AddFitmentMaintenanceDialog
@@ -691,14 +691,16 @@ export default function FitmentsPage() {
             Справочник привязок арматуры
           </div>
 
-          <div className="flex justify-end items-center gap-4">
-            <Button onClick={() => setBindFitmentOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Привязать арматуру
-            </Button>
-          </div>
-
-          <FitmentEquipmentsTable operations={[1, 2]} />
+          <FitmentEquipmentsTable
+            operations={[1, 2]}
+            exportFileName="FitmentBindings"
+            toolbarActions={
+              <Button onClick={() => setBindFitmentOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Привязать арматуру
+              </Button>
+            }
+          />
 
           <BindFitmentDialog
             open={bindFitmentOpen}

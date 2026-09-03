@@ -834,23 +834,29 @@ export interface PartInfoDTO {
 // PartEquipment (Оборудование деталей)
 export interface PartEquipmentDTO {
   id: string;
+  railwayCisternsId?: string;
   operation: number;
+  equipmentTypeId?: string;
   defectsId?: string;
   adminOwnerId?: string;
   partsId?: string;
+  jobDepotsId?: string;
   jobDate?: string;
   jobTypeId?: string;
   thicknessLeft?: number;
   thicknessRight?: number;
   truckType?: number;
   notes?: string;
+  documentId?: string;
   documentsId?: number;
   documentDate?: string;
+  depotsId?: string;
+  repairTypesId?: string;
   railwayCistern?: {
     id: string;
     number: string;
     model: string;
-    owner?: unknown;
+    owner?: string;
   };
   equipmentType?: {
     id: string;
@@ -880,6 +886,9 @@ export interface PartEquipmentDTO {
     name: string;
     code: string;
     description: string;
+    createdAt?: string;
+    shortName?: string;
+    portalName?: string;
   };
   part?: PartInfoDTO;
   document?: DocumentDTO;
@@ -968,6 +977,20 @@ export interface FitmentEquipmentDTO {
 }
 
 export interface CreateFitmentEquipmentDTO {
+  railwayCisternsId?: string | null;
+  operation: number;
+  fitmentId: string;
+  jobUserId?: string | null;
+  testUserId?: string | null;
+  acceptUserId?: string | null;
+  installUserId?: string | null;
+  approvUserId?: string | null;
+  depoId?: string | null;
+  date?: string;
+  documentId?: string;
+}
+
+export interface UpdateFitmentEquipmentDTO {
   railwayCisternsId?: string | null;
   operation: number;
   fitmentId: string;

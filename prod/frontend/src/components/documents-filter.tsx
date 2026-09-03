@@ -30,6 +30,13 @@ import {
   SelectValue,
 } from "@/components/ui";
 import { Filter, RotateCcw } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+/** Подсветка активного (заполненного) фильтра */
+const ACTIVE_FILTER_CONTROL =
+  "border-green-500 bg-green-50 text-green-900 hover:bg-green-50 focus-visible:ring-green-500/40";
+const ACTIVE_FILTER_BADGE =
+  "border-green-500 bg-green-100 text-green-800 hover:bg-green-100";
 
 export type DocumentSortField =
   | "number"
@@ -41,6 +48,8 @@ export type DocumentSortField =
   | "file";
 
 export type DocumentSortDirection = "asc" | "desc";
+
+export const DOCUMENT_TYPE_CISTERN_COMPLECTATION = 1;
 
 export const DOCUMENT_TYPE_OPTIONS = [
   { value: 1, label: "Комплектация вагона-цистерны" },
@@ -84,9 +93,9 @@ export const DOCUMENT_COLUMN_OPTIONS = [
   { value: "file", label: "Файл" },
 ] as const;
 
-export const DEFAULT_DOCUMENT_VISIBLE_COLUMNS = DOCUMENT_COLUMN_OPTIONS.map(
-  (option) => option.value
-);
+export const DEFAULT_DOCUMENT_VISIBLE_COLUMNS = DOCUMENT_COLUMN_OPTIONS.filter(
+  (option) => option.value !== "price" && option.value !== "note"
+).map((option) => option.value);
 
 export const EMPTY_DOCUMENT_FILTERS: DocumentFilterCriteria = {
   number: "",
@@ -101,9 +110,13 @@ export const EMPTY_DOCUMENT_FILTERS: DocumentFilterCriteria = {
 };
 
 export const DEFAULT_DOCUMENT_SORT: DocumentSortConfig = {
-  field: "",
-  direction: "asc",
+  field: "date",
+  direction: "desc",
 };
+
+export const isDefaultDocumentSort = (sort: DocumentSortConfig) =>
+  sort.field === DEFAULT_DOCUMENT_SORT.field &&
+  sort.direction === DEFAULT_DOCUMENT_SORT.direction;
 
 interface DocumentsFilterProps {
   open: boolean;
@@ -155,8 +168,9 @@ export function DocumentsFilter({
     onApply({ filters: EMPTY_DOCUMENT_FILTERS, sort: DEFAULT_DOCUMENT_SORT });
   };
 
+  const hasCustomSort = !isDefaultDocumentSort(localSort);
   const activeFiltersCount =
-    countActiveFilters(localFilters) + (localSort.field ? 1 : 0);
+    countActiveFilters(localFilters) + (hasCustomSort ? 1 : 0);
 
   return (
     <Sheet
@@ -170,11 +184,15 @@ export function DocumentsFilter({
       }}
     >
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(activeFiltersCount > 0 && ACTIVE_FILTER_CONTROL)}
+        >
           <Filter className="h-4 w-4 mr-2" />
           Фильтры
           {activeFiltersCount > 0 && (
-            <Badge variant="secondary" className="ml-2">
+            <Badge variant="outline" className={cn("ml-2", ACTIVE_FILTER_BADGE)}>
               {activeFiltersCount}
             </Badge>
           )}
@@ -220,23 +238,37 @@ export function DocumentsFilter({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="filter-number">Номер</Label>
+                      <Label
+                        htmlFor="filter-number"
+                        className={cn(localFilters.number && "text-green-800")}
+                      >
+                        Номер
+                      </Label>
                       <Input
                         id="filter-number"
                         placeholder="Поиск по номеру"
                         value={localFilters.number || ""}
                         onChange={(e) => updateFilter("number", e.target.value)}
+                        className={cn(localFilters.number && ACTIVE_FILTER_CONTROL)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="filter-type">Тип</Label>
+                      <Label
+                        htmlFor="filter-type"
+                        className={cn(localFilters.type && "text-green-800")}
+                      >
+                        Тип
+                      </Label>
                       <Select
                         value={localFilters.type || "all"}
                         onValueChange={(value) =>
                           updateFilter("type", value === "all" ? "" : value)
                         }
                       >
-                        <SelectTrigger id="filter-type" className="w-full">
+                        <SelectTrigger
+                          id="filter-type"
+                          className={cn("w-full", localFilters.type && ACTIVE_FILTER_CONTROL)}
+                        >
                           <SelectValue placeholder="Все типы" />
                         </SelectTrigger>
                         <SelectContent>
@@ -250,30 +282,48 @@ export function DocumentsFilter({
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="filter-author">Автор</Label>
+                      <Label
+                        htmlFor="filter-author"
+                        className={cn(localFilters.author && "text-green-800")}
+                      >
+                        Автор
+                      </Label>
                       <Input
                         id="filter-author"
                         placeholder="Поиск по автору"
                         value={localFilters.author || ""}
                         onChange={(e) => updateFilter("author", e.target.value)}
+                        className={cn(localFilters.author && ACTIVE_FILTER_CONTROL)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="filter-note">Примечание</Label>
+                      <Label
+                        htmlFor="filter-note"
+                        className={cn(localFilters.note && "text-green-800")}
+                      >
+                        Примечание
+                      </Label>
                       <Input
                         id="filter-note"
                         placeholder="Поиск по примечанию"
                         value={localFilters.note || ""}
                         onChange={(e) => updateFilter("note", e.target.value)}
+                        className={cn(localFilters.note && ACTIVE_FILTER_CONTROL)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="filter-file">Файл</Label>
+                      <Label
+                        htmlFor="filter-file"
+                        className={cn(localFilters.file && "text-green-800")}
+                      >
+                        Файл
+                      </Label>
                       <Input
                         id="filter-file"
                         placeholder="Поиск по файлу"
                         value={localFilters.file || ""}
                         onChange={(e) => updateFilter("file", e.target.value)}
+                        className={cn(localFilters.file && ACTIVE_FILTER_CONTROL)}
                       />
                     </div>
                   </CardContent>
@@ -286,21 +336,33 @@ export function DocumentsFilter({
                   <CardContent>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-2">
-                        <Label htmlFor="filter-date-from">От</Label>
+                        <Label
+                          htmlFor="filter-date-from"
+                          className={cn(localFilters.dateFrom && "text-green-800")}
+                        >
+                          От
+                        </Label>
                         <Input
                           id="filter-date-from"
                           type="date"
                           value={localFilters.dateFrom || ""}
                           onChange={(e) => updateFilter("dateFrom", e.target.value)}
+                          className={cn(localFilters.dateFrom && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="filter-date-to">До</Label>
+                        <Label
+                          htmlFor="filter-date-to"
+                          className={cn(localFilters.dateTo && "text-green-800")}
+                        >
+                          До
+                        </Label>
                         <Input
                           id="filter-date-to"
                           type="date"
                           value={localFilters.dateTo || ""}
                           onChange={(e) => updateFilter("dateTo", e.target.value)}
+                          className={cn(localFilters.dateTo && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                     </div>
@@ -314,7 +376,12 @@ export function DocumentsFilter({
                   <CardContent>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-2">
-                        <Label htmlFor="filter-price-from">От</Label>
+                        <Label
+                          htmlFor="filter-price-from"
+                          className={cn(localFilters.priceFrom && "text-green-800")}
+                        >
+                          От
+                        </Label>
                         <Input
                           id="filter-price-from"
                           type="number"
@@ -322,10 +389,16 @@ export function DocumentsFilter({
                           placeholder="От"
                           value={localFilters.priceFrom || ""}
                           onChange={(e) => updateFilter("priceFrom", e.target.value)}
+                          className={cn(localFilters.priceFrom && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="filter-price-to">До</Label>
+                        <Label
+                          htmlFor="filter-price-to"
+                          className={cn(localFilters.priceTo && "text-green-800")}
+                        >
+                          До
+                        </Label>
                         <Input
                           id="filter-price-to"
                           type="number"
@@ -333,6 +406,7 @@ export function DocumentsFilter({
                           placeholder="До"
                           value={localFilters.priceTo || ""}
                           onChange={(e) => updateFilter("priceTo", e.target.value)}
+                          className={cn(localFilters.priceTo && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                     </div>

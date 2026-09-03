@@ -74,6 +74,7 @@ import type {
   PaginatedPartEquipmentResponse,
   FitmentEquipmentDTO,
   CreateFitmentEquipmentDTO,
+  UpdateFitmentEquipmentDTO,
   PaginatedFitmentEquipmentResponse,
   PartFilterSortDTO,
   PartFilterSortWithoutPaginationDTO,
@@ -534,10 +535,31 @@ export const partEquipmentApi = {
     const response = await api.get(`/api/part-equipments/last-by-cistern/${cisternId}`);
     return response.data;
   },
+
+  getByDocument: async (documentId: string): Promise<PartEquipmentDTO[]> => {
+    const response = await api.get(`/api/part-equipments/by-document/${documentId}`);
+    return response.data;
+  },
+
+  create: async (data: unknown): Promise<PartEquipmentDTO> => {
+    const response = await api.post("/api/part-equipments", data);
+    return response.data;
+  },
+
+  update: async (id: string, data: unknown): Promise<void> => {
+    await api.put(`/api/part-equipments/${id}`, data);
+  },
 };
 
 // Fitment Equipment API (Привязка арматуры)
 export const fitmentEquipmentApi = {
+  getAllUnpaginated: async (operations?: number[]): Promise<FitmentEquipmentDTO[]> => {
+    const response = await api.get("/api/fitment-equipments/all/");
+    const allItems = (response.data ?? []) as FitmentEquipmentDTO[];
+    if (!operations?.length) return allItems;
+    return allItems.filter((item) => operations.includes(item.operation));
+  },
+
   getAll: async (
     pageNumber = 1,
     pageSize = 10,
@@ -545,9 +567,7 @@ export const fitmentEquipmentApi = {
   ): Promise<PaginatedFitmentEquipmentResponse> => {
     // Удалённый API пока может не поддерживать ?operations= — фильтруем на клиенте
     if (operations?.length) {
-      const response = await api.get("/api/fitment-equipments/all/");
-      const allItems = (response.data ?? []) as FitmentEquipmentDTO[];
-      const filtered = allItems.filter((item) => operations.includes(item.operation));
+      const filtered = await fitmentEquipmentApi.getAllUnpaginated(operations);
       const totalCount = filtered.length;
       const totalPages = Math.max(1, Math.ceil(totalCount / pageSize) || 1);
       const safePageNumber = Math.min(Math.max(pageNumber, 1), totalPages);
@@ -580,6 +600,10 @@ export const fitmentEquipmentApi = {
 
   create: async (data: CreateFitmentEquipmentDTO): Promise<void> => {
     await api.post('/api/fitment-equipments', data);
+  },
+
+  update: async (id: string, data: UpdateFitmentEquipmentDTO): Promise<void> => {
+    await api.put(`/api/fitment-equipments/${id}`, data);
   },
 
   getLastByFitment: async (fitmentId: string): Promise<FitmentEquipmentDTO | null> => {

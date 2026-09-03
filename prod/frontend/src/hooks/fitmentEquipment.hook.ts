@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fitmentEquipmentApi } from '@/api/directories';
-import type { CreateFitmentEquipmentDTO } from '@/types/directories';
+import type { CreateFitmentEquipmentDTO, UpdateFitmentEquipmentDTO } from '@/types/directories';
 
 export const fitmentEquipmentKeys = {
   all: ['directories', 'fitment-equipments'] as const,
   byId: (id: string) => [...fitmentEquipmentKeys.all, id] as const,
+  allUnpaginated: (operations?: number[]) =>
+    [...fitmentEquipmentKeys.all, 'all-unpaginated', { operations }] as const,
   filtered: (pageNumber: number, pageSize: number, operations?: number[]) =>
     [...fitmentEquipmentKeys.all, { pageNumber, pageSize, operations }] as const,
   lastByFitment: (fitmentId: string) =>
@@ -25,6 +27,13 @@ export const useFitmentEquipments = (
   return useQuery({
     queryKey: fitmentEquipmentKeys.filtered(pageNumber, pageSize, operations),
     queryFn: () => fitmentEquipmentApi.getAll(pageNumber, pageSize, operations),
+  });
+};
+
+export const useAllFitmentEquipments = (operations?: number[]) => {
+  return useQuery({
+    queryKey: fitmentEquipmentKeys.allUnpaginated(operations),
+    queryFn: () => fitmentEquipmentApi.getAllUnpaginated(operations),
   });
 };
 
@@ -72,6 +81,17 @@ export const useCreateFitmentEquipment = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateFitmentEquipmentDTO) => fitmentEquipmentApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: fitmentEquipmentKeys.all });
+    },
+  });
+};
+
+export const useUpdateFitmentEquipment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateFitmentEquipmentDTO }) =>
+      fitmentEquipmentApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: fitmentEquipmentKeys.all });
     },

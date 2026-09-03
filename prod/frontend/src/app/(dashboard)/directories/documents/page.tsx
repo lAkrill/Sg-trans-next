@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, type ChangeEvent } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -56,10 +56,12 @@ import {
   DEFAULT_DOCUMENT_SORT,
   DEFAULT_DOCUMENT_VISIBLE_COLUMNS,
   DOCUMENT_COLUMN_OPTIONS,
+  DOCUMENT_TYPE_CISTERN_COMPLECTATION,
   DOCUMENT_TYPE_OPTIONS,
   DocumentsFilter,
   EMPTY_DOCUMENT_FILTERS,
   getDocumentTypeLabel,
+  isDefaultDocumentSort,
   type DocumentFilterCriteria,
   type DocumentSortConfig,
   type DocumentSortField,
@@ -214,6 +216,7 @@ const hasActiveFilters = (filters: DocumentFilterCriteria) =>
   Object.values(filters).some((value) => value !== undefined && value !== null && value !== "");
 
 export default function DocumentsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialPageNumber = Number(searchParams.get("page")) || 1;
   const initialPageSize = Number(searchParams.get("pageSize")) || 10;
@@ -249,7 +252,7 @@ export default function DocumentsPage() {
     return [...filtered].sort((a, b) => compareDocuments(a, b, sort));
   }, [documents, filters, sort]);
 
-  const isFiltered = hasActiveFilters(filters) || Boolean(sort.field);
+  const isFiltered = hasActiveFilters(filters) || !isDefaultDocumentSort(sort);
   const totalCount = filteredDocuments.length;
   const allCount = documents.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -597,6 +600,17 @@ export default function DocumentsPage() {
       directory: normalized.slice(0, slashIndex) || DOCUMENT_FILE_DIRECTORY,
       fileName: normalized.slice(slashIndex + 1),
     };
+  };
+
+  const handleViewDocument = (documentItem: DocumentDTO) => {
+    if (documentItem.type !== DOCUMENT_TYPE_CISTERN_COMPLECTATION) return;
+
+    const params = new URLSearchParams({
+      returnPage: String(currentPage),
+      returnPageSize: String(pageSize),
+    });
+
+    router.push(`/directories/documents/${documentItem.id}?${params.toString()}`);
   };
 
   const handleViewFile = async (documentItem: DocumentDTO) => {
@@ -995,6 +1009,14 @@ export default function DocumentsPage() {
                       )}
                       <TableCell className="w-[1%] whitespace-nowrap">
                         <div className="flex w-max justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            title="Просмотр"
+                            onClick={() => handleViewDocument(documentItem)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"

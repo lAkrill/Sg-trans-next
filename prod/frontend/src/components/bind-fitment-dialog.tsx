@@ -26,12 +26,12 @@ import {
   useAllDocuments,
   useCisternIdAndNumbers,
   useCreateDocument,
-  useCreateFitmentEquipment,
   useCurrentUser,
   useDepots,
   useEmployees,
   useFitments,
   useUpdateFitment,
+  useUpdateFitmentEquipment,
 } from "@/hooks";
 import { fitmentEquipmentApi } from "@/api/directories";
 import { getDocumentTypeLabel } from "@/components/documents-filter";
@@ -214,7 +214,7 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
   const [documentFormError, setDocumentFormError] = useState<string | null>(null);
   const [isCreatingDocument, setIsCreatingDocument] = useState(false);
   const prefillRequestIdRef = useRef(0);
-  const createMutation = useCreateFitmentEquipment();
+  const updateMutation = useUpdateFitmentEquipment();
   const createDocumentMutation = useCreateDocument();
   const updateFitmentMutation = useUpdateFitment();
 
@@ -226,7 +226,7 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
   const { data: currentUser } = useCurrentUser();
 
   const isSubmitting =
-    createMutation.isPending ||
+    updateMutation.isPending ||
     createDocumentMutation.isPending ||
     updateFitmentMutation.isPending ||
     isPrefilling ||
@@ -519,6 +519,14 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
       return;
     }
 
+    if (!latestMaintenance?.id) {
+      setStatus({
+        type: "error",
+        message: "Для выбранной арматуры не найдена запись технического обслуживания",
+      });
+      return;
+    }
+
     try {
       setStatus({
         type: "loading",
@@ -532,19 +540,22 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
         message: "Отправляем запрос на привязку арматуры...",
       });
 
-      await createMutation.mutateAsync({
-        operation,
-        fitmentId: form.fitmentId,
-        railwayCisternsId:
-          operation === 2 ? form.railwayCisternsId : form.railwayCisternsId || undefined,
-        jobUserId: operation === 1 ? null : form.jobUserId || undefined,
-        testUserId: operation === 1 ? null : form.testUserId || undefined,
-        acceptUserId: operation === 1 ? null : form.acceptUserId || undefined,
-        installUserId: operation === 1 ? null : form.installUserId || undefined,
-        approvUserId: operation === 1 ? null : form.approvUserId || undefined,
-        depoId: operation === 1 ? form.locationDepoId || undefined : form.depoId || undefined,
-        date: form.date || undefined,
-        documentId: form.documentId,
+      await updateMutation.mutateAsync({
+        id: latestMaintenance.id,
+        data: {
+          railwayCisternsId:
+            operation === 2 ? form.railwayCisternsId : form.railwayCisternsId || null,
+          operation,
+          fitmentId: form.fitmentId,
+          jobUserId: operation === 1 ? null : form.jobUserId || null,
+          testUserId: operation === 1 ? null : form.testUserId || null,
+          depoId: operation === 1 ? form.locationDepoId || null : form.depoId || null,
+          date: form.date || undefined,
+          documentId: form.documentId,
+          acceptUserId: operation === 1 ? null : form.acceptUserId || null,
+          installUserId: operation === 1 ? null : form.installUserId || null,
+          approvUserId: operation === 1 ? null : form.approvUserId || null,
+        },
       });
 
       if (
@@ -578,7 +589,14 @@ export function BindFitmentDialog({ open, onOpenChange }: BindFitmentDialogProps
         type: "success",
         message: "Арматура успешно привязана",
       });
-      setForm(initialValues);
+      setForm((current) => ({
+        ...initialValues,
+        operation: current.operation,
+        railwayCisternsId: current.railwayCisternsId,
+        date: current.date,
+        installUserId: current.installUserId,
+        approvUserId: current.approvUserId,
+      }));
       setLatestMaintenance(null);
     } catch (err: unknown) {
       setStatus({

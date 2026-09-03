@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { filesApi } from "@/api/files";
@@ -21,9 +21,17 @@ interface ViewFileButtonProps {
   value: unknown;
   directory: string;
   label?: string;
+  title?: string;
+  icon?: ComponentType<{ className?: string }>;
 }
 
-export function ViewFileButton({ value, directory, label = "Посмотреть" }: ViewFileButtonProps) {
+export function ViewFileButton({
+  value,
+  directory,
+  label = "Посмотреть",
+  title,
+  icon: Icon = Eye,
+}: ViewFileButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   if (typeof value !== "string" || !value.trim()) {
@@ -46,11 +54,17 @@ export function ViewFileButton({ value, directory, label = "Посмотреть
   };
 
   return (
-    <Button variant="outline" size="sm" onClick={handleView} disabled={isLoading}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleView}
+      disabled={isLoading}
+      title={title ?? (label || "Посмотреть")}
+    >
       {isLoading ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <Loader2 className={label ? "mr-2 h-4 w-4 animate-spin" : "h-4 w-4 animate-spin"} />
       ) : (
-        <Eye className="mr-2 h-4 w-4" />
+        <Icon className={label ? "mr-2 h-4 w-4" : "h-4 w-4"} />
       )}
       {label}
     </Button>

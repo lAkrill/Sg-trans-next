@@ -9,6 +9,7 @@ export const partEquipmentKeys = {
     [...partEquipmentKeys.all, { pageNumber, pageSize, cisternId }] as const,
   byCistern: (cisternId: string) => [...partEquipmentKeys.all, 'by-cistern', cisternId] as const,
   lastByCistern: (cisternId: string) => [...partEquipmentKeys.all, 'last-by-cistern', cisternId] as const,
+  byDocument: (documentId: string) => [...partEquipmentKeys.all, 'by-document', documentId] as const,
 };
 
 // Hooks
@@ -40,5 +41,13 @@ export const useLastPartEquipmentsByCistern = (cisternId: string) => {
     queryKey: partEquipmentKeys.lastByCistern(cisternId),
     queryFn: () => partEquipmentApi.getLastByCistern(cisternId),
     enabled: !!cisternId,
+  });
+};
+
+export const usePartEquipmentsByDocument = (documentId: string) => {
+  return useQuery({
+    queryKey: partEquipmentKeys.byDocument(documentId),
+    queryFn: () => partEquipmentApi.getByDocument(documentId),
+    enabled: !!documentId,
   });
 };

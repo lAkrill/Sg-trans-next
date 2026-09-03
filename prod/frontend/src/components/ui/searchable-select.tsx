@@ -18,6 +18,7 @@ interface SearchableSelectProps {
   searchPlaceholder?: string;
   isLoading?: boolean;
   listClassName?: string;
+  className?: string;
   /** Раскрывает список в потоке на всю доступную высоту родителя */
   fillAvailable?: boolean;
 }
@@ -36,6 +37,7 @@ export const SearchableSelect = React.forwardRef<
       searchPlaceholder = 'Поиск...',
       isLoading = false,
       listClassName,
+      className,
       fillAvailable = false,
     },
     ref
@@ -121,7 +123,8 @@ export const SearchableSelect = React.forwardRef<
             'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
             'placeholder:text-muted-foreground',
             disabled && 'cursor-not-allowed opacity-50',
-            isOpen && 'ring-1 ring-ring'
+            isOpen && 'ring-1 ring-ring',
+            className
           )}
         >
           <span

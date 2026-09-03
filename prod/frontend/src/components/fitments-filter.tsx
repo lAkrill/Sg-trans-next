@@ -39,6 +39,13 @@ import {
   useFitmentTypeOptions,
 } from '@/hooks';
 import type { FitmentFilterCriteria } from '@/types/directories';
+import { cn } from '@/lib/utils';
+
+/** Подсветка активного (заполненного) фильтра */
+const ACTIVE_FILTER_CONTROL =
+  'border-green-500 bg-green-50 text-green-900 hover:bg-green-50 focus-visible:ring-green-500/40';
+const ACTIVE_FILTER_BADGE =
+  'border-green-500 bg-green-100 text-green-800 hover:bg-green-100';
 
 const LOCATION_CODE_OPTIONS = [
   { value: '0', label: 'Не установлена' },
@@ -103,6 +110,45 @@ const initialFilters: FitmentFilterCriteria = {
 };
 
 const parseList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
+
+function FilterBadges({
+  values,
+  options,
+  onRemove,
+  ariaLabel,
+}: {
+  values: string[];
+  options: { value: string; label: string }[];
+  onRemove: (value: string) => void;
+  ariaLabel: string;
+}) {
+  if (!values.length) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 pt-1">
+      {values.map((id) => {
+        const option = options.find((item) => item.value === id);
+        return (
+          <Badge
+            key={id}
+            variant="outline"
+            className={cn('gap-1 pr-1 text-xs', ACTIVE_FILTER_BADGE)}
+          >
+            {option?.label || id}
+            <button
+              type="button"
+              className="rounded-sm p-0.5 text-green-800 hover:bg-transparent"
+              onClick={() => onRemove(id)}
+              aria-label={ariaLabel}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        );
+      })}
+    </div>
+  );
+}
 
 export function FitmentsFilter({
   open,
@@ -294,11 +340,15 @@ export function FitmentsFilter({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {children || (
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(getActiveFiltersCount() > 0 && ACTIVE_FILTER_CONTROL)}
+          >
             <Filter className="h-4 w-4 mr-2" />
             Фильтры
             {getActiveFiltersCount() > 0 && (
-              <Badge variant="secondary" className="ml-2">
+              <Badge variant="outline" className={cn('ml-2', ACTIVE_FILTER_BADGE)}>
                 {getActiveFiltersCount()}
               </Badge>
             )}
@@ -345,7 +395,12 @@ export function FitmentsFilter({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="fitmentTypeIds">Тип арматуры</Label>
+                      <Label
+                        htmlFor="fitmentTypeIds"
+                        className={cn(selectedFitmentTypeIds.length > 0 && 'text-green-800')}
+                      >
+                        Тип арматуры
+                      </Label>
                       <SearchableSelect
                         value=""
                         onChange={handleFitmentTypeSelect}
@@ -353,37 +408,23 @@ export function FitmentsFilter({
                         placeholder="Выберите тип арматуры"
                         searchPlaceholder="Введите название или код"
                         isLoading={isFitmentTypesLoading}
+                        className={cn(selectedFitmentTypeIds.length > 0 && ACTIVE_FILTER_CONTROL)}
                       />
-                      {selectedFitmentTypeIds.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {selectedFitmentTypeIds.map((fitmentTypeId) => {
-                            const option = fitmentTypeOptions.find(
-                              (item) => item.value === fitmentTypeId
-                            );
-                            return (
-                              <Badge
-                                key={fitmentTypeId}
-                                variant="secondary"
-                                className="gap-1 pr-1"
-                              >
-                                {option?.label || fitmentTypeId}
-                                <button
-                                  type="button"
-                                  className="rounded-sm p-0.5 hover:bg-muted"
-                                  onClick={() => handleFitmentTypeRemove(fitmentTypeId)}
-                                  aria-label="Удалить тип"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <FilterBadges
+                        values={selectedFitmentTypeIds}
+                        options={fitmentTypeOptions}
+                        onRemove={handleFitmentTypeRemove}
+                        ariaLabel="Удалить тип"
+                      />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="modelIds">Модель арматуры</Label>
+                      <Label
+                        htmlFor="modelIds"
+                        className={cn(selectedModelIds.length > 0 && 'text-green-800')}
+                      >
+                        Модель арматуры
+                      </Label>
                       <SearchableSelect
                         value=""
                         onChange={handleModelSelect}
@@ -391,58 +432,56 @@ export function FitmentsFilter({
                         placeholder="Выберите модель арматуры"
                         searchPlaceholder="Введите название модели"
                         isLoading={isFitmentModelsLoading}
+                        className={cn(selectedModelIds.length > 0 && ACTIVE_FILTER_CONTROL)}
                       />
-                      {selectedModelIds.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {selectedModelIds.map((modelId) => {
-                            const option = fitmentModelOptions.find(
-                              (item) => item.value === modelId
-                            );
-                            return (
-                              <Badge
-                                key={modelId}
-                                variant="secondary"
-                                className="gap-1 pr-1"
-                              >
-                                {option?.label || modelId}
-                                <button
-                                  type="button"
-                                  className="rounded-sm p-0.5 hover:bg-muted"
-                                  onClick={() => handleModelRemove(modelId)}
-                                  aria-label="Удалить модель"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <FilterBadges
+                        values={selectedModelIds}
+                        options={fitmentModelOptions}
+                        onRemove={handleModelRemove}
+                        ariaLabel="Удалить модель"
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="serialNumbers">Номера</Label>
+                        <Label
+                          htmlFor="serialNumbers"
+                          className={cn(serialNumbersDraft.trim() && 'text-green-800')}
+                        >
+                          Номера
+                        </Label>
                         <Input
                           id="serialNumbers"
                           placeholder="Введите номера через запятую"
                           value={serialNumbersDraft}
                           onChange={(e) => setSerialNumbersDraft(e.target.value)}
+                          className={cn(serialNumbersDraft.trim() && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="passportNumbers">Паспорта</Label>
+                        <Label
+                          htmlFor="passportNumbers"
+                          className={cn(passportNumbersDraft.trim() && 'text-green-800')}
+                        >
+                          Паспорта
+                        </Label>
                         <Input
                           id="passportNumbers"
                           placeholder="Введите паспорта через запятую"
                           value={passportNumbersDraft}
                           onChange={(e) => setPassportNumbersDraft(e.target.value)}
+                          className={cn(passportNumbersDraft.trim() && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="depotIds">Производитель</Label>
+                      <Label
+                        htmlFor="depotIds"
+                        className={cn(selectedDepotIds.length > 0 && 'text-green-800')}
+                      >
+                        Производитель
+                      </Label>
                       <SearchableSelect
                         value=""
                         onChange={handleDepotSelect}
@@ -450,37 +489,23 @@ export function FitmentsFilter({
                         placeholder="Выберите производителя"
                         searchPlaceholder="Введите название депо"
                         isLoading={isDepotsLoading}
+                        className={cn(selectedDepotIds.length > 0 && ACTIVE_FILTER_CONTROL)}
                       />
-                      {selectedDepotIds.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {selectedDepotIds.map((depotId) => {
-                            const option = manufacturerDepotOptions.find(
-                              (item) => item.value === depotId
-                            );
-                            return (
-                              <Badge
-                                key={depotId}
-                                variant="secondary"
-                                className="gap-1 pr-1"
-                              >
-                                {option?.label || depotId}
-                                <button
-                                  type="button"
-                                  className="rounded-sm p-0.5 hover:bg-muted"
-                                  onClick={() => handleDepotRemove(depotId)}
-                                  aria-label="Удалить производителя"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <FilterBadges
+                        values={selectedDepotIds}
+                        options={manufacturerDepotOptions}
+                        onRemove={handleDepotRemove}
+                        ariaLabel="Удалить производителя"
+                      />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="creatorIds">Пользователь</Label>
+                      <Label
+                        htmlFor="creatorIds"
+                        className={cn(selectedCreatorIds.length > 0 && 'text-green-800')}
+                      >
+                        Пользователь
+                      </Label>
                       <SearchableSelect
                         value=""
                         onChange={handleCreatorSelect}
@@ -488,37 +513,23 @@ export function FitmentsFilter({
                         placeholder="Выберите пользователя"
                         searchPlaceholder="Введите ФИО или email"
                         isLoading={isUsersLoading}
+                        className={cn(selectedCreatorIds.length > 0 && ACTIVE_FILTER_CONTROL)}
                       />
-                      {selectedCreatorIds.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {selectedCreatorIds.map((creatorId) => {
-                            const option = userOptions.find(
-                              (item) => item.value === creatorId
-                            );
-                            return (
-                              <Badge
-                                key={creatorId}
-                                variant="secondary"
-                                className="gap-1 pr-1"
-                              >
-                                {option?.label || creatorId}
-                                <button
-                                  type="button"
-                                  className="rounded-sm p-0.5 hover:bg-muted"
-                                  onClick={() => handleCreatorRemove(creatorId)}
-                                  aria-label="Удалить пользователя"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <FilterBadges
+                        values={selectedCreatorIds}
+                        options={userOptions}
+                        onRemove={handleCreatorRemove}
+                        ariaLabel="Удалить пользователя"
+                      />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="locationCode">Местоположение</Label>
+                      <Label
+                        htmlFor="locationCode"
+                        className={cn(localFilters.code?.from != null && 'text-green-800')}
+                      >
+                        Местоположение
+                      </Label>
                       <Select
                         value={
                           localFilters.code?.from != null &&
@@ -537,7 +548,13 @@ export function FitmentsFilter({
                           updateFilter('code', { from: code, to: code });
                         }}
                       >
-                        <SelectTrigger id="locationCode" className="w-full">
+                        <SelectTrigger
+                          id="locationCode"
+                          className={cn(
+                            'w-full',
+                            localFilters.code?.from != null && ACTIVE_FILTER_CONTROL
+                          )}
+                        >
                           <SelectValue placeholder="Все местоположения" />
                         </SelectTrigger>
                         <SelectContent>
@@ -552,7 +569,12 @@ export function FitmentsFilter({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="locationCisternIds">Номера вагонов</Label>
+                      <Label
+                        htmlFor="locationCisternIds"
+                        className={cn(selectedLocationCisternIds.length > 0 && 'text-green-800')}
+                      >
+                        Номера вагонов
+                      </Label>
                       <SearchableSelect
                         value=""
                         onChange={handleLocationCisternSelect}
@@ -560,37 +582,23 @@ export function FitmentsFilter({
                         placeholder="Выберите номер вагона"
                         searchPlaceholder="Введите номер вагона"
                         isLoading={isCisternsLoading}
+                        className={cn(selectedLocationCisternIds.length > 0 && ACTIVE_FILTER_CONTROL)}
                       />
-                      {selectedLocationCisternIds.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {selectedLocationCisternIds.map((cisternId) => {
-                            const option = cisternOptions.find(
-                              (item) => item.value === cisternId
-                            );
-                            return (
-                              <Badge
-                                key={cisternId}
-                                variant="secondary"
-                                className="gap-1 pr-1"
-                              >
-                                {option?.label || cisternId}
-                                <button
-                                  type="button"
-                                  className="rounded-sm p-0.5 hover:bg-muted"
-                                  onClick={() => handleLocationCisternRemove(cisternId)}
-                                  aria-label="Удалить номер вагона"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <FilterBadges
+                        values={selectedLocationCisternIds}
+                        options={cisternOptions}
+                        onRemove={handleLocationCisternRemove}
+                        ariaLabel="Удалить номер вагона"
+                      />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="locationDepoIds">Депо</Label>
+                      <Label
+                        htmlFor="locationDepoIds"
+                        className={cn(selectedLocationDepoIds.length > 0 && 'text-green-800')}
+                      >
+                        Депо
+                      </Label>
                       <SearchableSelect
                         value=""
                         onChange={handleLocationDepoSelect}
@@ -598,33 +606,14 @@ export function FitmentsFilter({
                         placeholder="Выберите депо"
                         searchPlaceholder="Введите краткое наименование или код"
                         isLoading={isDepotsLoading}
+                        className={cn(selectedLocationDepoIds.length > 0 && ACTIVE_FILTER_CONTROL)}
                       />
-                      {selectedLocationDepoIds.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {selectedLocationDepoIds.map((depotId) => {
-                            const option = locationDepotOptions.find(
-                              (item) => item.value === depotId
-                            );
-                            return (
-                              <Badge
-                                key={depotId}
-                                variant="secondary"
-                                className="gap-1 pr-1"
-                              >
-                                {option?.label || depotId}
-                                <button
-                                  type="button"
-                                  className="rounded-sm p-0.5 hover:bg-muted"
-                                  onClick={() => handleLocationDepoRemove(depotId)}
-                                  aria-label="Удалить депо"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <FilterBadges
+                        values={selectedLocationDepoIds}
+                        options={locationDepotOptions}
+                        onRemove={handleLocationDepoRemove}
+                        ariaLabel="Удалить депо"
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -635,7 +624,9 @@ export function FitmentsFilter({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Дата постройки</Label>
+                      <Label className={cn((localFilters.buildDate?.from || localFilters.buildDate?.to) && 'text-green-800')}>
+                        Дата постройки
+                      </Label>
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           type="date"
@@ -644,6 +635,7 @@ export function FitmentsFilter({
                             ...localFilters.buildDate,
                             from: e.target.value || undefined,
                           })}
+                          className={cn(localFilters.buildDate?.from && ACTIVE_FILTER_CONTROL)}
                         />
                         <Input
                           type="date"
@@ -652,12 +644,15 @@ export function FitmentsFilter({
                             ...localFilters.buildDate,
                             to: e.target.value || undefined,
                           })}
+                          className={cn(localFilters.buildDate?.to && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Дата последнего ТО</Label>
+                      <Label className={cn((localFilters.lastRepairDate?.from || localFilters.lastRepairDate?.to) && 'text-green-800')}>
+                        Дата последнего ТО
+                      </Label>
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           type="date"
@@ -666,6 +661,7 @@ export function FitmentsFilter({
                             ...localFilters.lastRepairDate,
                             from: e.target.value || undefined,
                           })}
+                          className={cn(localFilters.lastRepairDate?.from && ACTIVE_FILTER_CONTROL)}
                         />
                         <Input
                           type="date"
@@ -674,12 +670,15 @@ export function FitmentsFilter({
                             ...localFilters.lastRepairDate,
                             to: e.target.value || undefined,
                           })}
+                          className={cn(localFilters.lastRepairDate?.to && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Дата обновления</Label>
+                      <Label className={cn((localFilters.updatedAt?.from || localFilters.updatedAt?.to) && 'text-green-800')}>
+                        Дата обновления
+                      </Label>
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           type="datetime-local"
@@ -688,6 +687,7 @@ export function FitmentsFilter({
                             ...localFilters.updatedAt,
                             from: e.target.value || undefined,
                           })}
+                          className={cn(localFilters.updatedAt?.from && ACTIVE_FILTER_CONTROL)}
                         />
                         <Input
                           type="datetime-local"
@@ -696,6 +696,7 @@ export function FitmentsFilter({
                             ...localFilters.updatedAt,
                             to: e.target.value || undefined,
                           })}
+                          className={cn(localFilters.updatedAt?.to && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                     </div>
@@ -708,7 +709,9 @@ export function FitmentsFilter({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Период ремонта</Label>
+                      <Label className={cn((localFilters.periodRep?.from != null || localFilters.periodRep?.to != null) && 'text-green-800')}>
+                        Период ремонта
+                      </Label>
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           type="number"
@@ -718,6 +721,7 @@ export function FitmentsFilter({
                             ...localFilters.periodRep,
                             from: e.target.value ? Number(e.target.value) : undefined,
                           })}
+                          className={cn(localFilters.periodRep?.from != null && ACTIVE_FILTER_CONTROL)}
                         />
                         <Input
                           type="number"
@@ -727,12 +731,15 @@ export function FitmentsFilter({
                             ...localFilters.periodRep,
                             to: e.target.value ? Number(e.target.value) : undefined,
                           })}
+                          className={cn(localFilters.periodRep?.to != null && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Срок службы (лет)</Label>
+                      <Label className={cn((localFilters.serviceLifeYears?.from != null || localFilters.serviceLifeYears?.to != null) && 'text-green-800')}>
+                        Срок службы (лет)
+                      </Label>
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           type="number"
@@ -742,6 +749,7 @@ export function FitmentsFilter({
                             ...localFilters.serviceLifeYears,
                             from: e.target.value ? Number(e.target.value) : undefined,
                           })}
+                          className={cn(localFilters.serviceLifeYears?.from != null && ACTIVE_FILTER_CONTROL)}
                         />
                         <Input
                           type="number"
@@ -751,6 +759,7 @@ export function FitmentsFilter({
                             ...localFilters.serviceLifeYears,
                             to: e.target.value ? Number(e.target.value) : undefined,
                           })}
+                          className={cn(localFilters.serviceLifeYears?.to != null && ACTIVE_FILTER_CONTROL)}
                         />
                       </div>
                     </div>

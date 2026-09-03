@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import Image from "next/image";
 import {
   Badge,
   Button,
@@ -22,11 +23,23 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
   Settings,
 } from "lucide-react";
-import { useFitmentEquipments } from "@/hooks";
+import { useAllFitmentEquipments, useFitmentTypes } from "@/hooks";
+import { api } from "@/lib/api";
 import { formatDate } from "@/lib/formatDate";
 import type { FitmentEquipmentDTO, FitmentEquipmentUserDTO } from "@/types/directories";
+import {
+  DEFAULT_FITMENT_EQUIPMENT_SORT,
+  DEFAULT_FITMENT_EQUIPMENT_VISIBLE_COLUMNS,
+  EMPTY_FITMENT_EQUIPMENT_FILTERS,
+  FITMENT_EQUIPMENT_COLUMN_OPTIONS,
+  FitmentEquipmentsFilter,
+  type FitmentEquipmentFilterCriteria,
+  type FitmentEquipmentSortConfig,
+  type FitmentEquipmentSortField,
+} from "@/components/fitment-equipments-filter";
 
 const getOperationLabel = (operation: number) => {
   switch (operation) {
@@ -69,25 +82,187 @@ const formatDocument = (item: FitmentEquipmentDTO) => {
   return `${number} (${author}; ${date})`;
 };
 
+const includesText = (value: string | null | undefined, query: string | undefined) => {
+  if (!query?.trim()) return true;
+  return (value ?? "").toLowerCase().includes(query.trim().toLowerCase());
+};
+
+const hasActiveFilters = (filters: FitmentEquipmentFilterCriteria) =>
+  Object.values(filters).some((value) => {
+    if (Array.isArray(value)) return value.length > 0;
+    return value !== undefined && value !== null && value !== "";
+  });
+
+const getSortValue = (
+  item: FitmentEquipmentDTO,
+  field: FitmentEquipmentSortField
+): string | number => {
+  switch (field) {
+    case "date":
+      return item.date ?? "";
+    case "operation":
+      return item.operation;
+    case "cistern":
+      return item.railwayCistern?.number ?? "";
+    case "fitment":
+      return formatFitment(item);
+    case "fitmentType":
+      return item.fitment?.fitmentTypeName ?? "";
+    case "jobUser":
+      return formatUserName(item.jobUser);
+    case "testUser":
+      return formatUserName(item.testUser);
+    case "acceptUser":
+      return formatUserName(item.acceptUser);
+    case "installUser":
+      return formatUserName(item.installUser);
+    case "approvUser":
+      return formatUserName(item.approvUser);
+    case "depot":
+      return formatDepot(item);
+    case "document":
+      return item.document?.number ?? "";
+    default:
+      return "";
+  }
+};
+
+const getRowValues = (item: FitmentEquipmentDTO): Record<string, string> => ({
+  date: formatDate(item.date, "ru-RU", "—"),
+  operation: getOperationLabel(item.operation).text,
+  cistern: item.railwayCistern?.number || "—",
+  fitment: formatFitment(item),
+  fitmentType: item.fitment?.fitmentTypeName || "—",
+  jobUser: formatUserName(item.jobUser),
+  testUser: formatUserName(item.testUser),
+  acceptUser: formatUserName(item.acceptUser),
+  installUser: formatUserName(item.installUser),
+  approvUser: formatUserName(item.approvUser),
+  depot: formatDepot(item),
+  document: formatDocument(item),
+});
+
 interface FitmentEquipmentsTableProps {
   /** Если задано — показывать только записи с указанными operation */
   operations?: number[];
   title?: string;
+  exportFileName?: string;
+  toolbarActions?: ReactNode;
 }
 
 export function FitmentEquipmentsTable({
   operations,
   title = "Список привязок арматуры",
+  exportFileName = "FitmentBindings",
+  toolbarActions,
 }: FitmentEquipmentsTableProps) {
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<FitmentEquipmentFilterCriteria>(
+    EMPTY_FITMENT_EQUIPMENT_FILTERS
+  );
+  const [sort, setSort] = useState<FitmentEquipmentSortConfig>(DEFAULT_FITMENT_EQUIPMENT_SORT);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    ...DEFAULT_FITMENT_EQUIPMENT_VISIBLE_COLUMNS,
+  ]);
+  const [exportingType, setExportingType] = useState<"pdf" | "doc" | "xls" | null>(null);
 
-  const { data, isLoading, error } = useFitmentEquipments(pageNumber, pageSize, operations);
+  const { data: allItems = [], isLoading, error } = useAllFitmentEquipments(operations);
+  const { data: fitmentTypes = [] } = useFitmentTypes();
 
-  const items = data?.items ?? [];
-  const totalCount = data?.totalCount ?? 0;
-  const totalPages = data?.totalPages || 1;
+  const isFiltered = hasActiveFilters(filters);
+
+  const filteredItems = useMemo(() => {
+    const selectedTypeNames = new Set(
+      fitmentTypes
+        .filter((type) => (filters.fitmentTypeIds ?? []).includes(type.id))
+        .map((type) => type.name)
+    );
+
+    const matches = allItems.filter((item) => {
+      const itemDate = item.date?.slice(0, 10) ?? "";
+      if (filters.dateFrom && itemDate < filters.dateFrom) return false;
+      if (filters.dateTo && itemDate > filters.dateTo) return false;
+
+      if (filters.operations?.length && !filters.operations.includes(item.operation)) {
+        return false;
+      }
+
+      if (
+        filters.railwayCisternsIds?.length &&
+        (!item.railwayCisternsId || !filters.railwayCisternsIds.includes(item.railwayCisternsId))
+      ) {
+        return false;
+      }
+
+      if (!includesText(item.fitment?.serialNumber, filters.serialNumber)) return false;
+      if (!includesText(item.fitment?.passportNumber, filters.passportNumber)) return false;
+      if (!includesText(item.document?.number, filters.documentNumber)) return false;
+
+      if (selectedTypeNames.size > 0) {
+        const typeName = item.fitment?.fitmentTypeName;
+        if (!typeName || !selectedTypeNames.has(typeName)) return false;
+      }
+
+      if (filters.jobUserIds?.length && !filters.jobUserIds.includes(item.jobUserId)) {
+        return false;
+      }
+      if (filters.testUserIds?.length && !filters.testUserIds.includes(item.testUserId)) {
+        return false;
+      }
+      if (
+        filters.acceptUserIds?.length &&
+        (!item.acceptUserId || !filters.acceptUserIds.includes(item.acceptUserId))
+      ) {
+        return false;
+      }
+      if (
+        filters.installUserIds?.length &&
+        (!item.installUserId || !filters.installUserIds.includes(item.installUserId))
+      ) {
+        return false;
+      }
+      if (
+        filters.approvUserIds?.length &&
+        (!item.approvUserId || !filters.approvUserIds.includes(item.approvUserId))
+      ) {
+        return false;
+      }
+      if (filters.depoIds?.length && (!item.depoId || !filters.depoIds.includes(item.depoId))) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (!sort.field) return matches;
+
+    const direction = sort.direction === "desc" ? -1 : 1;
+    return [...matches].sort((left, right) => {
+      const leftValue = getSortValue(left, sort.field as FitmentEquipmentSortField);
+      const rightValue = getSortValue(right, sort.field as FitmentEquipmentSortField);
+
+      if (typeof leftValue === "number" && typeof rightValue === "number") {
+        return (leftValue - rightValue) * direction;
+      }
+
+      return (
+        String(leftValue).localeCompare(String(rightValue), "ru", { numeric: true }) * direction
+      );
+    });
+  }, [allItems, filters, fitmentTypes, sort]);
+
+  const totalCount = filteredItems.length;
+  const allCount = allItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize) || 1);
   const currentPage = Math.min(pageNumber, totalPages);
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  const isColumnVisible = (column: string) => visibleColumns.includes(column);
 
   const handlePageChange = (page: number) => {
     setPageNumber(page);
@@ -97,6 +272,89 @@ export function FitmentEquipmentsTable({
     setPageSize(newPageSize);
     setPageNumber(1);
   };
+
+  const handleFilterApply = ({
+    filters: nextFilters,
+    sort: nextSort,
+  }: {
+    filters: FitmentEquipmentFilterCriteria;
+    sort: FitmentEquipmentSortConfig;
+  }) => {
+    setFilters(nextFilters);
+    setSort(nextSort);
+    setPageNumber(1);
+  };
+
+  const handleExport = useCallback(
+    async (type: "pdf" | "doc" | "xls") => {
+      const columns = FITMENT_EQUIPMENT_COLUMN_OPTIONS.filter((column) =>
+        visibleColumns.includes(column.value)
+      ).map((column) => ({
+        key: column.value,
+        label: column.label,
+        type: column.value === "date" ? ("date" as const) : ("string" as const),
+      }));
+
+      const data = filteredItems.map((item) => {
+        const row = getRowValues(item);
+        const filtered: Record<string, string> = {};
+        for (const column of columns) {
+          filtered[column.key] = row[column.key] ?? "—";
+        }
+        return filtered;
+      });
+
+      const extensionByType: Record<"pdf" | "doc" | "xls", string> = {
+        pdf: "pdf",
+        doc: "docx",
+        xls: "xlsx",
+      };
+      const mimeByType: Record<"pdf" | "doc" | "xls", string> = {
+        pdf: "application/pdf",
+        doc: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xls: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      };
+
+      setExportingType(type);
+      try {
+        const fileBaseName =
+          type === "pdf"
+            ? `${exportFileName}PDF`
+            : type === "doc"
+              ? `${exportFileName}DOC`
+              : `${exportFileName}XLS`;
+
+        const response = await api.post(
+          "/api/export/table",
+          {
+            type,
+            columns,
+            data,
+            fileName: fileBaseName,
+          },
+          {
+            responseType: "blob",
+          }
+        );
+
+        const url = window.URL.createObjectURL(
+          new Blob([response.data], { type: mimeByType[type] })
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${fileBaseName}.${extensionByType[type]}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (exportError) {
+        console.error(`Export ${type.toUpperCase()} failed`, exportError);
+      } finally {
+        setExportingType(null);
+      }
+    },
+    [exportFileName, filteredItems, visibleColumns]
+  );
 
   const getVisiblePages = () => {
     const delta = 1;
@@ -129,13 +387,11 @@ export function FitmentEquipmentsTable({
   };
 
   const Pagination = () => {
-    if (totalPages <= 1 && totalCount <= pageSize) return null;
-
     const startItem = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
     const endItem = Math.min(currentPage * pageSize, totalCount);
 
     return (
-      <div className="flex items-center justify-between px-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2">
         <div className="flex items-center space-x-2">
           <p className="text-sm text-gray-700 dark:text-gray-300">
             Показано {startItem}-{endItem} из {totalCount} записей
@@ -211,78 +467,176 @@ export function FitmentEquipmentsTable({
           <CardTitle className="text-red-600">Ошибка</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Произошла ошибка при загрузке привязок арматуры: {error.message}</p>
+          <p>Произошла ошибка при загрузке записей: {error.message}</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex gap-2 items-center">
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>Всего записей: {totalCount}</CardDescription>
+    <div className="space-y-3">
+      <div className="flex justify-end items-center gap-4">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт DOC"
+              onClick={() => handleExport("doc")}
+              disabled={!!exportingType || isLoading || totalCount === 0}
+            >
+              {exportingType === "doc" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_word.svg" alt="Экспорт DOC" width={16} height={16} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт PDF"
+              onClick={() => handleExport("pdf")}
+              disabled={!!exportingType || isLoading || totalCount === 0}
+            >
+              {exportingType === "pdf" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_pdf.png" alt="Экспорт PDF" width={16} height={16} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Экспорт XLS"
+              onClick={() => handleExport("xls")}
+              disabled={!!exportingType || isLoading || totalCount === 0}
+            >
+              {exportingType === "xls" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image src="/icon_excel.svg" alt="Экспорт XLS" width={16} height={16} />
+              )}
+            </Button>
+          </div>
+          <FitmentEquipmentsFilter
+            open={filterOpen}
+            onOpenChange={setFilterOpen}
+            filters={filters}
+            sort={sort}
+            visibleColumns={visibleColumns}
+            allowedOperations={operations}
+            onApply={handleFilterApply}
+            onVisibleColumnsChange={setVisibleColumns}
+            filteredCount={totalCount}
+            totalCount={allCount}
+          />
+          {toolbarActions}
         </div>
-      </CardHeader>
-      <CardContent className="-mt-4">
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        ) : !items.length ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <Settings className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">Нет данных для отображения</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Дата привязки</TableHead>
-                  <TableHead>Операция</TableHead>
-                  <TableHead>Номер вагона-цистерны</TableHead>
-                  <TableHead>Арматура</TableHead>
-                  <TableHead>Тип арматуры</TableHead>
-                  <TableHead>Работу произвёл</TableHead>
-                  <TableHead>Испытание провёл</TableHead>
-                  <TableHead>Место работы</TableHead>
-                  <TableHead>Документ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => {
-                  const operation = getOperationLabel(item.operation);
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.date, "ru-RU", "—")}</TableCell>
-                      <TableCell>
-                        <Badge variant={operation.variant}>{operation.text}</Badge>
-                      </TableCell>
-                      <TableCell>{item.railwayCistern?.number || "—"}</TableCell>
-                      <TableCell>{formatFitment(item)}</TableCell>
-                      <TableCell>{item.fitment?.fitmentTypeName || "—"}</TableCell>
-                      <TableCell>{formatUserName(item.jobUser)}</TableCell>
-                      <TableCell>{formatUserName(item.testUser)}</TableCell>
-                      <TableCell>{formatDepot(item)}</TableCell>
-                      <TableCell>{formatDocument(item)}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+      </div>
 
-            <div className="mt-4">
-              <Pagination />
+      <Card>
+        <CardHeader>
+          <div className="flex gap-2 items-center">
+            <CardTitle>{isFiltered ? "Результаты фильтрации" : title}</CardTitle>
+            <CardDescription>
+              {isFiltered ? `Отфильтровано: ${totalCount}` : `Всего записей: ${allCount}`}
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="-mt-4">
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
             </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+          ) : !filteredItems.length ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <Settings className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">
+                  {isFiltered
+                    ? "По заданным фильтрам записи не найдены"
+                    : "Нет данных для отображения"}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {isColumnVisible("date") && <TableHead>Дата привязки</TableHead>}
+                    {isColumnVisible("operation") && <TableHead>Операция</TableHead>}
+                    {isColumnVisible("cistern") && <TableHead>Номер вагона-цистерны</TableHead>}
+                    {isColumnVisible("fitment") && <TableHead>Арматура</TableHead>}
+                    {isColumnVisible("fitmentType") && <TableHead>Тип арматуры</TableHead>}
+                    {isColumnVisible("jobUser") && <TableHead>Работу произвёл</TableHead>}
+                    {isColumnVisible("testUser") && <TableHead>Испытание провёл</TableHead>}
+                    {isColumnVisible("acceptUser") && <TableHead>Работу принял</TableHead>}
+                    {isColumnVisible("installUser") && <TableHead>Установил</TableHead>}
+                    {isColumnVisible("approvUser") && <TableHead>Утвердил</TableHead>}
+                    {isColumnVisible("depot") && <TableHead>Место работы</TableHead>}
+                    {isColumnVisible("document") && <TableHead>Документ</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedItems.map((item) => {
+                    const operation = getOperationLabel(item.operation);
+                    return (
+                      <TableRow key={item.id}>
+                        {isColumnVisible("date") && (
+                          <TableCell>{formatDate(item.date, "ru-RU", "—")}</TableCell>
+                        )}
+                        {isColumnVisible("operation") && (
+                          <TableCell>
+                            <Badge variant={operation.variant}>{operation.text}</Badge>
+                          </TableCell>
+                        )}
+                        {isColumnVisible("cistern") && (
+                          <TableCell>{item.railwayCistern?.number || "—"}</TableCell>
+                        )}
+                        {isColumnVisible("fitment") && (
+                          <TableCell>{formatFitment(item)}</TableCell>
+                        )}
+                        {isColumnVisible("fitmentType") && (
+                          <TableCell>{item.fitment?.fitmentTypeName || "—"}</TableCell>
+                        )}
+                        {isColumnVisible("jobUser") && (
+                          <TableCell>{formatUserName(item.jobUser)}</TableCell>
+                        )}
+                        {isColumnVisible("testUser") && (
+                          <TableCell>{formatUserName(item.testUser)}</TableCell>
+                        )}
+                        {isColumnVisible("acceptUser") && (
+                          <TableCell>{formatUserName(item.acceptUser)}</TableCell>
+                        )}
+                        {isColumnVisible("installUser") && (
+                          <TableCell>{formatUserName(item.installUser)}</TableCell>
+                        )}
+                        {isColumnVisible("approvUser") && (
+                          <TableCell>{formatUserName(item.approvUser)}</TableCell>
+                        )}
+                        {isColumnVisible("depot") && <TableCell>{formatDepot(item)}</TableCell>}
+                        {isColumnVisible("document") && (
+                          <TableCell>{formatDocument(item)}</TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+
+              <div className="mt-4">
+                <Pagination />
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

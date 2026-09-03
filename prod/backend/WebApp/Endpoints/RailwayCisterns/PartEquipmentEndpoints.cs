@@ -811,6 +811,7 @@ public static class PartEquipmentEndpoints
                         Id = pe.Id,
                         RailwayCisternsId = pe.RailwayCisternsId,
                         Operation = pe.Operation,
+                        EquipmentTypeId = pe.EquipmentTypeId,
                         DefectsId = pe.DefectsId,
                         AdminOwnerId = pe.AdminOwnerId,
                         PartsId = pe.PartsId,
@@ -823,6 +824,8 @@ public static class PartEquipmentEndpoints
                         Notes = pe.Notes,
                         DocumentId = pe.DocumentId,
                         DocumentDate = pe.DocumentDate,
+                        DepotsId = pe.DepotsId,
+                        RepairTypesId = pe.RepairTypesId,
                         Document = pe.Document != null ? new DocumentDTO
                         {
                             Id = pe.Document.Id,
