@@ -17,6 +17,7 @@ public partial class DocumentConfiguration : IEntityTypeConfiguration<Document>
         entity.Property(e => e.Price).HasColumnType("money");
         entity.Property(e => e.Note).HasColumnType("text");
         entity.Property(e => e.File).HasColumnType("text");
+        entity.Property(e => e.RailwayNumber).HasColumnType("text");
 
         // Связи с другими сущностями
         entity.HasMany(d => d.Parts)

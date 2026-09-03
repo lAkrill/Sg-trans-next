@@ -14,6 +14,9 @@ public class DocumentDTO
 
     [JsonPropertyName("file")]
     public string? FileName { get; set; }
+
+    [JsonPropertyName("railwayNumber")]
+    public string? RailwayNumber { get; set; }
 }
 
 public class CreateDocumentDTO
@@ -27,6 +30,9 @@ public class CreateDocumentDTO
 
     [JsonPropertyName("file")]
     public string? FileName { get; set; }
+
+    [JsonPropertyName("railwayNumber")]
+    public string? RailwayNumber { get; set; }
 }
 
 public class UpdateDocumentDTO
@@ -40,4 +46,7 @@ public class UpdateDocumentDTO
 
     [JsonPropertyName("file")]
     public string? FileName { get; set; }
+
+    [JsonPropertyName("railwayNumber")]
+    public string? RailwayNumber { get; set; }
 }

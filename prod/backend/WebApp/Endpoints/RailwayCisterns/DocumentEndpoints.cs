@@ -46,7 +46,8 @@ public static class DocumentEndpoints
                     Author = d.Author,
                     Price = d.Price,
                     Note = d.Note,
-                    FileName = d.File
+                    FileName = d.File,
+                    RailwayNumber = d.RailwayNumber
                 })
                 .ToListAsync();
 
@@ -80,7 +81,8 @@ public static class DocumentEndpoints
                     Author = d.Author,
                     Price = d.Price,
                     Note = d.Note,
-                    FileName = d.File
+                    FileName = d.File,
+                    RailwayNumber = d.RailwayNumber
                 })
                 .ToListAsync();
 
@@ -105,7 +107,8 @@ public static class DocumentEndpoints
                     Author = d.Author,
                     Price = d.Price,
                     Note = d.Note,
-                    FileName = d.File
+                    FileName = d.File,
+                    RailwayNumber = d.RailwayNumber
                 })
                 .FirstOrDefaultAsync();
 
@@ -128,7 +131,8 @@ public static class DocumentEndpoints
                 Author = dto.Author,
                 Price = dto.Price,
                 Note = dto.Note,
-                File = dto.FileName
+                File = dto.FileName,
+                RailwayNumber = dto.RailwayNumber
             };
 
             context.Documents.Add(document);
@@ -155,6 +159,7 @@ public static class DocumentEndpoints
             document.Price = dto.Price;
             document.Note = dto.Note;
             document.File = dto.FileName;
+            document.RailwayNumber = dto.RailwayNumber;
 
             await context.SaveChangesAsync();
             return Results.NoContent();
