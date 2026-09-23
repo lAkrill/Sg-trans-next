@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui";
-import { ArrowLeft, Edit, FileText, Paperclip, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, FileText, Paperclip, Plus, Trash2, Upload } from "lucide-react";
 import { partEquipmentKeys, useDocument, usePartEquipmentsByDocument } from "@/hooks";
 import { ViewFileButton } from "@/components/view-file-button";
 import {
@@ -204,7 +204,7 @@ const formatJobTypeId = (value?: string | null) => {
 
 const formatPreviousWork = (item: PartEquipmentDTO) => {
   const place = formatDepot(item.jobDepot);
-  const date = formatDate(item.jobDate, "ru-RU", "—");
+  const date = item.jobDate ? item.jobDate : "—";
   const code = formatJobTypeId(item.jobTypeId);
   if (place === "—" && date === "—" && code === "—") return "—";
   return `${place} (${date}, ${code})`;
@@ -629,11 +629,15 @@ export default function DocumentViewPage() {
         </Link>
       </div>
 
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
           <FileText className="h-8 w-8" />
           {getDocumentTypeLabel(documentInfo.type)}
         </h1>
+        <Button type="button" variant="outline">
+          <Upload className="mr-2 h-4 w-4" />
+          Загрузить комплектацию из PDF
+        </Button>
       </div>
 
       <Card>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import RoleGuard from '@/components/auth/role-guard';
 import { useCurrentUser, useAllUsers, useAllRoles, useDeleteUser, useRegister } from '@/hooks';
 import { 
@@ -262,15 +263,17 @@ function AdminContent() {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Активных ролей</CardTitle>
-            <Badge className="h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{allRoles?.length || 0}</div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/roles" className="block">
+          <Card className="h-full cursor-pointer transition-colors duration-200 hover:border-green-500 hover:ring-2 hover:ring-green-500/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Активных ролей</CardTitle>
+              <Badge className="h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{allRoles?.length || 0}</div>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

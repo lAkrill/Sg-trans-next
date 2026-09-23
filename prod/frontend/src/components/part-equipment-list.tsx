@@ -63,7 +63,12 @@ import {
 } from "@/hooks";
 import { filesApi } from "@/api/files";
 import { MessagePriority } from "@/types/messages";
-import { FitmentEquipmentDTO, FitmentEquipmentUserDTO, LastEquipmentDTO } from "@/types/directories";
+import {
+  FitmentEquipmentDTO,
+  FitmentEquipmentUserDTO,
+  LastEquipmentDTO,
+  PartEquipmentDTO,
+} from "@/types/directories";
 import { formatDate as formatDateValue } from "@/lib/formatDate";
 import { v4 as uuidv4 } from "uuid";
 
@@ -206,12 +211,62 @@ const formatFitmentDepot = (item: FitmentEquipmentDTO) => {
   return `${shortName} (${code})`;
 };
 
+const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
+
+const readEntityId = (value: unknown): string | null => {
+  if (typeof value === "string") {
+    const id = value.trim();
+    return id && id !== EMPTY_GUID ? id : null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  return readEntityId(record.id ?? record.Id);
+};
+
+const formatPartDocumentNumber = (equipment: PartEquipmentDTO) => {
+  const number = equipment.document?.number?.trim();
+  if (!number) return "—";
+
+  const documentId = readEntityId(equipment.document) || readEntityId(equipment.documentId);
+  if (!documentId) return number;
+
+  return (
+    <Link
+      href={`/directories/documents/${documentId}`}
+      className="text-primary font-medium hover:underline"
+    >
+      {number}
+    </Link>
+  );
+};
+
 const formatFitmentDocument = (item: FitmentEquipmentDTO) => {
   if (!item.document) return "—";
-  const number = item.document.number || "—";
-  const author = item.document.author || "—";
-  const date = formatDateValue(item.document.date, "ru-RU", "—");
-  return `${number} (${author}; ${date})`;
+  const raw = item.document as unknown as Record<string, unknown>;
+  const number = String(raw.number ?? raw.Number ?? "").trim();
+  const author = String(raw.author ?? raw.Author ?? "").trim() || "—";
+  const date = formatDateValue(String(raw.date ?? raw.Date ?? ""), "ru-RU", "—");
+  const suffix = ` (${author}; ${date})`;
+  const documentId =
+    readEntityId(item.document) ||
+    readEntityId(item.documentId) ||
+    readEntityId((item as FitmentEquipmentDTO & Record<string, unknown>).DocumentId);
+
+  if (!documentId || !number) {
+    return `${number || "—"}${suffix}`;
+  }
+
+  return (
+    <>
+      <Link
+        href={`/directories/documents/${documentId}`}
+        className="text-primary font-medium hover:underline"
+      >
+        {number}
+      </Link>
+      {suffix}
+    </>
+  );
 };
 
 const getFitmentOperationText = (operation: number) => {
@@ -354,7 +409,7 @@ const WheelPairsTable = ({
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    {equipment.lastEquipment.document?.number || "—"};{" "}
+                    {formatPartDocumentNumber(equipment.lastEquipment)};{" "}
                     {formatLocaleDate(equipment.lastEquipment.documentDate)}
                     <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
@@ -464,7 +519,7 @@ const TruckPartsTable = ({
                   <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
                   <TableCell>{equipment.lastEquipment.truckType || "—"}</TableCell>
                   <TableCell>
-                    {equipment.lastEquipment.document?.number || "—"};{" "}
+                    {formatPartDocumentNumber(equipment.lastEquipment)};{" "}
                     {formatLocaleDate(equipment.lastEquipment.documentDate)}
                     <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>
@@ -581,7 +636,7 @@ const CouplerEquipmentTable = ({
                   <TableCell>{formatMonthYear(equipment.lastEquipment.documentDate)}</TableCell>
                   <TableCell>{equipment.lastEquipment.jobTypeId || "—"}</TableCell>
                   <TableCell>
-                    {equipment.lastEquipment.document?.number || "—"};{" "}
+                    {formatPartDocumentNumber(equipment.lastEquipment)};{" "}
                     {formatLocaleDate(equipment.lastEquipment.documentDate)}
                     <br /> {equipment.lastEquipment.repairType?.name || "—"}
                   </TableCell>

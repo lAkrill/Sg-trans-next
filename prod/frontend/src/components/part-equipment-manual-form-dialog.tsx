@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Alert,
@@ -95,9 +95,21 @@ type DefectOptionDTO = {
   cause: string;
 };
 
+const getRemovalDefaultDefectId = (defects?: DefectOptionDTO[]) => {
+  const defect = defects?.find((item) => Number(item.id) === 0);
+  return defect != null ? String(defect.id) : "";
+};
+
 type AdminOwnerOptionDTO = {
   id: number;
   name: string;
+};
+
+const DEFAULT_ADMIN_OWNER_CODE = 21;
+
+const getDefaultAdminOwnerId = (owners?: AdminOwnerOptionDTO[]) => {
+  const owner = owners?.find((item) => Number(item.id) === DEFAULT_ADMIN_OWNER_CODE);
+  return owner != null ? String(owner.id) : "";
 };
 
 type DocumentOptionDTO = {
@@ -240,14 +252,22 @@ export function PartEquipmentManualFormDialog({
   const [form, setForm] = useState<PartEquipmentManualFormData>(EMPTY_FORM);
   const [status, setStatus] = useState<RequestStatus | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const defectDefaultDismissedRef = useRef(false);
+  const ownerDefaultDismissedRef = useRef(false);
 
   const locked = useMemo(() => new Set(lockedFields), [lockedFields]);
   const isLocked = (field: PartEquipmentManualLockedField) => locked.has(field);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      defectDefaultDismissedRef.current = false;
+      ownerDefaultDismissedRef.current = false;
+      return;
+    }
     setForm(applyPresets(presets));
     setStatus(null);
+    defectDefaultDismissedRef.current = false;
+    ownerDefaultDismissedRef.current = false;
   }, [open, presets]);
 
   const { data: cisternIdAndNumbers, isLoading: cisternsLoading } = useCisternIdAndNumbers();
@@ -311,6 +331,26 @@ export function PartEquipmentManualFormDialog({
       setForm((current) => ({ ...current, equipmentTypeId: found.id }));
     }
   }, [open, equipmentTypes, form.equipmentTypeId, presets?.equipmentTypeCode]);
+
+  useEffect(() => {
+    if (!open || form.operation !== "1" || form.defectsId || defectDefaultDismissedRef.current) return;
+    const defaultDefectId = getRemovalDefaultDefectId(defects);
+    if (!defaultDefectId) return;
+    setForm((current) =>
+      current.operation === "1" && !current.defectsId
+        ? { ...current, defectsId: defaultDefectId }
+        : current
+    );
+  }, [open, form.operation, form.defectsId, defects]);
+
+  useEffect(() => {
+    if (!open || form.adminOwnerId || ownerDefaultDismissedRef.current) return;
+    const defaultOwnerId = getDefaultAdminOwnerId(adminOwners);
+    if (!defaultOwnerId) return;
+    setForm((current) =>
+      current.adminOwnerId ? current : { ...current, adminOwnerId: defaultOwnerId }
+    );
+  }, [open, form.adminOwnerId, adminOwners]);
 
   const selectedPartTypeId = equipmentTypes?.find(
     (equipmentType) => equipmentType.id === form.equipmentTypeId
@@ -416,12 +456,24 @@ export function PartEquipmentManualFormDialog({
   const updateField = (field: PartEquipmentManualLockedField, value: string) => {
     if (isLocked(field)) return;
     setStatus(null);
+    if (field === "defectsId") {
+      defectDefaultDismissedRef.current = value.trim() === "";
+    }
+    if (field === "adminOwnerId") {
+      ownerDefaultDismissedRef.current = value.trim() === "";
+    }
+    if (field === "operation" && value === "1") {
+      defectDefaultDismissedRef.current = false;
+    }
     setForm((current) => {
       const nextForm = {
         ...current,
         [field]: value,
         ...(field === "operation" && value !== "2" ? { railwayCisternsId: current.railwayCisternsId } : {}),
         ...(field === "operation" && value === "2" ? { defectsId: "", depotsId: "" } : {}),
+        ...(field === "operation" && value === "1"
+          ? { defectsId: current.defectsId || getRemovalDefaultDefectId(defects) }
+          : {}),
         ...(field === "equipmentTypeId" ? { partsId: "" } : {}),
       };
 
@@ -501,17 +553,22 @@ export function PartEquipmentManualFormDialog({
     };
     const toNullableDefectsId = (value: string) => {
       const trimmed = value.trim();
-      if (trimmed === "" || trimmed === "0") return null;
-      return trimmed;
+      return trimmed === "" ? null : trimmed;
     };
+    const defectsId =
+      form.operation === "1"
+        ? form.defectsId || getRemovalDefaultDefectId(defects)
+        : form.defectsId;
+    const adminOwnerId =
+      form.adminOwnerId ||
+      (ownerDefaultDismissedRef.current ? "" : getDefaultAdminOwnerId(adminOwners));
 
     const payload = {
-      railwayCisternsId:
-        isEdit || form.operation === "2" ? toNullableString(form.railwayCisternsId) : null,
+      railwayCisternsId: toNullableString(form.railwayCisternsId),
       operation: toNullableNumber(form.operation),
       equipmentTypeId: toNullableString(form.equipmentTypeId),
-      defectsId: form.operation === "2" ? null : toNullableDefectsId(form.defectsId),
-      adminOwnerId: toNullableString(form.adminOwnerId),
+      defectsId: form.operation === "2" ? null : toNullableDefectsId(defectsId),
+      adminOwnerId: toNullableString(adminOwnerId),
       partsId: toNullableString(form.partsId),
       jobDepotsId: toNullableString(form.jobDepotsId),
       jobDate: toNullableString(form.jobDate),
@@ -659,7 +716,7 @@ export function PartEquipmentManualFormDialog({
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="jobDepotsId">Депо работ</Label>
+                  <Label htmlFor="jobDepotsId">Предыдущее место работ</Label>
                   <SearchableSelect
                     value={form.jobDepotsId}
                     onChange={(value) => updateField("jobDepotsId", value)}

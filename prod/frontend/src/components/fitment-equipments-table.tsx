@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Badge,
   Button,
@@ -597,7 +598,19 @@ export function FitmentEquipmentsTable({
                           </TableCell>
                         )}
                         {isColumnVisible("cistern") && (
-                          <TableCell>{item.railwayCistern?.number || "—"}</TableCell>
+                          <TableCell>
+                            {item.railwayCistern?.number &&
+                            (item.railwayCistern.id || item.railwayCisternsId) ? (
+                              <Link
+                                href={`/cisterns/${item.railwayCistern.id || item.railwayCisternsId}?tab=components`}
+                                className="text-primary font-medium hover:underline"
+                              >
+                                {item.railwayCistern.number}
+                              </Link>
+                            ) : (
+                              item.railwayCistern?.number || "—"
+                            )}
+                          </TableCell>
                         )}
                         {isColumnVisible("fitment") && (
                           <TableCell>{formatFitment(item)}</TableCell>

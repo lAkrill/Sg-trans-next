@@ -220,7 +220,10 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     if (!hasPermission(item.roles)) return null;
 
     // For cisterns, check if we're on any cistern-related page
-    const isActive = item.href === pathname || (item.href === "/cisterns" && pathname.startsWith("/cisterns/"));
+    const isActive =
+      item.href === pathname ||
+      (item.href === "/cisterns" && pathname.startsWith("/cisterns/")) ||
+      (item.href === "/admin" && pathname.startsWith("/admin/"));
     const isExpanded = expandedItems.includes(item.title);
     const hasChildren = item.children && item.children.length > 0;
 
