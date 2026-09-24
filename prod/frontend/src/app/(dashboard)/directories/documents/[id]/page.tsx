@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,9 +19,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@/components/ui";
-import { ArrowLeft, Edit, FileText, Paperclip, Plus, Trash2, Upload } from "lucide-react";
-import { partEquipmentKeys, useDocument, usePartEquipmentsByDocument } from "@/hooks";
+import { AlertTriangle, ArrowLeft, Edit, FileText, Loader2, Paperclip, Plus, Trash2, Upload } from "lucide-react";
+import { documentsKeys, partEquipmentKeys, useDocument, usePartEquipmentsByDocument } from "@/hooks";
 import { ViewFileButton } from "@/components/view-file-button";
 import {
   PartEquipmentManualFormDialog,
@@ -34,7 +37,25 @@ import {
   getDocumentTypeLabel,
 } from "@/components/documents-filter";
 import { formatDate } from "@/lib/formatDate";
-import type { DocumentDTO, PartEquipmentDTO } from "@/types/directories";
+import type { DepotDTO, DocumentDTO, PartDTO, PartEquipmentDTO, RepairTypeDTO } from "@/types/directories";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  importFilesApi,
+  type ImportFileProcessDetail,
+  type ImportFileProcessResponse,
+} from "@/api/import-files";
+import { documentsApi, partEquipmentApi } from "@/api/directories";
+import { filesApi } from "@/api/files";
+import { v4 as uuidv4 } from "uuid";
+import { cisternsApi } from "@/api/cisterns";
+import { api } from "@/lib/api";
 
 const DOCUMENT_FILE_DIRECTORY = "Documents";
 
@@ -57,6 +78,274 @@ const ADD_LOCKED_FIELDS: PartEquipmentManualLockedField[] = [
 const EDIT_LOCKED_FIELDS: PartEquipmentManualLockedField[] = ["operation"];
 
 const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
+
+const isPdfFile = (file: File) =>
+  file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+const getPdfImportErrorMessage = (err: unknown) => {
+  if (!err || typeof err !== "object" || !("response" in err)) {
+    return "Не удалось обработать PDF";
+  }
+
+  const data = (
+    err as {
+      response?: {
+        data?: {
+          message?: string;
+          Message?: string;
+          details?: string;
+          Details?: string;
+        };
+      };
+    }
+  ).response?.data;
+
+  return data?.message || data?.Message || data?.details || data?.Details || "Не удалось обработать PDF";
+};
+
+const PDF_DOCUMENT_MISMATCH_MESSAGE =
+  "Загруженный документ не соответствует дате и номеру вагона-цистерны.";
+
+const toComparableDate = (value?: string | null) => {
+  const trimmed = value?.trim();
+  if (!trimmed) return "";
+
+  const dotted = trimmed.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (dotted) return `${dotted[3]}-${dotted[2]}-${dotted[1]}`;
+
+  const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  return "";
+};
+
+const pdfResultMatchesDocument = (
+  result: ImportFileProcessResponse,
+  documentDate: string | undefined,
+  wagonNumber: string
+) => {
+  const expectedDate = toComparableDate(documentDate);
+  const details = result.details ?? [];
+  if (!expectedDate || details.length === 0) return false;
+
+  return details.every((detail) => {
+    const dateMatches = toComparableDate(detail.DocumetnDate) === expectedDate;
+    const responseWagonNumber = detail.RailwayCisternsId?.trim() ?? "";
+    const wagonMatches = !wagonNumber || responseWagonNumber === wagonNumber;
+    return dateMatches && wagonMatches;
+  });
+};
+
+type EquipmentTypeOption = {
+  id: string;
+  name?: string;
+  code: number;
+  partTypeId: string;
+  partTypeName?: string;
+};
+
+const PDF_SECTION_CODES = [WHEEL_PAIR_CODE_LIST, TRUCK_PART_CODE_LIST, COUPLER_CODE_LIST] as const;
+
+const isWheelPairTypeName = (name?: string) => {
+  if (!name) return false;
+  const value = name.toLowerCase();
+  return value.includes("колес") || value.includes("wheel");
+};
+
+const isBolsterTypeName = (name?: string) => {
+  if (!name) return false;
+  const value = name.toLowerCase();
+  return value.includes("надрессор") || value.includes("надрисор") || value.includes("bolster");
+};
+
+const unwrapQuotedId = (value?: string | null) => value?.trim().replace(/^'+|'+$/g, "") ?? "";
+
+const nullableText = (value?: string | null) => {
+  const trimmed = value?.trim() ?? "";
+  return trimmed && trimmed !== "0" ? trimmed : null;
+};
+
+const toNumberOrZero = (value?: string | null) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const partManufactureYear = (value?: PartDTO["manufactureYear"]) => {
+  if (!value) return "";
+  if (typeof value === "string") return value.match(/^\d{4}/)?.[0] ?? "";
+  return String(value.year);
+};
+
+const samePartCode = (left?: string | null, right?: string | null) => {
+  const normalize = (value?: string | null) => value?.trim().replace(/^0+(?=\d)/, "") ?? "";
+  const a = left?.trim() ?? "";
+  const b = right?.trim() ?? "";
+  if (!a || !b) return false;
+  return a === b || normalize(a) === normalize(b);
+};
+
+const findPdfWheelDetail = (
+  details: ImportFileProcessDetail[],
+  used: Set<number>,
+  code: number,
+  operation: number
+) =>
+  details.findIndex((detail, index) => {
+    if (used.has(index)) return false;
+    return Number(detail.EquipmentTypeId) === code && Number(detail.Operation) === operation;
+  });
+
+const formatPostError = (err: unknown) => {
+  if (!err || typeof err !== "object" || !("response" in err)) {
+    return err instanceof Error ? err.message : "Запрос не выполнен";
+  }
+
+  const response = (err as { response?: { status?: number; data?: unknown } }).response;
+  const body = response?.data;
+  const text =
+    body == null ? "" : typeof body === "string" ? body : JSON.stringify(body, null, 2);
+  return [response?.status ? `HTTP ${response.status}` : "", text].filter(Boolean).join("\n") || "Запрос не выполнен";
+};
+
+const findMatchingPart = (parts: PartDTO[], detail: ImportFileProcessDetail) =>
+  parts.find(
+    (part) =>
+      samePartCode(part.serialNumber, detail.Part_number) &&
+      samePartCode(part.stampNumber?.value, detail.Part_stamp) &&
+      partManufactureYear(part.manufactureYear) === (detail.Part_year?.trim() ?? "")
+  );
+
+const insertMissingEquipments = async ({
+  equipments,
+  details,
+  documentId,
+  documentDate,
+  fallbackCisternId,
+  fallbackRepairTypeId,
+}: {
+  equipments: PartEquipmentDTO[];
+  details: ImportFileProcessDetail[];
+  documentId: string;
+  documentDate: string;
+  fallbackCisternId: string;
+  fallbackRepairTypeId: string;
+}) => {
+  const missingRows = PDF_SECTION_CODES.flatMap((codes) => {
+    const codeSet = new Set<number>(codes);
+    const items = equipments.filter((item) => {
+      const code = getEquipmentTypeCode(item);
+      return code != null && codeSet.has(code);
+    });
+    return buildSectionRows(items, codes).filter((row) => row.isMissing);
+  });
+  if (!missingRows.length) return { inserted: 0, skipped: 0, failures: [] };
+
+  const [equipmentTypes, depots, repairTypes, cisterns] = await Promise.all([
+    api.get<EquipmentTypeOption[]>("/api/equipment-types/all").then((response) => response.data),
+    api.get<DepotDTO[]>("/api/depots/all").then((response) => response.data),
+    api.get<RepairTypeDTO[]>("/api/repair-types/all").then((response) => response.data),
+    cisternsApi.getAllIdAndNumbers(),
+  ]);
+
+  const partsByType = new Map<string, PartDTO[]>();
+  const usedDetails = new Set<number>();
+  const failures: Array<{ key: string; message: string }> = [];
+  let inserted = 0;
+  let skipped = 0;
+
+  const skipRow = (row: EquipmentSectionRow, message: string) => {
+    skipped += 1;
+    failures.push({ key: row.key, message });
+  };
+
+  for (const row of missingRows) {
+    const detailIndex = findPdfWheelDetail(details, usedDetails, row.code, row.operation);
+    if (detailIndex < 0) {
+      skipRow(row, "В ответе PDF нет строки с этим кодом и операцией");
+      continue;
+    }
+    usedDetails.add(detailIndex);
+    const detail = details[detailIndex];
+    const equipmentType = equipmentTypes.find((item) => item.code === row.code);
+    if (!equipmentType?.partTypeId) {
+      skipRow(row, "Не найден тип оборудования");
+      continue;
+    }
+
+    let parts = partsByType.get(equipmentType.partTypeId);
+    if (!parts) {
+      const response = await api.get<PartDTO[]>("/api/parts/all", {
+        params: { typeId: equipmentType.partTypeId },
+      });
+      parts = Array.isArray(response.data) ? response.data : [];
+      partsByType.set(equipmentType.partTypeId, parts);
+    }
+
+    const part = findMatchingPart(parts, detail);
+    if (!part) {
+      skipRow(row, "Деталь не найдена в справочнике");
+      continue;
+    }
+
+    const wagonNumber = detail.RailwayCisternsId?.trim() ?? "";
+    const railwayCisternsId =
+      cisterns.find((cistern) => cistern.number === wagonNumber)?.id || fallbackCisternId || null;
+    if (row.operation === 2 && !railwayCisternsId) {
+      skipRow(row, "Не найден вагон для установки");
+      continue;
+    }
+
+    const repairTypeValue = detail.RepairTypesId?.trim() ?? "";
+    const repairTypeKey = repairTypeValue.toLowerCase();
+    const repairTypesId =
+      repairTypes.find((item) => item.id.trim().toLowerCase() === unwrapQuotedId(repairTypeValue).toLowerCase())
+        ?.id ||
+      repairTypes.find((item) =>
+        [item.name, item.shortName, item.portalName, item.code].some(
+          (value) => value?.trim().toLowerCase() === repairTypeKey
+        )
+      )?.id ||
+      fallbackRepairTypeId ||
+      "";
+    if (!repairTypesId) {
+      skipRow(row, "Не найден вид ремонта");
+      continue;
+    }
+    const notes = detail.Notes?.trim() || null;
+    const typeNames = [equipmentType.name, equipmentType.partTypeName];
+    const isWheelPair = typeNames.some(isWheelPairTypeName);
+    const isBolster = typeNames.some(isBolsterTypeName);
+    const jobDepot = depots.find((depot) => String(depot.code) === (detail.JobDepotsId?.trim() ?? ""));
+    const isInstallation = row.operation === 2;
+
+    try {
+      await partEquipmentApi.create({
+      railwayCisternsId: railwayCisternsId || null,
+      operation: row.operation,
+      equipmentTypeId: equipmentType.id,
+      defectsId: isInstallation ? null : nullableText(detail.DefectsId) ?? "0",
+      adminOwnerId: nullableText(detail.AdminOwnerId),
+      partsId: part.id,
+      jobDepotsId: jobDepot?.id ?? null,
+      jobDate: detail.JobDate?.trim() || null,
+      jobTypeId: nullableText(detail.JobTypeId),
+      thicknessLeft: isWheelPair ? toNumberOrZero(detail.ThicknessLeft) : 0,
+      thicknessRight: isWheelPair ? toNumberOrZero(detail.ThicknessRight) : 0,
+      truckType: isBolster ? toNumberOrZero(detail.TruckType) : 0,
+      notes,
+      documentId,
+      documentDate: documentDate || null,
+      depotsId: isInstallation ? null : unwrapQuotedId(detail.DepotsId) || null,
+      repairTypesId,
+    });
+      inserted += 1;
+    } catch (err: unknown) {
+      skipRow(row, formatPostError(err));
+    }
+  }
+
+  return { inserted, skipped, failures };
+};
 
 const isMeaningfulId = (value?: string | null) => {
   const trimmed = value?.trim();
@@ -358,6 +647,7 @@ function EquipmentSectionTable({
   requiredCodes,
   onAdd,
   onEdit,
+  rowErrors,
 }: {
   items: PartEquipmentDTO[];
   emptyText: string;
@@ -366,6 +656,7 @@ function EquipmentSectionTable({
   requiredCodes?: readonly number[];
   onAdd?: (row: EquipmentSectionRow) => void;
   onEdit?: (item: PartEquipmentDTO) => void;
+  rowErrors?: Record<string, string>;
 }) {
   const rows = buildSectionRows(items, requiredCodes);
 
@@ -441,7 +732,19 @@ function EquipmentSectionTable({
                 {item ? formatNote(item.notes) : "—"}
               </TableCell>
               <TableCell className="w-[1%] whitespace-nowrap">
-                <div className="flex w-max justify-end gap-2">
+                <div className="flex w-max items-center justify-end gap-2">
+                  {rowErrors?.[row.key] ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <AlertTriangle className="h-5 w-5 fill-yellow-400 text-yellow-600" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm whitespace-pre-wrap text-left">
+                        {rowErrors[row.key]}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null}
                   {row.isMissing ? (
                     <Button
                       variant="outline"
@@ -540,9 +843,116 @@ export default function DocumentViewPage() {
     [equipments]
   );
 
+  const wagonNumbers = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of equipments) {
+      const number = item.railwayCistern?.number?.trim();
+      if (!number) continue;
+      counts.set(number, (counts.get(number) ?? 0) + 1);
+    }
+
+    return [...counts.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .map(([number]) => number);
+  }, [equipments]);
+  const trainNumber = wagonNumbers[0] ?? "";
+
   const [formOpen, setFormOpen] = useState(false);
   const [formPresets, setFormPresets] = useState<PartEquipmentManualPresets>({});
   const [editingItem, setEditingItem] = useState<PartEquipmentDTO | null>(null);
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [pdfImportError, setPdfImportError] = useState<string | null>(null);
+  const [pdfImportResult, setPdfImportResult] = useState<ImportFileProcessResponse | null>(null);
+  const [pdfFillNote, setPdfFillNote] = useState<string | null>(null);
+  const [pdfRowErrors, setPdfRowErrors] = useState<Record<string, string>>({});
+  const [pdfMismatchOpen, setPdfMismatchOpen] = useState(false);
+  const pdfFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePdfFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!isPdfFile(file)) {
+      setPdfImportResult(null);
+      setPdfImportError("Выберите файл PDF");
+      return;
+    }
+
+    setPdfImportError(null);
+    setPdfImportResult(null);
+    setPdfFillNote(null);
+    setPdfRowErrors({});
+    setIsProcessingPdf(true);
+
+    try {
+      const result = await importFilesApi.processImportFile(file, "pdf2json");
+      if (result.status && result.status !== "success") {
+        setPdfImportError(result.message || "Не удалось обработать файл");
+        return;
+      }
+
+      const currentDocument = documentItem ?? equipments[0]?.document;
+      if (!pdfResultMatchesDocument(result, currentDocument?.date, trainNumber)) {
+        setPdfMismatchOpen(true);
+        return;
+      }
+
+      const fill = await insertMissingEquipments({
+        equipments,
+        details: result.details ?? [],
+        documentId: currentDocument?.id ?? documentId,
+        documentDate: currentDocument?.date?.slice(0, 10) ?? "",
+        fallbackCisternId: majorityCisternId,
+        fallbackRepairTypeId: majorityRepairTypeId,
+      });
+      setPdfRowErrors(Object.fromEntries(fill.failures.map((failure) => [failure.key, failure.message])));
+      if (fill.inserted > 0) {
+        queryClient.invalidateQueries({ queryKey: partEquipmentKeys.byDocument(documentId) });
+        queryClient.invalidateQueries({ queryKey: partEquipmentKeys.all });
+      }
+
+      let fileNote = "";
+      if (fill.inserted > 0 && currentDocument && !getDocumentFileValue(currentDocument)) {
+        try {
+          const extension = file.name.includes(".")
+            ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
+            : ".pdf";
+          const uniqueFileName = `${uuidv4()}${extension}`;
+          const uploaded = await filesApi.upload(file, {
+            directory: DOCUMENT_FILE_DIRECTORY,
+            fileName: uniqueFileName,
+          });
+          await documentsApi.update(currentDocument.id, {
+            number: currentDocument.number,
+            type: currentDocument.type,
+            date: currentDocument.date.slice(0, 10),
+            author: currentDocument.author || null,
+            price: currentDocument.price ?? null,
+            note: currentDocument.note || null,
+            file: `${DOCUMENT_FILE_DIRECTORY}/${uploaded.fileName}`,
+          });
+          queryClient.invalidateQueries({ queryKey: documentsKeys.byId(documentId) });
+          fileNote = " Файл прикреплён к документу.";
+        } catch (attachError: unknown) {
+          fileNote = ` Файл не удалось прикрепить: ${getPdfImportErrorMessage(attachError)}`;
+        }
+      }
+
+      setPdfFillNote(
+        fill.inserted || fill.skipped
+          ? `Добавлено: ${fill.inserted}${
+              fill.skipped ? `, не удалось добавить: ${fill.skipped}` : ""
+            }.${fileNote}`
+          : null
+      );
+      setPdfImportResult(result);
+    } catch (err: unknown) {
+      setPdfImportError(getPdfImportErrorMessage(err));
+    } finally {
+      setIsProcessingPdf(false);
+    }
+  };
 
   const handleAddRow = (row: EquipmentSectionRow) => {
     const document = documentItem ?? equipments[0]?.document;
@@ -629,15 +1039,49 @@ export default function DocumentViewPage() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-          <FileText className="h-8 w-8" />
-          {getDocumentTypeLabel(documentInfo.type)}
-        </h1>
-        <Button type="button" variant="outline">
-          <Upload className="mr-2 h-4 w-4" />
-          Загрузить комплектацию из PDF
-        </Button>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <FileText className="h-8 w-8" />
+            {getDocumentTypeLabel(documentInfo.type)}
+          </h1>
+          <input
+            ref={pdfFileInputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={handlePdfFileChange}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isProcessingPdf}
+            onClick={() => pdfFileInputRef.current?.click()}
+          >
+            {isProcessingPdf ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Обработка...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Загрузить комплектацию из PDF
+              </>
+            )}
+          </Button>
+        </div>
+        {pdfImportError ? (
+          <p className="text-sm text-red-600 dark:text-red-400">{pdfImportError}</p>
+        ) : pdfImportResult ? (
+          <p className="text-sm text-green-600 dark:text-green-400">
+            {pdfImportResult.message || "Файл успешно обработан"}
+            {pdfImportResult.statistics
+              ? `. Обработано ${pdfImportResult.statistics.success} из ${pdfImportResult.statistics.total_processed}`
+              : ""}
+            {pdfFillNote ? ` ${pdfFillNote}` : ""}
+          </p>
+        ) : null}
       </div>
 
       <Card>
@@ -678,9 +1122,13 @@ export default function DocumentViewPage() {
                 <p className="font-medium">—</p>
               )}
             </div>
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-2">
               <span className="text-muted-foreground">Примечание</span>
               <p className="font-medium">{formatNote(documentInfo.note)}</p>
+            </div>
+            <div >
+              <span className="text-muted-foreground">Номера вагонов</span>
+              <p className="font-medium">{trainNumber ? wagonNumbers.join(", ") : "—"}</p>
             </div>
           </div>
         </CardContent>
@@ -703,6 +1151,7 @@ export default function DocumentViewPage() {
                 emptyText="Нет данных по колесным парам"
                 showThickness
                 requiredCodes={WHEEL_PAIR_CODE_LIST}
+                rowErrors={pdfRowErrors}
                 onAdd={handleAddRow}
                 onEdit={handleEditRow}
               />
@@ -724,6 +1173,7 @@ export default function DocumentViewPage() {
                 emptyText="Нет данных по деталям тележек"
                 showTruckType
                 requiredCodes={TRUCK_PART_CODE_LIST}
+                rowErrors={pdfRowErrors}
                 onAdd={handleAddRow}
                 onEdit={handleEditRow}
               />
@@ -744,6 +1194,7 @@ export default function DocumentViewPage() {
                 items={groupedEquipments.couplers}
                 emptyText="Нет данных по автосцепному оборудованию"
                 requiredCodes={COUPLER_CODE_LIST}
+                rowErrors={pdfRowErrors}
                 onAdd={handleAddRow}
                 onEdit={handleEditRow}
               />
@@ -751,6 +1202,25 @@ export default function DocumentViewPage() {
           </Card>
         </>
       )}
+
+      <Dialog open={pdfMismatchOpen} onOpenChange={setPdfMismatchOpen}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader className="text-center sm:text-center">
+            <DialogTitle className="flex justify-center">
+              <AlertTriangle className="h-14 w-14 fill-yellow-400 text-yellow-600" aria-hidden />
+              <span className="sr-only">Предупреждение</span>
+            </DialogTitle>
+            <DialogDescription className="text-center text-base text-foreground">
+              {PDF_DOCUMENT_MISMATCH_MESSAGE}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center">
+            <Button type="button" onClick={() => setPdfMismatchOpen(false)}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <PartEquipmentManualFormDialog
         open={formOpen}
