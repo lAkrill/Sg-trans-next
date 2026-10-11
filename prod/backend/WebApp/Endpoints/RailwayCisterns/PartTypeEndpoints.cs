@@ -14,7 +14,7 @@ public static class PartTypeEndpoints
     {
         var group = app.MapGroup("/api/part-types")
             .RequireAuthorization()
-            .WithTags("part-types");
+            .WithTags("partTypes");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {

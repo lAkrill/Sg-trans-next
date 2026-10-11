@@ -14,7 +14,7 @@ public static class MessageEndpoints
     {
         var group = app.MapGroup("/api/Messages")
             .RequireAuthorization()
-            .WithTags("Messages");
+            .WithTags("messages");
 
         group.MapGet("/", async ([FromServices] ApplicationDbContext context, [FromQuery] int skip = 0, [FromQuery] int take = 50) =>
         {

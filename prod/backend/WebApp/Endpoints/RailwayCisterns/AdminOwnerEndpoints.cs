@@ -14,7 +14,7 @@ public static class AdminOwnerEndpoints
     {
         var group = app.MapGroup("/api/admin-owner")
             .RequireAuthorization()
-            .WithTags("AdminOwner");
+            .WithTags("adminOwner");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {

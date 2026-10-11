@@ -22,7 +22,7 @@ public static class VesselEndpoint
     {
         var group = app.MapGroup("/api/vessels")
             .RequireAuthorization()
-            .WithTags("Vessels");
+            .WithTags("vessels");
 
         group.MapGet("/", async ([FromServices] ApplicationDbContext context,
                 [FromQuery] int page = 1,

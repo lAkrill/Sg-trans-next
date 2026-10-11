@@ -87,6 +87,9 @@ public static class ApiExtensions
         app.MapEmployeeEndpoints();
 
         app.MapFileEndpoints();
+
+        // Permissions
+        app.MapPermissionsEndpoints();
     }
 
     public static void AddApiAuthentication(

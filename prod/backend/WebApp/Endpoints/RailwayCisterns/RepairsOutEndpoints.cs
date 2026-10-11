@@ -14,7 +14,7 @@ public static class RepairsOutEndpoints
     {
         var group = app.MapGroup("/api/RepairsOut")
             .RequireAuthorization()
-            .WithTags("RepairsOut");
+            .WithTags("repairsOut");
         
         group.MapGet("/", async ([FromServices] ApplicationDbContext context, [FromQuery] int skip = 0, [FromQuery] int take = 50) =>
         {

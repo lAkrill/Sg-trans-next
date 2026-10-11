@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Metadata;
 using WebApp.Abstractions.Services;
 using WebApp.Data.Enums;
 
@@ -24,14 +25,33 @@ public class PermissionAuthorizationHandler
         if (userId is null || !Guid.TryParse(userId.Value, out var id))
             return;
 
+        var endpoint = context.Resource switch
+        {
+            Endpoint resourceEndpoint => resourceEndpoint,
+            HttpContext httpContext => httpContext.GetEndpoint(),
+            _ => null
+        };
+        var endpointName = endpoint?
+            .Metadata
+            .GetMetadata<IEndpointNameMetadata>()?
+            .EndpointName;
+
+        var tags = endpoint?
+            .Metadata
+            .GetMetadata<ITagsMetadata>()?
+            .Tags;
+        
         using var scope = _scopeFactory.CreateScope();
 
         var permissionService = scope.ServiceProvider
             .GetRequiredService<IPermissionService>();
 
-        var permissions = await permissionService.GetPermissionsAsync(id);
+        var permissions = await permissionService.GetPermissionsAsync(id, tags);
 
-        if (permissions.Intersect(requirement.Permissions).Any())
+        var requiredMask = requirement.Permissions.Aggregate(
+            0, (mask, permission) => mask | (int)permission);
+
+        if (permissions.Any(p => (p.Access & requiredMask) != 0))
         {
             context.Succeed(requirement);
         }

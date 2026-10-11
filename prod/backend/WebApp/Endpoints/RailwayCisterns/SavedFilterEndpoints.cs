@@ -23,7 +23,7 @@ public static class SavedFilterEndpoints
     {
         var group = app.MapGroup("/api/saved-filters")
             .RequireAuthorization()
-            .WithTags("saved-filters");
+            .WithTags("savedFilters");
 
         // Get all filters for current user
         group.MapGet("/", async (

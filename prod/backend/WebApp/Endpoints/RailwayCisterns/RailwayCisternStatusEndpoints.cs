@@ -15,7 +15,7 @@ public static class RailwayCisternStatusEndpoints
     {
         var group = app.MapGroup("/api/railway-cistern-status")
             .RequireAuthorization()
-            .WithTags("railway-cistern-status");
+            .WithTags("railwayCisternStatus");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {

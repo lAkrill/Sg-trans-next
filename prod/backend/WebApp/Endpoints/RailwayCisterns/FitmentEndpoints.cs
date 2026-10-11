@@ -15,7 +15,7 @@ public static class FitmentEndpoints
     {
         var group = app.MapGroup("/api/Fitments")
             .RequireAuthorization()
-            .WithTags("Fitments");
+            .WithTags("fitments");
 
         group.MapGet("/", async ([FromServices] ApplicationDbContext context, [FromQuery] int skip = 0, [FromQuery] int take = 50) =>
             {

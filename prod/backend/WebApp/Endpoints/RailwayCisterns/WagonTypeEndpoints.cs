@@ -14,7 +14,7 @@ public static class WagonTypeEndpoints
     {
         var group = app.MapGroup("/api/wagon-types")
             .RequireAuthorization()
-            .WithTags("wagon-types");
+            .WithTags("wagonTypes");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {

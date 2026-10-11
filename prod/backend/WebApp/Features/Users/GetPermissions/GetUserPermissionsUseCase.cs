@@ -1,5 +1,6 @@
-using WebApp.Data.Enums;
+using System.Collections.Generic;
 using WebApp.Data.Repositories;
+using WebApp.DTO.Common;
 
 namespace WebApp.Features.Users.GetPermissions;
 
@@ -12,8 +13,8 @@ public class GetUserPermissionsUseCase
         _userRepository = userRepository;
     }
 
-    public Task<HashSet<Permission>> ExecuteAsync(GetUserPermissionsRequest request)
+    public Task<List<RolePermissionDTO>> ExecuteAsync(GetUserPermissionsRequest request)
     {
-        return _userRepository.GetUserPermissionsAsync(request.UserId);
+        return _userRepository.GetUserPermissionsAsync(request.UserId, request.Tags);
     }
 }

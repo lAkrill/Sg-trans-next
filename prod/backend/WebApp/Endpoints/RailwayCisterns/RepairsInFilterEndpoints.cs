@@ -15,7 +15,7 @@ public static class RepairsInFilterEndpoints
     {
         var group = app.MapGroup("/api/repairs-in/filter")
             .RequireAuthorization()
-            .WithTags("repairs-in-filter");
+            .WithTags("repairsInFilter");
 
         // Фильтрация с пагинацией
         group.MapPost("/", async (

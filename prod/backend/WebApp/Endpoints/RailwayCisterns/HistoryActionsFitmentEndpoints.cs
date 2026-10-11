@@ -15,7 +15,7 @@ public static class HistoryActionsFitmentEndpoints
     {
         var group = app.MapGroup("/api/history-actions-fitment")
             .RequireAuthorization()
-            .WithTags("history-actions-fitment");
+            .WithTags("historyActionsFitment");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {

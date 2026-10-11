@@ -1,9 +1,10 @@
 ﻿namespace WebApp.Data.Enums;
 
+[Flags]
 public enum Permission
 {
     Read = 1,
     Create = 2,
-    Update = 3,
-    Delete = 4
+    Update = 4,
+    Delete = 8
 }

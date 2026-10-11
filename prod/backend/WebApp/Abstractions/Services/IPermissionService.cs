@@ -1,8 +1,8 @@
-using WebApp.Data.Enums;
+using WebApp.DTO.Common;
 
 namespace WebApp.Abstractions.Services;
 
 public interface IPermissionService
 {
-    Task<HashSet<Permission>> GetPermissionsAsync(Guid userId);
+    Task<List<RolePermissionDTO>> GetPermissionsAsync(Guid userId, IEnumerable<string> tags);
 }

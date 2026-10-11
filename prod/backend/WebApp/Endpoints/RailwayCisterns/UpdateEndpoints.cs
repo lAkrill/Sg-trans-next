@@ -13,7 +13,7 @@ public static class UpdateEndpoints
     {
         var group = app.MapGroup("/api/updates")
             .RequireAuthorization()
-            .WithTags("Update");
+            .WithTags("update");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {

@@ -16,7 +16,7 @@ public static class PartFilterEndpoints
     {
         var group = app.MapGroup("/api/parts/filter")
             .RequireAuthorization()
-            .WithTags("parts-filter");
+            .WithTags("partsFilter");
 
         // Фильтрация с пагинацией
         group.MapPost("/", async (

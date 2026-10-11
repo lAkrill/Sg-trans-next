@@ -14,7 +14,7 @@ public static class StampNumberEndpoints
     {
         var group = app.MapGroup("/api/stamp-numbers")
             .RequireAuthorization()
-            .WithTags("stamp-numbers");
+            .WithTags("stampNumbers");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {

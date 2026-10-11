@@ -1,5 +1,5 @@
 using WebApp.Abstractions.Services;
-using WebApp.Data.Enums;
+using WebApp.DTO.Common;
 using WebApp.Data.Repositories;
 
 namespace WebApp.Services;
@@ -13,8 +13,8 @@ public class PermissionService : IPermissionService
         _userRepository = userRepository;
     }
 
-    public Task<HashSet<Permission>> GetPermissionsAsync(Guid userId)
+    public Task<List<RolePermissionDTO>> GetPermissionsAsync(Guid userId, IEnumerable<string> tags)
     {
-        return _userRepository.GetUserPermissionsAsync(userId);
+        return _userRepository.GetUserPermissionsAsync(userId, tags);
     }
 }

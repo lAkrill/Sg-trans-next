@@ -14,7 +14,7 @@ public static class RepairTypeEndpoints
     {
         var group = app.MapGroup("/api/repair-types")
             .RequireAuthorization()
-            .WithTags("repair-types");
+            .WithTags("repairTypes");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {

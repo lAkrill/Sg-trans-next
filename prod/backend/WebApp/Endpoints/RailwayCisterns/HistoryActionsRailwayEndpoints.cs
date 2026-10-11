@@ -15,7 +15,7 @@ public static class HistoryActionsRailwayEndpoints
     {
         var group = app.MapGroup("/api/history-actions-railway")
             .RequireAuthorization()
-            .WithTags("history-actions-railway");
+            .WithTags("historyActionsRailway");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {

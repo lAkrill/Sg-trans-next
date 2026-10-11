@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
@@ -14,7 +15,7 @@ public static class EquipmentTypeEndpoints
     {
         var group = app.MapGroup("/api/equipment-types")
             .RequireAuthorization()
-            .WithTags("equipment-types");
+            .WithTags("equipmentTypes");
 
         // Получение всех типов оборудования
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>

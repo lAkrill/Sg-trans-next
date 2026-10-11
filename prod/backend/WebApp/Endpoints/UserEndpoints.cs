@@ -22,7 +22,7 @@ public static class UsersEndpoints
     {
         // Public Endpoints Group
         var publicGroup = app.MapGroup("/users")
-            .WithTags("Users");
+            .WithTags("users");
 
         publicGroup.MapPost("login", Login);
         publicGroup.MapPost("refresh-token", RefreshToken);
@@ -30,7 +30,7 @@ public static class UsersEndpoints
         // Protected Endpoints Group
         var protectedGroup = app.MapGroup("/users")
             .RequireAuthorization()
-            .WithTags("Users");
+            .WithTags("users");
 
         protectedGroup.MapPost("register", RegisterUser)
             .RequirePermissions(Permission.Update);

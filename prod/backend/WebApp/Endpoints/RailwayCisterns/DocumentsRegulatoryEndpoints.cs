@@ -13,7 +13,7 @@ public static class DocumentsRegulatoryEndpoints
     {
         var group = app.MapGroup("/api/documents-regulatory")
             .RequireAuthorization()
-            .WithTags("documents-regulatory");
+            .WithTags("documentsRegulatory");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {

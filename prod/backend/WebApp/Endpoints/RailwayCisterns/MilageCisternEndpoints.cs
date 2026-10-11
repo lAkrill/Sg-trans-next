@@ -14,7 +14,7 @@ public static class MilageCisternEndpoints
     {
         var group = app.MapGroup("/api/milage-cisterns")
             .RequireAuthorization()
-            .WithTags("milage-cisterns");
+            .WithTags("milageCisterns");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {

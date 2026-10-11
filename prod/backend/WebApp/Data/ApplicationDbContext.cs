@@ -9,8 +9,11 @@ public class ApplicationDbContext(
 {
     //Users
     public DbSet<User> Users { get; set; }
-    public DbSet<RoleEntity> Roles { get; set; }
+
     public DbSet<RolePermission> RolePermissions { get; set; }
+    public DbSet<PermissionEntity> PermissionEntitys { get; set; }
+    public DbSet<RoleEntity> Roles { get; set; }
+   
 
     // Employees
     public DbSet<Employee> Employees { get; set; }

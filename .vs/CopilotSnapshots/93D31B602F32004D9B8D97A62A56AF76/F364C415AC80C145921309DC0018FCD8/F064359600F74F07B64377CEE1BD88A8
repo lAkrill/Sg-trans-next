@@ -1,0 +1,27 @@
+﻿using System;
+using System.Collections.Generic;
+using WebApp.Data.Enums;
+using WebApp.Data.Repositories;
+
+namespace WebApp.Features.Users.GetPermissions;
+
+public record GetUserPermissionsRequest : IEquatable<GetUserPermissionsRequest>
+{
+    public Guid UserId { get; init; }
+    public IEnumerable<string>? Tags { get; init; } // добавлено свойство тегов, может быть null
+}
+
+public class GetUserPermissionsUseCase
+{
+    private readonly UserRepository _userRepository;
+
+    public GetUserPermissionsUseCase(UserRepository userRepository)
+    {
+        _userRepository = userRepository;
+    }
+
+    public Task<HashSet<Permission>> ExecuteAsync(GetUserPermissionsRequest request)
+    {
+        return _userRepository.GetUserPermissionsAsync(request.UserId, request.Tags);
+    }
+}

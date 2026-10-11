@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WebApp.Data.Entities.Users;
-using WebApp.Data.Enums;
+using WebApp.DTO.Common;
 using WebApp.Exceptions;
 
 namespace WebApp.Data.Repositories;
@@ -59,21 +59,36 @@ public class UserRepository
         return userEntity;
     }
 
-    public async Task<HashSet<Permission>> GetUserPermissionsAsync(Guid userId)
+    public async Task<List<RolePermissionDTO>> GetUserPermissionsAsync(Guid userId, IEnumerable<string> tags)
     {
-        var roles = await _context.Users
+        var roleIds = _context.Users
             .AsNoTracking()
-            .Include(u => u.Roles)
-            .ThenInclude(r => r.Permissions)
             .Where(u => u.Id == userId)
-            .Select(u => u.Roles)
-            .ToArrayAsync();
+            .SelectMany(u => u.Roles)
+            .Select(role => role.Id);
 
-        return roles
-            .SelectMany(r => r)
-            .SelectMany(r => r.Permissions)
-            .Select(p => (Permission)p.Id)
-            .ToHashSet();
+        var links =
+            from link in _context.RolePermissions.AsNoTracking()
+            join permission in _context.PermissionEntitys.AsNoTracking()
+                on link.PermissionId equals permission.Id
+            where roleIds.Contains(link.RoleId)
+            select new { link, permission };
+
+        if (tags is not null)
+        {
+            var tagList = tags.ToArray();
+            links = links.Where(x => tagList.Contains(x.permission.Name));
+        }
+
+        return await links
+            .Select(x => new RolePermissionDTO
+            {
+                RoleId = x.link.RoleId,
+                PermissionId = x.link.PermissionId,
+                PermissionName = x.permission.Name,
+                Access = x.link.Access
+            })
+            .ToListAsync();
     }
 
     public async Task<User> GetUserByIdAsync(Guid userId)

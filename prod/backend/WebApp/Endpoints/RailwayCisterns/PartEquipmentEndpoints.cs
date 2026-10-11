@@ -16,7 +16,7 @@ public static class PartEquipmentEndpoints
     {
         var group = app.MapGroup("/api/part-equipments")
             .RequireAuthorization()
-            .WithTags("part-equipments");
+            .WithTags("partEquipments");
 
         // Получение всех записей с пагинацией
         group.MapGet("/", async (

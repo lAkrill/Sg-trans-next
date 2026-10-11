@@ -15,7 +15,7 @@ public static class HistoryActionsPartEndpoints
     {
         var group = app.MapGroup("/api/history-actions-part")
             .RequireAuthorization()
-            .WithTags("history-actions-part");
+            .WithTags("historyActionsPart");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {

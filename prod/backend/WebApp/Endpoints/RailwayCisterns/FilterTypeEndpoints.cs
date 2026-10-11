@@ -14,7 +14,7 @@ public static class FilterTypeEndpoints
     {
         var group = app.MapGroup("/api/filter-types")
             .RequireAuthorization()
-            .WithTags("filter-types");
+            .WithTags("filterTypes");
 
         // Get all filter types
         group.MapGet("/all/", async (

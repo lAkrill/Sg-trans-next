@@ -15,7 +15,7 @@ public static class PersonalCisRepairPeriodEndpoints
     {
         var group = app.MapGroup("/api/personal-cis-repair-periods")
             .RequireAuthorization()
-            .WithTags("personal-cis-repair-periods");
+            .WithTags("personalCisRepairPeriods");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
         {

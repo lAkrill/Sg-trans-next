@@ -19,7 +19,7 @@ public static class ActionLogEndpoints
     {
         var group = app.MapGroup("/api/ActionLog")
             .RequireAuthorization()
-            .WithTags("ActionLog");
+            .WithTags("actionLog");
 
         group.MapGet("/", async (
             [FromServices] ApplicationDbContext context,

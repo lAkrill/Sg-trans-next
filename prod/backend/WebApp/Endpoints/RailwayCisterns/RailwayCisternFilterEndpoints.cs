@@ -17,7 +17,7 @@ public static class RailwayCisternFilterEndpoints
     {
         var group = app.MapGroup("/api/railway-cisterns/filter")
             .RequireAuthorization()
-            .WithTags("railway-cisterns-filter");
+            .WithTags("railwayCisternsFilter");
 
         // Advanced search with filtering and sorting
         group.MapPost("/", async (

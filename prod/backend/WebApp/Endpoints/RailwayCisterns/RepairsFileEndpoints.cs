@@ -16,7 +16,7 @@ public static class RepairsFileEndpoints
     {
         var group = app.MapGroup("/api/RepairsFiles")
             .RequireAuthorization()
-            .WithTags("RepairsFiles");
+            .WithTags("repairsFiles");
 
         group.MapPost("/process-repairs-file", ProcessRepairsFile)
             .WithName("ProcessRepairsFile")
@@ -28,7 +28,7 @@ public static class RepairsFileEndpoints
         
         var group2 = app.MapGroup("/api/ImportFiles")
             .RequireAuthorization()
-            .WithTags("ImportFiles");
+            .WithTags("importFiles");
 
         group2.MapPost("/process-import-file", ImportFile)
             .WithName("ProcessImportFile")

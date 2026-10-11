@@ -13,7 +13,7 @@ public static class RoadEndpoints
     {
         var group = app.MapGroup("/api/roads")
             .RequireAuthorization()
-            .WithTags("Road");
+            .WithTags("road");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {

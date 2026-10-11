@@ -13,7 +13,7 @@ public static class DefectEndpoints
     {
         var group = app.MapGroup("/api/defects")
             .RequireAuthorization()
-            .WithTags("Defect");
+            .WithTags("defect");
 
         group.MapGet("/all/", async ([FromServices] ApplicationDbContext context) =>
             {

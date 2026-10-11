@@ -9,16 +9,19 @@ public partial class PermissionConfiguration : IEntityTypeConfiguration<Permissi
 {
     public void Configure(EntityTypeBuilder<PermissionEntity> builder)
     {
-        builder.HasKey(p => p.Id);
 
-        var permissions = Enum
-            .GetValues<Permission>()
-            .Select(p => new PermissionEntity
-            {
-                Id = (int)p,
-                Name = p.ToString()
-            });
+        builder.ToTable("PermissionEntity");
+        builder.HasKey(e => e.Id);
 
-        builder.HasData(permissions);
+        builder.Property(e => e.Id)
+            .HasColumnName("Id")
+            .IsRequired();
+
+        builder.Property(e => e.Name)
+            .HasColumnName("Name")
+            .IsRequired()
+            .HasColumnType("text");
+
     }
+
 }

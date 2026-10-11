@@ -16,7 +16,7 @@ public static class FitmentFilterEndpoints
     {
         var group = app.MapGroup("/api/fitments/filter")
             .RequireAuthorization()
-            .WithTags("fitments-filter");
+            .WithTags("fitmentsFilter");
 
         // Фильтрация с пагинацией
         group.MapPost("/", async (
