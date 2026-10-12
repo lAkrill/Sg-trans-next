@@ -15,3 +15,4 @@ public class RolePermissionDTO
     public string PermissionName { get; set; }
     public int Access { get; set; }
 }
+

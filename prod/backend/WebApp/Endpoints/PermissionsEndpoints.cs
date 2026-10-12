@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using WebApp.Data;
 using WebApp.Data.Entities.RailwayCisterns;
+using WebApp.Data.Entities.Users;
 using WebApp.Data.Enums;
 using WebApp.DTO.Common;
 using WebApp.DTO.Employees;
@@ -28,7 +29,8 @@ public static class PermissionsEndpoints
     {
         // Public Endpoints Group
         var publicGroup = app.MapGroup("/api/permissions")
-            .WithTags("permissions");
+            .WithTags("permissions")
+            .RequireAuthorization();
 
         publicGroup.MapGet("role/all/", async ([FromServices] ApplicationDbContext context) =>
         {
@@ -107,6 +109,46 @@ public static class PermissionsEndpoints
         })
         .WithName("GetPermissionsNameById")
         .Produces<RolePermissionDTO>(StatusCodes.Status200OK);
+
+        publicGroup.MapPost("/", async ([FromServices] ApplicationDbContext context, [FromBody] RolePermission dto) =>
+        {
+            var rolePermission = new RolePermission
+            {
+                RoleId = dto.RoleId,
+                PermissionId = dto.PermissionId,
+                Access = dto.Access
+            };
+
+            context.Add(rolePermission);
+            await context.SaveChangesAsync();
+
+            return Results.NoContent();
+        })
+        .WithName("CreateRolePermission")
+        .Produces(StatusCodes.Status201Created)
+        .ProducesValidationProblem()
+        .RequirePermissions(Permission.Create);
+
+        publicGroup.MapPut("/", async ([FromServices] ApplicationDbContext context, [FromBody] List<RolePermission> dtos) =>
+        {
+            foreach (var dto in dtos)
+            {
+                var rolePermission = await context.RolePermissions.FindAsync(dto.RoleId, dto.PermissionId);
+
+                if (rolePermission is null)
+                    return Results.NotFound();
+
+                rolePermission.Access = dto.Access;
+            }
+
+            await context.SaveChangesAsync();
+            return Results.NoContent();
+        })
+        .WithName("UpdateRolePermission")
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status404NotFound)
+        .ProducesValidationProblem()
+        .RequirePermissions(Permission.Update);
     }
 
 }
