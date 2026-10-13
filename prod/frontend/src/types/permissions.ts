@@ -1,6 +1,7 @@
 export interface PermissionName {
   id: number;
   name: string | null;
+  description: string | null;
 }
 
 export interface RolePermission {

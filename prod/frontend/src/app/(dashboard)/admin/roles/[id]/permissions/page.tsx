@@ -90,6 +90,7 @@ function RolePermissionsContent() {
       .map((setting) => ({
         id: setting.permissionId,
         name: setting.permissionName,
+        description: null,
       }));
 
     return [...permissionNames, ...extras].sort((left, right) =>
@@ -255,7 +256,12 @@ function RolePermissionsContent() {
                       className={index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-100 dark:bg-gray-800'}
                     >
                       <TableCell className="font-medium" title={`Маска ${access}`}>
-                        {name}
+                        <div>{name}</div>
+                        {permission.description ? (
+                          <div className="mt-1 text-sm font-normal text-muted-foreground">
+                            {permission.description}
+                          </div>
+                        ) : null}
                       </TableCell>
                       {ACCESS_COLUMNS.map((column) => (
                         <TableCell key={column.flag}>
