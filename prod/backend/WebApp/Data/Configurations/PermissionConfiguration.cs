@@ -22,6 +22,10 @@ public partial class PermissionConfiguration : IEntityTypeConfiguration<Permissi
             .IsRequired()
             .HasColumnType("text");
 
+        builder.Property(e => e.Description)
+            .HasColumnName("Description")
+            .HasColumnType("text");
+
     }
 
 }

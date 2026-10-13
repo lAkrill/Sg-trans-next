@@ -81,6 +81,7 @@ public static class PermissionsEndpoints
                 var outPermission = new PermissionEntityDTO();
                 outPermission.Id = item.Id;
                 outPermission.Name = item.Name;
+                outPermission.Description = item.Description;
                 outResponse.Add(outPermission);
             }
             return Results.Ok(outResponse);

@@ -6,5 +6,7 @@ public class PermissionEntity
 
     public string Name { get; set; } = string.Empty;
 
+    public string? Description { get; set; } = string.Empty;
+
     public ICollection<RoleEntity> Roles { get; set; } = [];
 }
