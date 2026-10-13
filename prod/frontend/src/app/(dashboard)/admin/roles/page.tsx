@@ -82,8 +82,10 @@ function RolesContent() {
                     <TableCell className="text-right">
                       {role.id !== Role.Admin && (
                         <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" title="Права доступа" aria-label="Права доступа">
-                            <Shield className="h-4 w-4" />
+                          <Button variant="outline" size="sm" title="Права доступа" aria-label="Права доступа" asChild>
+                            <Link href={`/admin/roles/${role.id}/permissions`}>
+                              <Shield className="h-4 w-4" />
+                            </Link>
                           </Button>
                           <Button variant="outline" size="sm" title="Редактировать" aria-label="Редактировать">
                             <Edit className="h-4 w-4" />

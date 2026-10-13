@@ -29,6 +29,7 @@ export * from './scrapmetal.hook';
 export * from './vessels.hook';
 
 export * from './auth.hook';
+export * from './permissions.hook';
 export * from './cisterns.hook';
 export * from './history-actions.hook';
 export * from './action-log.hook';
