@@ -49,6 +49,7 @@ import {
 import {
   useAllDocuments,
   useCreateDocument,
+  useCurrentUser,
   useUpdateDocument,
   useDeleteDocument,
 } from "@/hooks";
@@ -71,6 +72,13 @@ import { api } from "@/lib/api";
 import { formatDate } from "@/lib/formatDate";
 import type { CreateDocumentDTO, DocumentDTO, UpdateDocumentDTO } from "@/types/directories";
 
+const todayInputDate = () => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+};
+
 const EMPTY_FORM: CreateDocumentDTO = {
   number: "",
   type: null,
@@ -79,6 +87,16 @@ const EMPTY_FORM: CreateDocumentDTO = {
   price: null,
   note: "",
   file: "",
+};
+
+const createEmptyForm = (): CreateDocumentDTO => ({
+  ...EMPTY_FORM,
+  date: todayInputDate(),
+});
+
+const formatUserAuthor = (user?: { firstName?: string | null; lastName?: string | null } | null) => {
+  if (!user) return "";
+  return [user.lastName, user.firstName].filter(Boolean).join(" ").trim();
 };
 
 const DOCUMENT_FILE_DIRECTORY = "Documents";
@@ -235,13 +253,15 @@ export default function DocumentsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<DocumentDTO | null>(null);
-  const [formData, setFormData] = useState<CreateDocumentDTO>(EMPTY_FORM);
+  const [formData, setFormData] = useState<CreateDocumentDTO>(createEmptyForm);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewingFileId, setViewingFileId] = useState<string | null>(null);
 
   const { data: documents = [], isLoading, error } = useAllDocuments();
+  const { data: currentUser } = useCurrentUser();
+  const currentAuthor = formatUserAuthor(currentUser);
   const createMutation = useCreateDocument();
   const updateMutation = useUpdateDocument();
   const deleteMutation = useDeleteDocument();
@@ -388,7 +408,7 @@ export default function DocumentsPage() {
   };
 
   const resetDocumentForm = () => {
-    setFormData(EMPTY_FORM);
+    setFormData(createEmptyForm());
     setSelectedFile(null);
     setFormError(null);
     setEditingDocument(null);
@@ -507,7 +527,7 @@ export default function DocumentsPage() {
 
       await createMutation.mutateAsync({
         ...formData,
-        author: formData.author || null,
+        author: currentAuthor || null,
         note: formData.note || null,
         file: fileName,
       });
@@ -545,7 +565,7 @@ export default function DocumentsPage() {
 
       const payload: UpdateDocumentDTO = {
         ...formData,
-        author: formData.author || null,
+        author: currentAuthor || null,
         note: formData.note || null,
         file: fileName,
       };
@@ -770,9 +790,9 @@ export default function DocumentsPage() {
         <Label htmlFor="author">Автор</Label>
         <Input
           id="author"
-          value={formData.author ?? ""}
-          onChange={(e) => updateFormField("author", e.target.value)}
-          placeholder="Введите автора"
+          value={currentAuthor}
+          readOnly
+          disabled
         />
       </div>
       <div>

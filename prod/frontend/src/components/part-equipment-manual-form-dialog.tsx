@@ -152,7 +152,7 @@ const EXTRA_FIELDS: Array<{
   label: string;
   type?: string;
 }> = [
-  { name: "jobDate", label: "Дата работы" },
+  { name: "jobDate", label: "Предыдущая дата работы с деталью" },
   { name: "jobTypeId", label: "Код вида работ" },
   { name: "thicknessLeft", label: "Толщина слева", type: "number" },
   { name: "thicknessRight", label: "Толщина справа", type: "number" },
@@ -256,7 +256,14 @@ export function PartEquipmentManualFormDialog({
   const ownerDefaultDismissedRef = useRef(false);
 
   const locked = useMemo(() => new Set(lockedFields), [lockedFields]);
-  const isLocked = (field: PartEquipmentManualLockedField) => locked.has(field);
+  const selectableWhenEmpty = new Set<PartEquipmentManualLockedField>([
+    "railwayCisternsId",
+    "repairTypesId",
+  ]);
+  const isLocked = (field: PartEquipmentManualLockedField) => {
+    if (selectableWhenEmpty.has(field) && !isMeaningfulId(presets?.[field])) return false;
+    return locked.has(field);
+  };
 
   useEffect(() => {
     if (!open) {

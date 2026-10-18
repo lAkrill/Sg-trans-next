@@ -26,6 +26,7 @@ import {
   Import,
   Tags,
   Recycle,
+  Hash,
 } from "lucide-react";
 import { useCurrentUser, useVersion } from "@/hooks";
 import { Role } from "@/types/auth";
@@ -88,6 +89,11 @@ const directoryItems: SidebarItem[] = [
     title: "Статусы деталей",
     href: "/directories/part-statuses",
     icon: Activity,
+  },
+  {
+    title: "Номера клейм",
+    href: "/directories/stamp-numbers",
+    icon: Hash,
   },
   {
     title: "Типы ремонта",

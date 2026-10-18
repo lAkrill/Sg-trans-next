@@ -82,9 +82,12 @@ const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 const isPdfFile = (file: File) =>
   file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
+const isTxtFile = (file: File) =>
+  file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt");
+
 const getPdfImportErrorMessage = (err: unknown) => {
   if (!err || typeof err !== "object" || !("response" in err)) {
-    return "Не удалось обработать PDF";
+    return "Не удалось обработать файл";
   }
 
   const data = (
@@ -100,7 +103,7 @@ const getPdfImportErrorMessage = (err: unknown) => {
     }
   ).response?.data;
 
-  return data?.message || data?.Message || data?.details || data?.Details || "Не удалось обработать PDF";
+  return data?.message || data?.Message || data?.details || data?.Details || "Не удалось обработать файл";
 };
 
 const PDF_DOCUMENT_MISMATCH_MESSAGE =
@@ -860,33 +863,27 @@ export default function DocumentViewPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [formPresets, setFormPresets] = useState<PartEquipmentManualPresets>({});
   const [editingItem, setEditingItem] = useState<PartEquipmentDTO | null>(null);
-  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [processingKind, setProcessingKind] = useState<"pdf" | "txt" | null>(null);
   const [pdfImportError, setPdfImportError] = useState<string | null>(null);
   const [pdfImportResult, setPdfImportResult] = useState<ImportFileProcessResponse | null>(null);
   const [pdfFillNote, setPdfFillNote] = useState<string | null>(null);
   const [pdfRowErrors, setPdfRowErrors] = useState<Record<string, string>>({});
   const [pdfMismatchOpen, setPdfMismatchOpen] = useState(false);
   const pdfFileInputRef = useRef<HTMLInputElement>(null);
+  const txtFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePdfFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    if (!isPdfFile(file)) {
-      setPdfImportResult(null);
-      setPdfImportError("Выберите файл PDF");
-      return;
-    }
-
+  const processComplectationFile = async (
+    file: File,
+    fileType: "pdf2json" | "txt2json"
+  ) => {
     setPdfImportError(null);
     setPdfImportResult(null);
     setPdfFillNote(null);
     setPdfRowErrors({});
-    setIsProcessingPdf(true);
+    setProcessingKind(fileType === "txt2json" ? "txt" : "pdf");
 
     try {
-      const result = await importFilesApi.processImportFile(file, "pdf2json");
+      const result = await importFilesApi.processImportFile(file, fileType);
       if (result.status && result.status !== "success") {
         setPdfImportError(result.message || "Не удалось обработать файл");
         return;
@@ -917,7 +914,9 @@ export default function DocumentViewPage() {
         try {
           const extension = file.name.includes(".")
             ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
-            : ".pdf";
+            : fileType === "txt2json"
+              ? ".txt"
+              : ".pdf";
           const uniqueFileName = `${uuidv4()}${extension}`;
           const uploaded = await filesApi.upload(file, {
             directory: DOCUMENT_FILE_DIRECTORY,
@@ -950,9 +949,25 @@ export default function DocumentViewPage() {
     } catch (err: unknown) {
       setPdfImportError(getPdfImportErrorMessage(err));
     } finally {
-      setIsProcessingPdf(false);
+      setProcessingKind(null);
     }
   };
+
+  const handleComplectationFileChange =
+    (fileType: "pdf2json" | "txt2json") => async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) return;
+
+      const isValid = fileType === "txt2json" ? isTxtFile(file) : isPdfFile(file);
+      if (!isValid) {
+        setPdfImportResult(null);
+        setPdfImportError(fileType === "txt2json" ? "Выберите файл TXT" : "Выберите файл PDF");
+        return;
+      }
+
+      await processComplectationFile(file, fileType);
+    };
 
   const handleAddRow = (row: EquipmentSectionRow) => {
     const document = documentItem ?? equipments[0]?.document;
@@ -1045,31 +1060,58 @@ export default function DocumentViewPage() {
             <FileText className="h-8 w-8" />
             {getDocumentTypeLabel(documentInfo.type)}
           </h1>
-          <input
-            ref={pdfFileInputRef}
-            type="file"
-            accept="application/pdf,.pdf"
-            className="hidden"
-            onChange={handlePdfFileChange}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isProcessingPdf}
-            onClick={() => pdfFileInputRef.current?.click()}
-          >
-            {isProcessingPdf ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Обработка...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Загрузить комплектацию из PDF
-              </>
-            )}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={pdfFileInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={handleComplectationFileChange("pdf2json")}
+            />
+            <input
+              ref={txtFileInputRef}
+              type="file"
+              accept="text/plain,.txt"
+              className="hidden"
+              onChange={handleComplectationFileChange("txt2json")}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={processingKind !== null}
+              onClick={() => pdfFileInputRef.current?.click()}
+            >
+              {processingKind === "pdf" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Обработка...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Загрузить комплектацию из PDF
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={processingKind !== null}
+              onClick={() => txtFileInputRef.current?.click()}
+            >
+              {processingKind === "txt" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Обработка...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Загрузить комплектацию из TXT (4634)
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         {pdfImportError ? (
           <p className="text-sm text-red-600 dark:text-red-400">{pdfImportError}</p>

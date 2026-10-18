@@ -2,7 +2,7 @@ import { api } from "@/lib/api";
 
 const IMPORT_FILES_ENDPOINT = "/api/ImportFiles/process-import-file";
 
-export type ImportFileType = "pdf" | "txt" | "pdf2json";
+export type ImportFileType = "pdf" | "txt" | "pdf2json" | "txt2json";
 
 export interface ImportFileProcessDetail {
   Id?: string;
