@@ -687,7 +687,7 @@ function EquipmentSectionTable({
             </TableHead>
           )}
           <TableHead>Предыдущие работы</TableHead>
-          <TableHead>Вид ремонта</TableHead>
+          <TableHead>Депо <br />(вид ремонта)</TableHead>
           <TableHead>Вагон</TableHead>
           <TableHead className="whitespace-normal">Примечание</TableHead>
           <TableHead className="w-[1%] whitespace-nowrap text-right">Действия</TableHead>
@@ -718,7 +718,22 @@ function EquipmentSectionTable({
                 <TableCell>{item?.truckType ? item.truckType : "—"}</TableCell>
               )}
               <TableCell>{item ? formatPreviousWork(item) : "—"}</TableCell>
-              <TableCell>{item?.repairType?.name || "—"}</TableCell>
+              <TableCell>
+                {item ? (
+                  <>
+                    <div className="font-medium">
+                      {item.depot
+                        ? `${item.depot.shortName || item.depot.name || "—"} (${item.depot.code || "—"})`
+                        : "—"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {item.repairType?.name || "—"}
+                    </div>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </TableCell>
               <TableCell>
                 {item ? (
                   <>

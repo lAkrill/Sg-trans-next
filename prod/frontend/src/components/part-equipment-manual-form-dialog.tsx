@@ -477,7 +477,7 @@ export function PartEquipmentManualFormDialog({
         ...current,
         [field]: value,
         ...(field === "operation" && value !== "2" ? { railwayCisternsId: current.railwayCisternsId } : {}),
-        ...(field === "operation" && value === "2" ? { defectsId: "", depotsId: "" } : {}),
+        ...(field === "operation" && value === "2" ? { defectsId: "" } : {}),
         ...(field === "operation" && value === "1"
           ? { defectsId: current.defectsId || getRemovalDefaultDefectId(defects) }
           : {}),
@@ -521,6 +521,10 @@ export function PartEquipmentManualFormDialog({
       setStatus({ type: "error", message: "Выберите деталь" });
       return;
     }
+    if (!isMeaningfulId(form.depotsId)) {
+      setStatus({ type: "error", message: "Выберите депо" });
+      return;
+    }
 
     if (isWheelPairSelected) {
       const validateThickness = (value: string, label: string) => {
@@ -558,10 +562,6 @@ export function PartEquipmentManualFormDialog({
       const parsed = Number(trimmed);
       return Number.isNaN(parsed) ? null : parsed;
     };
-    const toNullableDefectsId = (value: string) => {
-      const trimmed = value.trim();
-      return trimmed === "" ? null : trimmed;
-    };
     const defectsId =
       form.operation === "1"
         ? form.defectsId || getRemovalDefaultDefectId(defects)
@@ -574,7 +574,7 @@ export function PartEquipmentManualFormDialog({
       railwayCisternsId: toNullableString(form.railwayCisternsId),
       operation: toNullableNumber(form.operation),
       equipmentTypeId: toNullableString(form.equipmentTypeId),
-      defectsId: form.operation === "2" ? null : toNullableDefectsId(defectsId),
+      defectsId: defectsId.trim() || "0",
       adminOwnerId: toNullableString(adminOwnerId),
       partsId: toNullableString(form.partsId),
       jobDepotsId: toNullableString(form.jobDepotsId),
@@ -586,7 +586,7 @@ export function PartEquipmentManualFormDialog({
       notes: toNullableString(form.notes),
       documentId: toNullableString(form.documentId),
       documentDate: toNullableString(form.documentDate),
-      depotsId: form.operation === "2" ? null : toNullableString(form.depotsId),
+      depotsId: toNullableString(form.depotsId),
       repairTypesId: toNullableString(form.repairTypesId),
     };
 
@@ -709,19 +709,18 @@ export function PartEquipmentManualFormDialog({
                     disabled={isLocked("railwayCisternsId")}
                   />
                 </div>
-                {form.operation !== "2" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="depotsId">Депо</Label>
-                    <SearchableSelect
-                      value={form.depotsId}
-                      onChange={(value) => updateField("depotsId", value)}
-                      options={currentDepotOptions}
-                      placeholder="Выберите депо"
-                      searchPlaceholder="Введите код депо"
-                      isLoading={depotsLoading}
-                    />
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="depotsId">Депо</Label>
+                  <SearchableSelect
+                    value={form.depotsId}
+                    onChange={(value) => updateField("depotsId", value)}
+                    options={currentDepotOptions}
+                    placeholder="Выберите депо"
+                    searchPlaceholder="Введите код депо"
+                    isLoading={depotsLoading}
+                    disabled={isLocked("depotsId")}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="jobDepotsId">Предыдущее место работ</Label>
                   <SearchableSelect
