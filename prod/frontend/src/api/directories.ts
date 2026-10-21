@@ -549,6 +549,10 @@ export const partEquipmentApi = {
   update: async (id: string, data: unknown): Promise<void> => {
     await api.put(`/api/part-equipments/${id}`, data);
   },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/api/part-equipments/${id}`);
+  },
 };
 
 // Fitment Equipment API (Привязка арматуры)

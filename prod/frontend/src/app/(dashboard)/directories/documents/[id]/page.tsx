@@ -85,9 +85,9 @@ const isPdfFile = (file: File) =>
 const isTxtFile = (file: File) =>
   file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt");
 
-const getPdfImportErrorMessage = (err: unknown) => {
+const getRequestErrorMessage = (err: unknown, fallback: string) => {
   if (!err || typeof err !== "object" || !("response" in err)) {
-    return "Не удалось обработать файл";
+    return fallback;
   }
 
   const data = (
@@ -103,8 +103,11 @@ const getPdfImportErrorMessage = (err: unknown) => {
     }
   ).response?.data;
 
-  return data?.message || data?.Message || data?.details || data?.Details || "Не удалось обработать файл";
+  return data?.message || data?.Message || data?.details || data?.Details || fallback;
 };
+
+const getPdfImportErrorMessage = (err: unknown) =>
+  getRequestErrorMessage(err, "Не удалось обработать файл");
 
 const PDF_DOCUMENT_MISMATCH_MESSAGE =
   "Загруженный документ не соответствует дате и номеру вагона-цистерны.";
@@ -650,6 +653,7 @@ function EquipmentSectionTable({
   requiredCodes,
   onAdd,
   onEdit,
+  onDelete,
   rowErrors,
 }: {
   items: PartEquipmentDTO[];
@@ -659,6 +663,7 @@ function EquipmentSectionTable({
   requiredCodes?: readonly number[];
   onAdd?: (row: EquipmentSectionRow) => void;
   onEdit?: (item: PartEquipmentDTO) => void;
+  onDelete?: (item: PartEquipmentDTO) => void;
   rowErrors?: Record<string, string>;
 }) {
   const rows = buildSectionRows(items, requiredCodes);
@@ -782,7 +787,12 @@ function EquipmentSectionTable({
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" title="Удалить">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        title="Удалить"
+                        onClick={() => item && onDelete?.(item)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>
@@ -884,6 +894,9 @@ export default function DocumentViewPage() {
   const [pdfFillNote, setPdfFillNote] = useState<string | null>(null);
   const [pdfRowErrors, setPdfRowErrors] = useState<Record<string, string>>({});
   const [pdfMismatchOpen, setPdfMismatchOpen] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<PartEquipmentDTO | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const pdfFileInputRef = useRef<HTMLInputElement>(null);
   const txtFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1013,6 +1026,33 @@ export default function DocumentViewPage() {
   const handleFormSuccess = () => {
     queryClient.invalidateQueries({ queryKey: partEquipmentKeys.byDocument(documentId) });
     queryClient.invalidateQueries({ queryKey: partEquipmentKeys.all });
+  };
+
+  const handleDeleteRequest = (item: PartEquipmentDTO) => {
+    setDeleteError(null);
+    setDeletingItem(item);
+  };
+
+  const handleDeleteDialogChange = (open: boolean) => {
+    if (open || isDeleting) return;
+    setDeletingItem(null);
+    setDeleteError(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingItem) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await partEquipmentApi.delete(deletingItem.id);
+      setDeletingItem(null);
+      queryClient.invalidateQueries({ queryKey: partEquipmentKeys.byDocument(documentId) });
+      queryClient.invalidateQueries({ queryKey: partEquipmentKeys.all });
+    } catch (err: unknown) {
+      setDeleteError(getRequestErrorMessage(err, "Не удалось удалить запись"));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (isLoading) {
@@ -1211,6 +1251,7 @@ export default function DocumentViewPage() {
                 rowErrors={pdfRowErrors}
                 onAdd={handleAddRow}
                 onEdit={handleEditRow}
+                onDelete={handleDeleteRequest}
               />
             </CardContent>
           </Card>
@@ -1233,6 +1274,7 @@ export default function DocumentViewPage() {
                 rowErrors={pdfRowErrors}
                 onAdd={handleAddRow}
                 onEdit={handleEditRow}
+                onDelete={handleDeleteRequest}
               />
             </CardContent>
           </Card>
@@ -1254,6 +1296,7 @@ export default function DocumentViewPage() {
                 rowErrors={pdfRowErrors}
                 onAdd={handleAddRow}
                 onEdit={handleEditRow}
+                onDelete={handleDeleteRequest}
               />
             </CardContent>
           </Card>
@@ -1274,6 +1317,39 @@ export default function DocumentViewPage() {
           <DialogFooter className="sm:justify-center">
             <Button type="button" onClick={() => setPdfMismatchOpen(false)}>
               OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deletingItem !== null} onOpenChange={handleDeleteDialogChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Удалить запись?</DialogTitle>
+            <DialogDescription>
+              {deletingItem
+                ? `Удалить комплектацию «${getPartLabel(deletingItem)}»? Это действие нельзя отменить.`
+                : "Удалить выбранную комплектацию? Это действие нельзя отменить."}
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError ? <p className="text-sm text-red-600 dark:text-red-400">{deleteError}</p> : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleDeleteDialogChange(false)}
+              disabled={isDeleting}
+            >
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Удалить
             </Button>
           </DialogFooter>
         </DialogContent>
