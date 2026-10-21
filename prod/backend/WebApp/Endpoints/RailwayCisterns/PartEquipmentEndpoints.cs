@@ -298,6 +298,22 @@ public static class PartEquipmentEndpoints
             .Produces<List<PartEquipmentDTO>>(StatusCodes.Status200OK)
             .RequirePermissions(Permission.Read);
 
+        // Удаление
+        group.MapDelete("/{id}", async ([FromServices] ApplicationDbContext context, [FromRoute] Guid id) =>
+        {
+           
+            var equipment = await context.PartEquipments.FindAsync(id);
+            if (equipment is null)
+                return Results.NotFound();
+
+            context.Remove(equipment);
+            await context.SaveChangesAsync();
+            return Results.NoContent();
+        })
+            .WithName("DeletePartEquipments")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .RequirePermissions(Permission.Delete);
 
         // Получение записи по ID
         group.MapGet("/{id}", async (
