@@ -10,6 +10,9 @@ public partial class PartEquipmentConfiguration : IEntityTypeConfiguration<PartE
     {
         entity.ToTable("PartEquipments");
             entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.PartsId, e.DocumentDate, e.Operation, e.Id })
+                .IsDescending(false, true, true, true)
+                .HasDatabaseName("IX_PartEquipments_LatestByPart");
             
             entity.Property(e => e.Operation).IsRequired().HasDefaultValue(0);
             entity.Property(e => e.DefectsId).IsRequired().HasDefaultValue("0").HasColumnType("text");

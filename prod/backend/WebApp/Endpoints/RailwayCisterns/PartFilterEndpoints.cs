@@ -23,7 +23,7 @@ public static class PartFilterEndpoints
             [FromServices] ApplicationDbContext context,
             [FromBody] PartFilterSortDTO request) =>
         {
-            var query = BuildFilterQuery(context, request.Filters);
+            var query = await BuildFilterQuery(context, request.Filters);
 
             if (request.SortFields != null && request.SortFields.Any())
             {
@@ -73,7 +73,7 @@ public static class PartFilterEndpoints
             [FromServices] ApplicationDbContext context,
             [FromBody] PartFilterSortWithoutPaginationDTO request) =>
         {
-            var query = BuildFilterQuery(context, request.Filters);
+            var query = await BuildFilterQuery(context, request.Filters);
 
             if (request.SortFields != null && request.SortFields.Any())
             {
@@ -119,7 +119,7 @@ public static class PartFilterEndpoints
 
             var filterCriteria = System.Text.Json.JsonSerializer.Deserialize<PartFilterCriteria>(savedFilter.FilterJson);
             var sortFields = System.Text.Json.JsonSerializer.Deserialize<List<SortCriteria>>(savedFilter.SortFieldsJson);
-            var query = BuildFilterQuery(context, filterCriteria);
+            var query = await BuildFilterQuery(context, filterCriteria);
 
             if (sortFields != null && sortFields.Any())
             {
@@ -210,7 +210,7 @@ public static class PartFilterEndpoints
         };
     }
 
-    private static IQueryable<Part> BuildFilterQuery(ApplicationDbContext context, PartFilterCriteria? filters)
+    private static async Task<IQueryable<Part>> BuildFilterQuery(ApplicationDbContext context, PartFilterCriteria? filters)
     {
         var query = context.Parts
             .Include(p => p.PartType)
@@ -243,22 +243,6 @@ public static class PartFilterEndpoints
                 query = query.Where(p => p.ManufactureYear >= filters.ManufactureYear.From);
             if (filters.ManufactureYear.To.HasValue)
                 query = query.Where(p => p.ManufactureYear <= filters.ManufactureYear.To);
-        }
-
-        if (filters.CurrentLocationIds != null && filters.CurrentLocationIds.Any())
-        {
-            var currentSiteIds = filters.CurrentLocationIds;
-            query = query.Where(p =>
-                p.PartEquipments.Any() &&
-                currentSiteIds.Contains(
-                    p.PartEquipments
-                        .OrderByDescending(pe => pe.DocumentDate)
-                        .ThenByDescending(pe => pe.Operation)
-                        .ThenByDescending(pe => pe.Id)
-                        .Select(pe => pe.Operation == 2
-                            ? pe.RailwayCisternsId
-                            : (pe.DepotsId ?? pe.JobDepotsId))
-                        .FirstOrDefault()));
         }
 
         if (filters.Locations != null && filters.Locations.Any())
@@ -302,20 +286,7 @@ public static class PartFilterEndpoints
                 query = query.Where(p => p.UpdatedAt <= filters.UpdatedAt.To);
         }
 
-        if (filters.Code != null)
-        {
-            if (filters.Code.From.HasValue)
-            {
-                var typeFrom = filters.Code.From.Value;
-                query = query.Where(p => p.PartEquipments
-                    .OrderByDescending(pe => pe.DocumentDate)
-                    .ThenByDescending(pe => pe.Operation)
-                    .ThenByDescending(pe => pe.Id)
-                    .Select(pe => (int?)pe.Operation)
-                    .FirstOrDefault() == typeFrom);
-            }
-
-        }
+        query = await ApplyCurrentSiteFilterAsync(context, query, filters);
 
         if (filters.DocumentId.HasValue)
             query = query.Where(p => p.DocumentId == filters.DocumentId);
@@ -335,6 +306,83 @@ public static class PartFilterEndpoints
         }
 
         return query;
+    }
+
+    /// <summary>
+    /// Code.From — точное CurrentSite.Type, CurrentLocationIds — CurrentSite.Id.
+    /// Идентификаторы считаются одним DISTINCT ON, без подзапроса на каждую деталь.
+    /// </summary>
+    private static async Task<IQueryable<Part>> ApplyCurrentSiteFilterAsync(
+        ApplicationDbContext context,
+        IQueryable<Part> query,
+        PartFilterCriteria filters)
+    {
+        int? operation = filters.Code?.From;
+        Guid[]? siteIds = filters.CurrentLocationIds is { Count: > 0 }
+            ? filters.CurrentLocationIds.ToArray()
+            : null;
+
+        if (operation is null && siteIds is null)
+            return query;
+
+        var partIds = await FindPartIdsByCurrentSiteAsync(context, operation, siteIds);
+        return query.Where(p => partIds.Contains(p.Id));
+    }
+
+    private static Task<Guid[]> FindPartIdsByCurrentSiteAsync(
+        ApplicationDbContext context,
+        int? operation,
+        Guid[]? siteIds)
+    {
+        if (operation is int operationValue && siteIds is not null)
+        {
+            return context.Database.SqlQuery<Guid>($"""
+                SELECT s."PartsId" AS "Value"
+                FROM (
+                    SELECT DISTINCT ON (pe."PartsId")
+                        pe."PartsId",
+                        pe."Operation",
+                        CASE
+                            WHEN pe."Operation" = 2 THEN pe."RailwayCisternsId"
+                            ELSE COALESCE(pe."DepotsId", pe."JobDepotsId")
+                        END AS "SiteId"
+                    FROM "PartEquipments" pe
+                    ORDER BY pe."PartsId", pe."DocumetnDate" DESC, pe."Operation" DESC, pe."Id" DESC
+                ) AS s
+                WHERE s."Operation" = {operationValue}
+                  AND s."SiteId" = ANY ({siteIds})
+                """).ToArrayAsync();
+        }
+
+        if (operation is int operationOnly)
+        {
+            return context.Database.SqlQuery<Guid>($"""
+                SELECT s."PartsId" AS "Value"
+                FROM (
+                    SELECT DISTINCT ON (pe."PartsId")
+                        pe."PartsId",
+                        pe."Operation"
+                    FROM "PartEquipments" pe
+                    ORDER BY pe."PartsId", pe."DocumetnDate" DESC, pe."Operation" DESC, pe."Id" DESC
+                ) AS s
+                WHERE s."Operation" = {operationOnly}
+                """).ToArrayAsync();
+        }
+
+        return context.Database.SqlQuery<Guid>($"""
+            SELECT s."PartsId" AS "Value"
+            FROM (
+                SELECT DISTINCT ON (pe."PartsId")
+                    pe."PartsId",
+                    CASE
+                        WHEN pe."Operation" = 2 THEN pe."RailwayCisternsId"
+                        ELSE COALESCE(pe."DepotsId", pe."JobDepotsId")
+                    END AS "SiteId"
+                FROM "PartEquipments" pe
+                ORDER BY pe."PartsId", pe."DocumetnDate" DESC, pe."Operation" DESC, pe."Id" DESC
+            ) AS s
+            WHERE s."SiteId" = ANY ({siteIds})
+            """).ToArrayAsync();
     }
 
     private static IOrderedQueryable<Part> ApplySort(IQueryable<Part> query, SortCriteria sort)

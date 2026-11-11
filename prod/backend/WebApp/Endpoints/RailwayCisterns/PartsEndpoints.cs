@@ -524,7 +524,7 @@ public static class PartsEndpoints
                 pe.RailwayCisternsId,
                 CisternNumber = pe.RailwayCistern.Number,
                 pe.DepotsId,
-                DepotName = pe.Depot != null ? pe.Depot.ShortName + "(" + pe.Depot.Code + ")" : null,
+                DepotName = pe.Depot != null ? pe.Depot.ShortName + " (" + pe.Depot.Code + ")" : null,
                 pe.JobDepotsId,
                 JobDepotName = pe.JobDepot.Name
             })
@@ -551,7 +551,9 @@ public static class PartsEndpoints
                 {
                     Type = row.Operation,
                     Id = row.RailwayCisternsId,
-                    Value = row.CisternNumber
+                    Value = row.CisternNumber,
+                    Date = row.DocumentDate
+
                 };
                 continue;
             }
@@ -561,7 +563,8 @@ public static class PartsEndpoints
             {
                 Type = row.Operation,
                 Id = depotId,
-                Value = (row.DepotsId != null ? row.DepotName : row.JobDepotName) ?? string.Empty
+                Value = (row.DepotsId != null ? row.DepotName : row.JobDepotName) ?? string.Empty,
+                Date = row.DocumentDate
             };
         }
     }
