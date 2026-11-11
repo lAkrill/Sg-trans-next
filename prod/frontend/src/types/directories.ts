@@ -573,6 +573,7 @@ export interface PartDTO extends BaseEntity {
   serialNumber?: string;
   manufactureYear?: string | { year: number; month: number; day: number }; // DateOnly может прийти как объект
   currentLocation?: { id: string; number: string };
+  currentSite: {type: number; id: string; value: string; date: string;};
   status: PartStatusDTO;
   notes?: string;
   model?: string | null;

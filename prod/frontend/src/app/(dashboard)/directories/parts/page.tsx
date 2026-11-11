@@ -326,13 +326,13 @@ export default function PartsPage() {
   };
 
   const getWagonDepotDisplay = (part: PartDTO) => {
-    if (part.code === 2 && part.currentLocation?.number) {
-      return part.currentLocation.number;
+    if (part.currentSite?.type === 2) {
+      return part.currentSite.value;
     }
 
-    if (part.code === 1 && part.depot) {
-      const depotName = part.depot.shortName || part.depot.name;
-      return depotName ? `${part.depot.code} (${depotName})` : part.depot.code;
+    if (part.currentSite?.type === 1) {
+      const depotName = part.currentSite.value;
+      return depotName;
     }
 
     return "—";
@@ -442,7 +442,7 @@ export default function PartsPage() {
           stampNumber: part.stampNumber?.value ?? "—",
           serialNumber: part.serialNumber || "—",
           manufactureYear: formatYear(part.manufactureYear),
-          location: getLocationDisplay(part.code),
+          location: getLocationDisplay(part.currentSite.type),
           wagonDepot: getWagonDepotDisplay(part),
           serviceLife: String(getServiceLifeDisplay(part)),
           extendedDate: getExtendedDateDisplay(part),
@@ -716,7 +716,7 @@ export default function PartsPage() {
                         <TableCell>{formatYear(part.manufactureYear)}</TableCell>
                       )}
                       {isColumnVisible("location") && (
-                        <TableCell>{getLocationDisplay(part.code)}</TableCell>
+                        <TableCell>{getLocationDisplay(part.currentSite.type)}</TableCell>
                       )}
                       {isColumnVisible("wagonDepot") && (
                         <TableCell>{getWagonDepotDisplay(part)}</TableCell>
