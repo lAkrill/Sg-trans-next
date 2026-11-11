@@ -110,6 +110,8 @@ public static class PartsEndpoints
                 })
                 .ToListAsync();
 
+            await ApplyCurrentSitesAsync(context, parts);
+
             var result = new PaginatedList<PartDTO>
             {
                 Items = parts,
@@ -202,6 +204,8 @@ public static class PartsEndpoints
                 })
                 .ToListAsync();
 
+            await ApplyCurrentSitesAsync(context, parts);
+
             return Results.Ok(parts);
         })
         .WithName("GetAllParts")
@@ -275,6 +279,9 @@ public static class PartsEndpoints
                     } : null
                 })
                 .FirstOrDefaultAsync();
+
+            if (part != null)
+                await ApplyCurrentSitesAsync(context, [part]);
 
             return part == null ? Results.NotFound() : Results.Ok(part);
         })
@@ -491,5 +498,71 @@ public static class PartsEndpoints
         .ProducesValidationProblem()
         .Produces(StatusCodes.Status204NoContent)
         .RequirePermissions(Permission.Delete);
+    }
+
+    /// <summary>
+    /// Последнее место детали по PartEquipment: максимальная DocumentDate,
+    /// при одной дате — максимальная Operation (0, 1, 2).
+    /// Operation 2 — цистерна, иначе депо хранения (или депо работ, если депо хранения не задано).
+    /// </summary>
+    internal static async Task ApplyCurrentSitesAsync(ApplicationDbContext context, IList<PartDTO> parts)
+    {
+        if (parts.Count == 0)
+            return;
+
+        var ids = parts.Select(p => p.Id).ToArray();
+
+        var rows = await context.PartEquipments
+            .AsNoTracking()
+            .Where(pe => ids.Contains(pe.PartsId))
+            .Select(pe => new
+            {
+                pe.Id,
+                pe.PartsId,
+                pe.DocumentDate,
+                pe.Operation,
+                pe.RailwayCisternsId,
+                CisternNumber = pe.RailwayCistern.Number,
+                pe.DepotsId,
+                DepotName = pe.Depot != null ? pe.Depot.Name : null,
+                pe.JobDepotsId,
+                JobDepotName = pe.JobDepot.Name
+            })
+            .ToListAsync();
+
+        var latestByPart = rows
+            .GroupBy(r => r.PartsId)
+            .ToDictionary(
+                g => g.Key,
+                g => g
+                    .OrderByDescending(x => x.DocumentDate)
+                    .ThenByDescending(x => x.Operation)
+                    .ThenByDescending(x => x.Id)
+                    .First());
+
+        foreach (var part in parts)
+        {
+            if (!latestByPart.TryGetValue(part.Id, out var row))
+                continue;
+
+            if (row.Operation == 2)
+            {
+                part.CurrentSite = new CurrentSiteDTO
+                {
+                    Type = row.Operation,
+                    Id = row.RailwayCisternsId,
+                    Value = row.CisternNumber
+                };
+                continue;
+            }
+
+            var depotId = row.DepotsId ?? row.JobDepotsId;
+            part.CurrentSite = new CurrentSiteDTO
+            {
+                Type = row.Operation,
+                Id = depotId,
+                Value = (row.DepotsId != null ? row.DepotName : row.JobDepotName) ?? string.Empty
+            };
+        }
     }
 }

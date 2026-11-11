@@ -51,6 +51,8 @@ public static class PartFilterEndpoints
                 .Select(p => MapPartToDto(p))
                 .ToListAsync();
 
+            await PartsEndpoints.ApplyCurrentSitesAsync(context, parts);
+
             var result = new PaginatedList<PartDTO>
             {
                 Items = parts,
@@ -93,6 +95,8 @@ public static class PartFilterEndpoints
             var parts = await query
                 .Select(p => MapPartToDto(p))
                 .ToListAsync();
+
+            await PartsEndpoints.ApplyCurrentSitesAsync(context, parts);
 
             return Results.Ok(parts);
         })
@@ -137,6 +141,8 @@ public static class PartFilterEndpoints
             var parts = await query
                 .Select(p => MapPartToDto(p))
                 .ToListAsync();
+
+            await PartsEndpoints.ApplyCurrentSitesAsync(context, parts);
 
             return Results.Ok(parts);
         })
@@ -240,7 +246,20 @@ public static class PartFilterEndpoints
         }
 
         if (filters.CurrentLocationIds != null && filters.CurrentLocationIds.Any())
-            query = query.Where(p => p.CurrentLocation.HasValue && filters.CurrentLocationIds.Contains(p.CurrentLocation.Value));
+        {
+            var currentSiteIds = filters.CurrentLocationIds;
+            query = query.Where(p =>
+                p.PartEquipments.Any() &&
+                currentSiteIds.Contains(
+                    p.PartEquipments
+                        .OrderByDescending(pe => pe.DocumentDate)
+                        .ThenByDescending(pe => pe.Operation)
+                        .ThenByDescending(pe => pe.Id)
+                        .Select(pe => pe.Operation == 2
+                            ? pe.RailwayCisternsId
+                            : (pe.DepotsId ?? pe.JobDepotsId))
+                        .FirstOrDefault()));
+        }
 
         if (filters.Locations != null && filters.Locations.Any())
             query = query.Where(p => p.RailwayCistern != null && filters.Locations.Contains(p.RailwayCistern.Number));
@@ -286,9 +305,26 @@ public static class PartFilterEndpoints
         if (filters.Code != null)
         {
             if (filters.Code.From.HasValue)
-                query = query.Where(p => p.Code >= filters.Code.From);
+            {
+                var typeFrom = filters.Code.From.Value;
+                query = query.Where(p => p.PartEquipments
+                    .OrderByDescending(pe => pe.DocumentDate)
+                    .ThenByDescending(pe => pe.Operation)
+                    .ThenByDescending(pe => pe.Id)
+                    .Select(pe => (int?)pe.Operation)
+                    .FirstOrDefault() >= typeFrom);
+            }
+
             if (filters.Code.To.HasValue)
-                query = query.Where(p => p.Code <= filters.Code.To);
+            {
+                var typeTo = filters.Code.To.Value;
+                query = query.Where(p => p.PartEquipments
+                    .OrderByDescending(pe => pe.DocumentDate)
+                    .ThenByDescending(pe => pe.Operation)
+                    .ThenByDescending(pe => pe.Id)
+                    .Select(pe => (int?)pe.Operation)
+                    .FirstOrDefault() <= typeTo);
+            }
         }
 
         if (filters.DocumentId.HasValue)

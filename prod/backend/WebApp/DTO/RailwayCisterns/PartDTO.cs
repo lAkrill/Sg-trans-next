@@ -18,6 +18,7 @@ public class PartDTO
     public string? File { get; set; }
     //
     public RailwayCisternIdAndNumberDTO? CurrentLocation { get; set; }
+    public CurrentSiteDTO? CurrentSite { get; set; }
     public int? Code { get; set; }
     public Guid? DocumentId { get; set; }
     public DocumentDTO? Document { get; set; }

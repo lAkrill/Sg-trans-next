@@ -4,6 +4,12 @@ using WebApp.DTO.Common;
 
 namespace WebApp.DTO.RailwayCisterns;
 
+public class CurrentSiteDTO
+{
+    public int Type { get; set; }
+    public Guid Id { get; set; }
+    public string Value { get; set; } = string.Empty;
+}
 
 public class RailwayCisternIdAndNumberDTO
 {
