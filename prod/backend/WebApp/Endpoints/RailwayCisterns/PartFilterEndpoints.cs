@@ -312,19 +312,9 @@ public static class PartFilterEndpoints
                     .ThenByDescending(pe => pe.Operation)
                     .ThenByDescending(pe => pe.Id)
                     .Select(pe => (int?)pe.Operation)
-                    .FirstOrDefault() >= typeFrom);
+                    .FirstOrDefault() == typeFrom);
             }
 
-            if (filters.Code.To.HasValue)
-            {
-                var typeTo = filters.Code.To.Value;
-                query = query.Where(p => p.PartEquipments
-                    .OrderByDescending(pe => pe.DocumentDate)
-                    .ThenByDescending(pe => pe.Operation)
-                    .ThenByDescending(pe => pe.Id)
-                    .Select(pe => (int?)pe.Operation)
-                    .FirstOrDefault() <= typeTo);
-            }
         }
 
         if (filters.DocumentId.HasValue)

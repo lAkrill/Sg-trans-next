@@ -524,7 +524,7 @@ public static class PartsEndpoints
                 pe.RailwayCisternsId,
                 CisternNumber = pe.RailwayCistern.Number,
                 pe.DepotsId,
-                DepotName = pe.Depot != null ? pe.Depot.Name : null,
+                DepotName = pe.Depot != null ? pe.Depot.ShortName + "(" + pe.Depot.Code + ")" : null,
                 pe.JobDepotsId,
                 JobDepotName = pe.JobDepot.Name
             })
