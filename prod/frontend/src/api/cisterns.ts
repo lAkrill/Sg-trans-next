@@ -43,6 +43,14 @@ function toYmdDateString(value?: string): string | undefined {
   return head || undefined;
 }
 
+function currentRequestDate(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function normalizeRepairsFilterDateRange(range?: DateRange): DateRange | undefined {
   if (!range) return undefined;
   const from = toYmdDateString(range.from);
@@ -61,6 +69,7 @@ function serializeRepairsFilterRequest(
   const out: RailwayCisternRepairsFilterRequestDTO = {
     ...data,
     isAnd: data.isAnd ?? true,
+    requestDate: currentRequestDate(),
   };
   for (const key of REPAIRS_FILTER_DATE_RANGE_KEYS) {
     const normalized = normalizeRepairsFilterDateRange(data[key] as DateRange | undefined);

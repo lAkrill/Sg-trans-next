@@ -260,6 +260,7 @@ function normalizeRequest(
       }
     }
   }
+  if (f.isOverdue) out.isOverdue = true;
   if (Object.keys(out).length > 0 && typeof f.isAnd === "boolean") {
     out.isAnd = f.isAnd;
   }
@@ -498,6 +499,31 @@ export function PlanningRepairsFilters({
           >
             Убрать из планирования вагоны со сроком конца эксплуатации совмещённым с
             ремонтами
+          </Label>
+        </div>
+
+        <div
+          className={cn(
+            "flex items-start gap-3 rounded-md border px-3 py-3 mt-3",
+            draft.isOverdue ? "border-green-500 bg-green-50" : "border-border/60 bg-muted/30"
+          )}
+        >
+          <Checkbox
+            id="include-overdue-repairs"
+            checked={draft.isOverdue === true}
+            onCheckedChange={(checked) =>
+              updateDraft("isOverdue", checked === true ? true : undefined)
+            }
+            className="mt-0.5"
+          />
+          <Label
+            htmlFor="include-overdue-repairs"
+            className={cn(
+              "text-sm font-normal leading-snug cursor-pointer",
+              draft.isOverdue && "text-green-800"
+            )}
+          >
+            Включить вагоны-цистерны с просроченными капитальным и деповским ремонтами
           </Label>
         </div>
 

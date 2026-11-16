@@ -38,6 +38,12 @@ export interface RailwayCisternStatusDTO {
   lastName: string;
 }
 
+export interface BacklightStatusDTO {
+  Status: number;
+  Color: number;
+  Description: string;
+}
+
 export interface RailwayCisternDetailDTO {
   id: string;
   number: string;
@@ -108,6 +114,7 @@ export interface RailwayCisternDetailDTO {
   vessels: VesselListDTO[]
   lastMilage: lastMilageDTO;
   railwayCisternStatus: RailwayCisternStatusDTO;
+  backlightStatus: BacklightStatusDTO;
 }
 
 export interface RailwayCisternRepairsFilterListDTO {
@@ -241,6 +248,10 @@ export interface RailwayCisternRepairsFilterRequestDTO {
   planPeriodIntermediateTest?: DateRange;
   planPeriodDepotRepair?: DateRange;
   planPeriodPPRRepair?: DateRange;
+  /** Включить вагоны-цистерны с просроченными капитальным и деповским ремонтами. */
+  isOverdue?: boolean;
+  /** Дата запроса `YYYY-MM-DD`. В форму не выводится: подставляется текущая дата при отправке. */
+  requestDate?: string;
 }
 
 export interface PaginatedCisternsResponse {

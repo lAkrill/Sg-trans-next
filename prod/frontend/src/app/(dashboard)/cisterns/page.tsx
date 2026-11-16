@@ -10,7 +10,7 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle, 
-  Button, 
+  Button,
   Table, 
   TableBody, 
   TableCell, 
@@ -18,7 +18,10 @@ import {
   TableHeader, 
   TableRow, 
   Skeleton,
-  AutocompleteInput
+  AutocompleteInput,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@/components/ui";
 import {
   Plus,
@@ -49,6 +52,7 @@ import type {
   CisternsFilter,
   RailwayCisternDetailDTO,
   RailwayCisternListDTO,
+  BacklightStatusDTO,
   FilterCriteria,
   SortCriteria,
   RailwayCisternFilterSortDTO,
@@ -276,20 +280,53 @@ const formatExtensionServiceLifeDate = (cistern: DisplayCistern): string => {
   return date ? date.toLocaleDateString("ru-RU") : "—";
 };
 
-/** Красный — срок истёк; розовый — истекает в течение года */
-const getServiceEndDateRowClass = (cistern: DisplayCistern): string | undefined => {
-  const endDate = getServiceEndDate(cistern);
-  if (!endDate) return undefined;
+type BacklightFields = BacklightStatusDTO & {
+  status?: number;
+  description?: string;
+};
 
+const getBacklight = (
+  cistern: DisplayCistern
+): { status?: number; description: string } => {
+  const backlight = (cistern as RailwayCisternDetailDTO).backlightStatus as
+    | BacklightFields
+    | undefined;
+  if (!backlight) return { description: "" };
+
+  const rawStatus = backlight.Status ?? backlight.status;
+  const status = rawStatus == null ? undefined : Number(rawStatus);
+  const description = (backlight.Description ?? backlight.description ?? "").trim();
+
+  return {
+    status: status != null && !Number.isNaN(status) ? status : undefined,
+    description,
+  };
+};
+
+/** Приоритет фона: красный (срок истёк), жёлтый (Status === 2), розовый (истекает в течение года), бледно-жёлтый (Status === 1) */
+const getCisternRowClass = (cistern: DisplayCistern): string | undefined => {
+  const endDate = getServiceEndDate(cistern);
   const today = startOfLocalDay(new Date());
-  if (endDate < today) {
+  const backlightStatus = getBacklight(cistern).status;
+
+  if (endDate && endDate < today) {
     return "bg-[lab(69_60.78_30.83)] hover:bg-[lab(69_60.78_30.83)]";
   }
 
-  const inOneYear = new Date(today);
-  inOneYear.setFullYear(inOneYear.getFullYear() + 1);
-  if (endDate <= inOneYear) {
-    return "bg-pink-100 hover:bg-pink-100";
+  if (backlightStatus === 2) {
+    return "bg-yellow-200 hover:bg-yellow-200";
+  }
+
+  if (endDate) {
+    const inOneYear = new Date(today);
+    inOneYear.setFullYear(inOneYear.getFullYear() + 1);
+    if (endDate <= inOneYear) {
+      return "bg-pink-100 hover:bg-pink-100";
+    }
+  }
+
+  if (backlightStatus === 1) {
+    return "bg-yellow-100 hover:bg-yellow-100";
   }
 
   return undefined;
@@ -1049,55 +1086,72 @@ export default function CisternsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayData.map((cistern, index) => (
-                    <TableRow
-                      key={`${cistern.id}-${index}`}
-                      className={getServiceEndDateRowClass(cistern)}
-                    >
-                      {visibleColumns.map((column) => (
-                        <TableCell
-                          key={`${cistern.id}-${column}`}
-                          className={
-                            column === "number"
-                              ? "font-medium"
-                              : column === "type.name"
-                              ? "w-[16rem] min-w-[16rem] max-w-[16rem] whitespace-normal break-words"
-                              : undefined
-                          }
-                        >
-                          {column === "number" ? (
-                            <Link href={`/cisterns/${cistern.id}`} className="text-primary hover:underline">
-                              {getDisplayValue(cistern, column)}
-                            </Link>
-                          ) : (
-                            getDisplayValue(cistern, column)
-                          )}
-                        </TableCell>
-                      ))}
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Link href={`/cisterns/${cistern.id}`}>
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Link href={`/cisterns/${cistern.id}/edit`}>
-                            <Button variant="outline" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(cistern.id)}
-                            disabled={deleteMutation.isPending}
+                  {displayData.map((cistern, index) => {
+                    const rowKey = `${cistern.id}-${index}`;
+                    const backlightDescription = getBacklight(cistern).description;
+                    const row = (
+                      <TableRow
+                        key={backlightDescription ? undefined : rowKey}
+                        className={getCisternRowClass(cistern)}
+                      >
+                        {visibleColumns.map((column) => (
+                          <TableCell
+                            key={`${cistern.id}-${column}`}
+                            className={
+                              column === "number"
+                                ? "font-medium"
+                                : column === "type.name"
+                                ? "w-[16rem] min-w-[16rem] max-w-[16rem] whitespace-normal break-words"
+                                : undefined
+                            }
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            {column === "number" ? (
+                              <Link href={`/cisterns/${cistern.id}`} className="text-primary hover:underline">
+                                {getDisplayValue(cistern, column)}
+                              </Link>
+                            ) : (
+                              getDisplayValue(cistern, column)
+                            )}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Link href={`/cisterns/${cistern.id}`}>
+                              <Button variant="outline" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Link href={`/cisterns/${cistern.id}/edit`}>
+                              <Button variant="outline" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete(cistern.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+
+                    if (!backlightDescription) {
+                      return row;
+                    }
+
+                    return (
+                      <Tooltip key={rowKey} delayDuration={1000}>
+                        <TooltipTrigger asChild>{row}</TooltipTrigger>
+                        <TooltipContent className="max-w-sm whitespace-pre-wrap text-left">
+                          {backlightDescription}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
                 </TableBody>
               </Table>
 
