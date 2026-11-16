@@ -962,9 +962,72 @@ public static class RailwayCisternEndpoints
             .Where(p => cisternIds.Contains(p.CisternId))
             .ToListAsync();
 
+        var installedParts = await context.PartEquipments
+            .AsNoTracking()
+            .Where(pe => cisternIds.Contains(pe.RailwayCisternsId)
+                         && pe.Operation == 2
+                         && pe.EquipmentTypeId != null)
+            .Select(pe => new
+            {
+                pe.RailwayCisternsId,
+                EquipmentTypeId = pe.EquipmentTypeId!.Value,
+                EquipmentTypeName = pe.EquipmentType!.Name,
+                pe.DocumentDate,
+                pe.Id
+            })
+            .ToListAsync();
+
+        var lastInstalledByCistern = installedParts
+            .GroupBy(pe => pe.RailwayCisternsId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(pe => pe.EquipmentTypeId)
+                    .Select(typeGroup =>
+                    {
+                        var last = typeGroup
+                            .OrderByDescending(pe => pe.DocumentDate)
+                            .ThenByDescending(pe => pe.Id)
+                            .First();
+                        return new InstalledPartDateDTO
+                        {
+                            EquipmentTypeId = last.EquipmentTypeId,
+                            EquipmentTypeName = last.EquipmentTypeName,
+                            Date = last.DocumentDate
+                        };
+                    })
+                    .ToList());
+
         foreach (var cistern in cisterns)
         {
             ApplyComputedRepairFields(cistern, models, personalCisRepairPeriods);
+
+            cistern.backlightStatus ??= new BacklightStatusDTO();
+            cistern.backlightStatus.Status = 0;
+            cistern.backlightStatus.Color = 0;
+            cistern.backlightStatus.Description = string.Empty;
+
+            if (!lastInstalledByCistern.TryGetValue(cistern.Id, out var parts) || parts.Count == 0)
+                continue;
+
+            var distinctDates = parts.Select(part => part.Date).Distinct().Count();
+            if (distinctDates > 1)
+            {
+                cistern.backlightStatus.Status = 1;
+                cistern.backlightStatus.Description = $"Разных дат комплектации: {distinctDates}";
+            }
+
+            var majority = parts.Count / 2;
+            var repairDate = cistern.PeriodMajorRepair.HasValue && cistern.PeriodDepotRepair.HasValue
+                ? (cistern.PeriodMajorRepair.Value > cistern.PeriodDepotRepair.Value
+                    ? cistern.PeriodMajorRepair
+                    : cistern.PeriodDepotRepair)
+                : cistern.PeriodMajorRepair ?? cistern.PeriodDepotRepair;
+
+            if (repairDate.HasValue && parts.Count(part => repairDate.Value > part.Date) > majority)
+            {
+                cistern.backlightStatus.Status = 2;
+                cistern.backlightStatus.Description = "Дата копмлектации не соответвует дате последнего ремонта";
+            }
         }
     }
 

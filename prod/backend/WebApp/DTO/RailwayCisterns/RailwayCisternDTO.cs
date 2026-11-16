@@ -18,6 +18,16 @@ public class RailwayCisternIdAndNumberDTO
     public Guid Id { get; set; }
     public string Number { get; set; }
 }
+
+public class BacklightStatusDTO
+{
+    public int Status { get; set; }
+
+    public int Color { get; set; }
+    public string Description { get; set; }
+}
+
+
 public class RailwayCisternDetailDTO
 {
     public Guid Id { get; set; }
@@ -74,6 +84,14 @@ public class RailwayCisternDetailDTO
     public RailwayCisternStatusDTO RailwayCisternStatus { get; set; } = null!;
     public DateOnly? ReRegistrationNextDate { get; set; }
     public DateOnly? ExtensionServiceLifeDate { get; set; }
+    public BacklightStatusDTO? backlightStatus { get; set; }
+}
+
+public class InstalledPartDateDTO
+{
+    public Guid EquipmentTypeId { get; set; }
+    public string EquipmentTypeName { get; set; } = string.Empty;
+    public DateOnly Date { get; set; }
 }
 
 public static class RailwayCisternDTOMapper
@@ -216,7 +234,13 @@ public static class RailwayCisternDTOMapper
                 ? cistern.RailwayCisternStatus.ToRailwayCisternStatusDTO()
                 : new RailwayCisternStatusDTO(),
             ReRegistrationNextDate = cistern.ReRegistrationNextDate,
-            ExtensionServiceLifeDate = cistern.ExtensionServiceLifeDate
+            ExtensionServiceLifeDate = cistern.ExtensionServiceLifeDate,
+            backlightStatus = new BacklightStatusDTO
+            {
+                Status = 0,
+                Color = 0,
+                Description = string.Empty
+            }
         };
     }
 
