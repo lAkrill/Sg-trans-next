@@ -445,6 +445,8 @@ public class FilterRepairsCisternsRequestDTO
     public DateRange? PlanPeriodPPRRepair { get; set; }
     public DateRange? ExtensionServiceLifeDate { get; set; }
     public bool IsAnd {get; set;} = true;
+    public bool IsOverdue {get; set;} = false;
+    public DateOnly? RequestDate { get; set;}
 }
 
 public class FilterRepairsCisternsResponseDTO

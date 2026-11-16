@@ -427,6 +427,7 @@ public static class RailwayCisternEndpoints
                     .Where(rc => rc.CisternStatusId == Guid.Parse("6c7f6085-7509-46fd-8ffb-36da4aafd7ee"))
                     .AsQueryable();
                 var isAnd = req?.IsAnd ?? true;
+                var isOverdue = req?.IsOverdue ?? false;
 
                 if (req != null && isAnd)
                 {
@@ -722,6 +723,18 @@ public static class RailwayCisternEndpoints
                     {
                         cisterns = cisterns.Where(rc =>
                         {
+                            var requestDate = req.RequestDate ?? DateOnly.FromDateTime(DateTime.Now);
+                            bool MatchRange(DateOnly? value, DateRange? range)
+                            {
+                                if (MatchesDateRange(value, range))
+                                    return true;
+
+                                if (!isOverdue || range?.From is not DateOnly from)
+                                    return false;
+
+                                return value <= from && value <= requestDate;
+                            }
+
                             bool match = false;
                             if (!match && req.Numbers != null && req.Numbers.Contains(rc.Number)) match = true;
                             if (!match && req.WagonModelsNames != null && rc.WagonModelName != null && req.WagonModelsNames.Contains(rc.WagonModelName)) match = true;
@@ -736,7 +749,7 @@ public static class RailwayCisternEndpoints
 
                             if (!match && req.PeriodMajorRepair != null)
                             {
-                                match = MatchesDateRange(rc.PeriodMajorRepair, req.PeriodMajorRepair);
+                                match = MatchRange(rc.PeriodMajorRepair, req.PeriodMajorRepair);
                             }
                             if (!match && req.PeriodPeriodicTest != null)
                             {
@@ -774,7 +787,7 @@ public static class RailwayCisternEndpoints
 
                             if (!match && req.PlanPeriodMajorRepair != null)
                             {
-                                match = MatchesDateRange(rc.PlanPeriodMajorRepair, req.PlanPeriodMajorRepair);
+                                match = MatchRange(rc.PlanPeriodMajorRepair, req.PlanPeriodMajorRepair);
                             }
                             if (!match && req.PlanPeriodPeriodicTest != null)
                             {
@@ -786,7 +799,7 @@ public static class RailwayCisternEndpoints
                             }
                             if (!match && req.PlanPeriodDepotRepair != null)
                             {
-                                match = MatchesDateRange(rc.PlanPeriodDepotRepair, req.PlanPeriodDepotRepair);
+                                match = MatchRange(rc.PlanPeriodDepotRepair, req.PlanPeriodDepotRepair);
                             }
                             if (!match && req.PlanPeriodPPRRepair != null)
                             {
@@ -814,7 +827,19 @@ public static class RailwayCisternEndpoints
                         {
                             if (req.PlanPeriodMajorRepair.From.HasValue)
                             {
-                                cisterns = cisterns.Where(rc => rc.PlanPeriodMajorRepair >= req.PlanPeriodMajorRepair.From.Value).ToList();
+                                var planFrom = req.PlanPeriodMajorRepair.From.Value;
+                                if (isOverdue)
+                                {
+                                    var requestDate = req.RequestDate ?? DateOnly.FromDateTime(DateTime.Now);
+                                    cisterns = cisterns.Where(rc =>
+                                        rc.PlanPeriodMajorRepair >= planFrom
+                                        || (rc.PlanPeriodMajorRepair <= planFrom
+                                            && rc.PlanPeriodMajorRepair <= requestDate)).ToList();
+                                }
+                                else
+                                {
+                                    cisterns = cisterns.Where(rc => rc.PlanPeriodMajorRepair >= planFrom).ToList();
+                                }
                             }
                             if (req.PlanPeriodMajorRepair.To.HasValue)
                             {
@@ -850,7 +875,19 @@ public static class RailwayCisternEndpoints
                         {
                             if (req.PlanPeriodDepotRepair.From.HasValue)
                             {
-                                cisterns = cisterns.Where(rc => rc.PlanPeriodDepotRepair >= req.PlanPeriodDepotRepair.From.Value).ToList();
+                                var planFrom = req.PlanPeriodDepotRepair.From.Value;
+                                if (isOverdue)
+                                {
+                                    var requestDate = req.RequestDate ?? DateOnly.FromDateTime(DateTime.Now);
+                                    cisterns = cisterns.Where(rc =>
+                                        rc.PlanPeriodDepotRepair >= planFrom
+                                        || (rc.PlanPeriodDepotRepair <= planFrom
+                                            && rc.PlanPeriodDepotRepair <= requestDate)).ToList();
+                                }
+                                else
+                                {
+                                    cisterns = cisterns.Where(rc => rc.PlanPeriodDepotRepair >= planFrom).ToList();
+                                }
                             }
                             if (req.PlanPeriodDepotRepair.To.HasValue)
                             {
